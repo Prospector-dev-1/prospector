@@ -160,11 +160,7 @@ Important: Stay in character throughout the entire call. You don't know what the
         provider: 'openai',
         voiceId: 'alloy'
       },
-      firstMessage: difficulty_level <= 3 
-        ? "Hello? Who is this?" 
-        : difficulty_level <= 7 
-          ? "Yeah, hello? What do you want?" 
-          : "What? Who is this and why are you calling me?",
+      firstMessage: "hello",
       endCallMessage: "Thanks for calling, goodbye.",
       endCallPhrases: ["goodbye", "hang up", "end call"],
       recordingEnabled: true,
