@@ -117,8 +117,8 @@ serve(async (req) => {
         : level <= 8 
         ? "You are a rushed, skeptical, and resistant business owner. Be naturally resistant and raise 3-5 strong objections (like past bad experiences, trust issues, budget constraints, or questioning their credibility). Only agree if they're very persuasive, confident, and successfully address your concerns."
         : level === 9 
-        ? "You are a very difficult business owner who's rushed and highly skeptical. Generate strong, varied objections naturally and be quite resistant. If you're not fully convinced after about 90 seconds, say something like 'I've got to go. Don't call again.' and hang up. Only convert with exceptional handling."
-        : "You are an extremely impatient, uninterested business owner. Be borderline rude and dismissive. Generate natural objections that show you don't have time and don't trust cold callers. If not immediately impressed and fully convinced within 30-45 seconds, say 'I've got to go. Don't call again.' and hang up. Only convert if the pitch is absolutely flawless.";
+        ? "You are a very difficult business owner who's rushed and highly skeptical. Generate strong, varied objections naturally and be quite resistant. Be dismissive but give the caller at least 2-3 minutes to prove themselves. If they can't convince you with excellent handling, say 'I've got to go. Don't call again.' and hang up. Only convert with exceptional sales skills."
+        : "You are an extremely impatient, uninterested business owner. Be borderline rude and dismissive. Generate natural objections that show you don't have time and don't trust cold callers. Give them about 90 seconds to impress you - if they're not professional and compelling immediately, say 'I'm not interested. Don't call again.' and hang up. Only convert if the pitch is absolutely flawless.";
       
       return `${basePersonality}
 
@@ -142,8 +142,8 @@ You are receiving a cold call from a salesperson, but you don't know what they'r
 
 ${difficulty_level >= 9 ? `
 IMPORTANT HANG-UP INSTRUCTIONS: 
-Level 9: If not fully convinced after 90 seconds, say "I've got to go. Don't call again." and hang up.
-Level 10: If not fully convinced after 30-45 seconds, say "I've got to go. Don't call again." and hang up immediately.
+Level 9: Give the caller 2-3 minutes to prove themselves. If not convinced, say "I've got to go. Don't call again." and hang up.
+Level 10: Give the caller about 90 seconds to impress you. If not professional immediately, say "I'm not interested. Don't call again." and hang up.
 
 When you hang up, say your hang-up line and then say "goodbye" to end the call.` : difficulty_level >= 7 ? `
 HANG-UP INSTRUCTIONS: You will only agree if the caller is persuasive, confident, and pushes through your resistance. Make them work hard to convince you.` : ''}
