@@ -6,7 +6,6 @@ import { Badge } from '@/components/ui/badge';
 import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/integrations/supabase/client';
 import { Phone, TrendingUp, User, Settings, LogOut, CreditCard } from 'lucide-react';
-
 interface CallRecord {
   id: string;
   difficulty_level: number;
@@ -20,44 +19,44 @@ interface CallRecord {
   tone_score: number;
   closing_score: number;
 }
-
 const Dashboard = () => {
-  const { user, profile, signOut } = useAuth();
+  const {
+    user,
+    profile,
+    signOut
+  } = useAuth();
   const navigate = useNavigate();
   const [recentCalls, setRecentCalls] = useState<CallRecord[]>([]);
   const [totalCallsCount, setTotalCallsCount] = useState<number>(0);
   const [thisWeekCallsCount, setThisWeekCallsCount] = useState<number>(0);
   const [loading, setLoading] = useState(true);
-
   useEffect(() => {
     fetchRecentCalls();
   }, [user]);
-
   const fetchRecentCalls = async () => {
     if (!user) return;
-
     try {
       // Fetch recent calls (for display)
-      const { data, error } = await supabase
-        .from('calls')
-        .select('*')
-        .eq('user_id', user.id)
-        .order('created_at', { ascending: false })
-        .limit(5);
-
+      const {
+        data,
+        error
+      } = await supabase.from('calls').select('*').eq('user_id', user.id).order('created_at', {
+        ascending: false
+      }).limit(5);
       if (error) {
         console.error('Error fetching calls:', error);
         return;
       }
-
       setRecentCalls(data || []);
 
       // Fetch total count of all calls
-      const { count, error: countError } = await supabase
-        .from('calls')
-        .select('*', { count: 'exact', head: true })
-        .eq('user_id', user.id);
-
+      const {
+        count,
+        error: countError
+      } = await supabase.from('calls').select('*', {
+        count: 'exact',
+        head: true
+      }).eq('user_id', user.id);
       if (countError) {
         console.error('Error fetching call count:', countError);
       } else {
@@ -66,38 +65,32 @@ const Dashboard = () => {
 
       // Fetch count of calls made this week
       const oneWeekAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString();
-      const { count: thisWeekCount, error: thisWeekError } = await supabase
-        .from('calls')
-        .select('*', { count: 'exact', head: true })
-        .eq('user_id', user.id)
-        .gte('created_at', oneWeekAgo);
-
+      const {
+        count: thisWeekCount,
+        error: thisWeekError
+      } = await supabase.from('calls').select('*', {
+        count: 'exact',
+        head: true
+      }).eq('user_id', user.id).gte('created_at', oneWeekAgo);
       if (thisWeekError) {
         console.error('Error fetching this week call count:', thisWeekError);
       } else {
         setThisWeekCallsCount(thisWeekCount || 0);
       }
-
     } catch (error) {
       console.error('Error fetching calls:', error);
     } finally {
       setLoading(false);
     }
   };
-
   const getSubscriptionBadge = () => {
     if (profile?.subscription_type === 'premium') {
       return <Badge className="bg-primary text-primary-foreground">Premium</Badge>;
     }
     return <Badge variant="secondary">Free</Badge>;
   };
-
-  const averageScore = recentCalls.length > 0 
-    ? (recentCalls.reduce((sum, call) => sum + (call.overall_score || 0), 0) / recentCalls.length).toFixed(1)
-    : 'N/A';
-
-  return (
-    <div className="min-h-screen bg-background">
+  const averageScore = recentCalls.length > 0 ? (recentCalls.reduce((sum, call) => sum + (call.overall_score || 0), 0) / recentCalls.length).toFixed(1) : 'N/A';
+  return <div className="min-h-screen bg-background">
       {/* Header */}
       <div className="border-b border-border bg-card">
         <div className="px-3 sm:px-4 lg:px-8">
@@ -117,9 +110,7 @@ const Dashboard = () => {
               <Button variant="ghost" size="icon" onClick={() => navigate('/profile')}>
                 <User className="h-4 w-4" />
               </Button>
-              <Button variant="ghost" size="icon" onClick={signOut}>
-                <LogOut className="h-4 w-4" />
-              </Button>
+              
             </div>
           </div>
         </div>
@@ -138,10 +129,7 @@ const Dashboard = () => {
 
         {/* Action Cards */}
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 mb-6">
-          <Card 
-            className="hover:shadow-lg transition-shadow cursor-pointer"
-            onClick={() => navigate('/call-simulation')}
-          >
+          <Card className="hover:shadow-lg transition-shadow cursor-pointer" onClick={() => navigate('/call-simulation')}>
             <CardHeader className="text-center pb-3">
               <Phone className="h-8 w-8 sm:h-10 sm:w-10 text-primary mx-auto mb-2" />
               <CardTitle className="text-base sm:text-lg">Start Practice Call</CardTitle>
@@ -201,29 +189,20 @@ const Dashboard = () => {
             </CardDescription>
           </CardHeader>
           <CardContent>
-            {loading ? (
-              <div className="text-center py-6">
+            {loading ? <div className="text-center py-6">
                 <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-primary mx-auto"></div>
                 <p className="mt-3 text-sm text-muted-foreground">Loading calls...</p>
-              </div>
-            ) : recentCalls.length === 0 ? (
-              <div className="text-center py-6">
+              </div> : recentCalls.length === 0 ? <div className="text-center py-6">
                 <Phone className="h-8 w-8 text-muted-foreground mx-auto mb-3" />
                 <p className="text-sm text-muted-foreground">No practice sessions yet</p>
                 <p className="text-xs text-muted-foreground mt-1">
                   Start your first call to see your progress here
                 </p>
-              </div>
-            ) : (
-              <div className="space-y-3">
-                {recentCalls.map((call) => (
-                  <div key={call.id} className="flex flex-col sm:flex-row sm:items-center sm:justify-between p-3 border border-border rounded-lg space-y-2 sm:space-y-0">
+              </div> : <div className="space-y-3">
+                {recentCalls.map(call => <div key={call.id} className="flex flex-col sm:flex-row sm:items-center sm:justify-between p-3 border border-border rounded-lg space-y-2 sm:space-y-0">
                     <div className="flex items-center space-x-3">
                       <div className="flex-shrink-0">
-                        <Badge 
-                          variant={call.difficulty_level <= 3 ? "secondary" : call.difficulty_level <= 7 ? "default" : "destructive"}
-                          className="text-xs"
-                        >
+                        <Badge variant={call.difficulty_level <= 3 ? "secondary" : call.difficulty_level <= 7 ? "default" : "destructive"} className="text-xs">
                           Level {call.difficulty_level}
                         </Badge>
                       </div>
@@ -240,24 +219,15 @@ const Dashboard = () => {
                       <p className="text-xs text-muted-foreground">
                         {new Date(call.created_at).toLocaleDateString()}
                       </p>
-                      <Button 
-                        variant="ghost" 
-                        size="sm"
-                        className="h-8 text-xs"
-                        onClick={() => navigate(`/call-results/${call.id}`)}
-                      >
+                      <Button variant="ghost" size="sm" className="h-8 text-xs" onClick={() => navigate(`/call-results/${call.id}`)}>
                         View Details
                       </Button>
                     </div>
-                  </div>
-                ))}
-              </div>
-            )}
+                  </div>)}
+              </div>}
           </CardContent>
         </Card>
       </div>
-    </div>
-  );
+    </div>;
 };
-
 export default Dashboard;
