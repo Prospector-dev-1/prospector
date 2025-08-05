@@ -49,14 +49,19 @@ serve(async (req) => {
 
     // Check if the transcript shows meaningful caller participation
     const transcriptLower = transcript.toLowerCase();
-    const callerIndicators = ['hello', 'hi', 'this is', 'i am', 'calling', 'would like', 'interested in', 'website', 'business'];
-    const hasCallerContent = callerIndicators.some(indicator => transcriptLower.includes(indicator));
+    const hasBasicParticipation = transcript.length > 30 && (
+      transcriptLower.includes('hello') || 
+      transcriptLower.includes('hi') || 
+      transcriptLower.includes('website') ||
+      transcriptLower.includes('business') ||
+      transcriptLower.includes('call')
+    );
     
-    console.log('Has caller content:', hasCallerContent);
+    console.log('Has basic participation:', hasBasicParticipation);
     
-    // If no meaningful caller participation, return zeros immediately
-    if (!hasCallerContent || transcript.length < 50) {
-      console.log('Insufficient caller participation detected');
+    // If no participation at all, return zeros immediately
+    if (!hasBasicParticipation) {
+      console.log('No participation detected');
       const analysis = {
         confidence_score: 0,
         objection_handling_score: 0,
@@ -67,10 +72,10 @@ serve(async (req) => {
         closing_score: 0,
         overall_score: 0,
         successful_sale: false,
-        feedback: "No meaningful sales conversation detected. To receive feedback, you need to actively participate in the call by introducing yourself, making a pitch, and responding to the prospect's questions or objections."
+        feedback: "No sales conversation detected. You need to actively participate in the call by speaking to the prospect."
       };
       
-      console.log('Using zero scores for insufficient participation');
+      console.log('Using zero scores for no participation');
       
       // Update call record with analysis
       const { error: updateError } = await supabaseService
@@ -104,8 +109,8 @@ serve(async (req) => {
       });
     }
 
-    // Only do OpenAI analysis if there's meaningful caller participation
-    console.log('Meaningful conversation detected, proceeding with AI analysis');
+    // For any participation, use AI analysis for rigorous scoring
+    console.log('Participation detected, proceeding with rigorous AI analysis');
     const analysisPrompt = `
 Analyze this cold calling transcript and provide scores (1-10) for each category. The caller was trying to sell a website to a business owner.
 
@@ -180,28 +185,57 @@ Respond in JSON format:
       analysis = JSON.parse(analysisText);
       console.log('Parsed analysis:', analysis);
     } catch (e) {
-      console.log('JSON parsing failed, using manual analysis. Error:', e);
+      console.log('JSON parsing failed, using rigorous manual analysis. Error:', e);
       console.log('Raw OpenAI response that failed to parse:', analysisText);
       
-      // Manual analysis based on transcript content since AI parsing failed
+      // Rigorous manual analysis based on actual sales performance
       const transcriptLower = transcript.toLowerCase();
-      const hasIntroduction = transcriptLower.includes('hello') || transcriptLower.includes('hi') || transcriptLower.includes('this is');
-      const hasPitch = transcriptLower.includes('website') || transcriptLower.includes('business') || transcriptLower.includes('better');
-      const hasClosing = transcriptLower.includes('interested') || transcriptLower.includes('want') || transcriptLower.includes('would you');
       
-      const baseScore = hasPitch ? 6 : 3; // Give credit if they made a pitch
+      // Check for proper introduction (professional opening)
+      const hasProperIntro = transcriptLower.includes('this is') || transcriptLower.includes('my name is') || transcriptLower.includes('calling from');
+      
+      // Check for clear value proposition (not just mentioning website)
+      const hasValueProp = (transcriptLower.includes('better') && transcriptLower.includes('website')) || 
+                          transcriptLower.includes('improve your') || 
+                          transcriptLower.includes('help you') ||
+                          transcriptLower.includes('save you');
+      
+      // Check for objection handling (responding to resistance)
+      const hasObjectionHandling = transcriptLower.includes('understand') || 
+                                  transcriptLower.includes('but what if') || 
+                                  transcriptLower.includes('let me explain');
+      
+      // Check for closing attempt (asking for next step)
+      const hasClosing = transcriptLower.includes('would you be interested') || 
+                        transcriptLower.includes('can we schedule') || 
+                        transcriptLower.includes('when would be good');
+      
+      // Harsh but fair scoring - most people should get 1-3 on their first tries
+      const introScore = hasProperIntro ? 4 : 1;
+      const pitchScore = hasValueProp ? 5 : 2;
+      const objectionScore = hasObjectionHandling ? 6 : 1;
+      const closingScore = hasClosing ? 6 : 1;
+      const overallScore = Math.round((introScore + pitchScore + objectionScore + closingScore) / 4);
       
       analysis = {
-        confidence_score: baseScore,
-        objection_handling_score: hasClosing ? baseScore : 2,
-        clarity_score: hasIntroduction ? baseScore : 3,
-        persuasiveness_score: hasPitch ? baseScore : 2,
-        tone_score: baseScore,
-        overall_pitch_score: hasPitch ? baseScore : 2,
-        closing_score: hasClosing ? baseScore : 2,
-        overall_score: baseScore,
+        confidence_score: introScore,
+        objection_handling_score: objectionScore,
+        clarity_score: pitchScore,
+        persuasiveness_score: hasValueProp ? 4 : 1,
+        tone_score: 2, // Default low since we can't assess tone from text
+        overall_pitch_score: pitchScore,
+        closing_score: closingScore,
+        overall_score: overallScore,
         successful_sale: false,
-        feedback: `Good job participating in the call! I detected you made a sales pitch about websites. ${hasPitch ? 'You mentioned making better websites, which is good.' : ''} ${hasClosing ? 'You attempted to engage the prospect.' : 'Try to be more direct in asking for next steps.'} Keep practicing to improve your technique!`
+        feedback: `Sales Performance Analysis:
+INTRODUCTION: ${hasProperIntro ? 'Good - You introduced yourself professionally' : 'Poor - No professional introduction detected'}
+VALUE PROPOSITION: ${hasValueProp ? 'Fair - You mentioned improvements' : 'Poor - No clear value proposition offered'}
+OBJECTION HANDLING: ${hasObjectionHandling ? 'Good - You addressed concerns' : 'Poor - No objection handling detected'}
+CLOSING: ${hasClosing ? 'Good - You attempted to advance the sale' : 'Poor - No closing attempt detected'}
+
+${overallScore < 3 ? 'This was a weak sales call. Focus on: 1) Professional introduction 2) Clear value proposition 3) Asking for next steps' : 
+  overallScore < 6 ? 'This was an average attempt. Improve your objection handling and closing technique.' : 
+  'Solid performance! Keep refining your approach.'}`
       };
     }
 
