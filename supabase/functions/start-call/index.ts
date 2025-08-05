@@ -13,6 +13,22 @@ serve(async (req) => {
 
   try {
     console.log('Start-call function called');
+    
+    // Check if required environment variables exist
+    const vapiApiKey = Deno.env.get('VAPI_API_KEY');
+    const supabaseUrl = Deno.env.get('SUPABASE_URL');
+    const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY');
+    
+    console.log('Environment check:', {
+      vapiApiKey: vapiApiKey ? 'exists' : 'missing',
+      supabaseUrl: supabaseUrl ? 'exists' : 'missing',
+      supabaseServiceKey: supabaseServiceKey ? 'exists' : 'missing'
+    });
+
+    if (!vapiApiKey) {
+      throw new Error('VAPI_API_KEY not configured');
+    }
+
     const { difficulty_level } = await req.json();
     console.log('Difficulty level:', difficulty_level);
     
@@ -22,8 +38,8 @@ serve(async (req) => {
     
     // Use service role to bypass RLS for credit checking
     const supabaseService = createClient(
-      Deno.env.get('SUPABASE_URL') ?? '',
-      Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? '',
+      supabaseUrl ?? '',
+      supabaseServiceKey ?? '',
       { auth: { persistSession: false } }
     );
 
@@ -43,8 +59,11 @@ serve(async (req) => {
       .single();
 
     if (profileError || !profile) {
+      console.error('Profile error:', profileError);
       throw new Error('Profile not found');
     }
+
+    console.log('User profile:', profile);
 
     // Check if user has credits or premium subscription
     if (profile.subscription_type !== 'premium' && profile.credits <= 0) {
@@ -68,7 +87,7 @@ serve(async (req) => {
           user_id: userData.user.id,
           amount: -1,
           type: 'deduction',
-           description: `AI practice call - Difficulty Level ${difficulty_level}`
+          description: `AI practice call - Difficulty Level ${difficulty_level}`
         });
     }
 
@@ -108,10 +127,6 @@ serve(async (req) => {
 
     // Create Vapi assistant for web call
     console.log('Creating Vapi assistant...');
-    const vapiApiKey = Deno.env.get('VAPI_API_KEY');
-    if (!vapiApiKey) {
-      throw new Error('VAPI_API_KEY not configured');
-    }
     
     const vapiResponse = await fetch('https://api.vapi.ai/assistant', {
       method: 'POST',
@@ -189,6 +204,8 @@ Important: Stay in character throughout the entire call. You don't know what the
     if (callError) {
       console.error('Error creating call record:', callError);
     }
+
+    console.log('Call record created:', callRecord?.id);
 
     return new Response(JSON.stringify({ 
       success: true, 
