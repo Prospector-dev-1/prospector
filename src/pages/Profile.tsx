@@ -658,17 +658,9 @@ const Profile = () => {
                     <Button 
                       variant="outline" 
                       className="w-full sm:w-auto"
-                      onClick={() => handlePurchase('credits')}
-                      disabled={!!purchaseLoading}
+                      onClick={() => navigate('/buy-credits')}
                     >
-                      {purchaseLoading === 'credits' ? (
-                        <>
-                          <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                          Processing...
-                        </>
-                      ) : (
-                        'Buy 100 Credits - $9.99'
-                      )}
+                      Buy Credits
                     </Button>
                     <Button 
                       variant="outline" 

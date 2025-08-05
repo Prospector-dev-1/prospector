@@ -9,6 +9,7 @@ import Auth from "./pages/Auth";
 import CallSimulation from "./pages/CallSimulation";
 import CallResults from "./pages/CallResults";
 import Profile from "./pages/Profile";
+import BuyCredits from "./pages/BuyCredits";
 import ScriptAnalysis from "./pages/ScriptAnalysis";
 import CustomScriptGenerator from "./pages/CustomScriptGenerator";
 import NotFound from "./pages/NotFound";
@@ -28,6 +29,7 @@ const App = () => (
             <Route path="/call-simulation" element={<CallSimulation />} />
             <Route path="/call-results/:callId" element={<CallResults />} />
             <Route path="/profile" element={<Profile />} />
+            <Route path="/buy-credits" element={<BuyCredits />} />
             <Route path="/script-analysis" element={<ScriptAnalysis />} />
             <Route path="/custom-script" element={<CustomScriptGenerator />} />
             {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}

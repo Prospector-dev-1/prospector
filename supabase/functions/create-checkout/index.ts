@@ -25,7 +25,7 @@ serve(async (req) => {
     const user = data.user;
     if (!user?.email) throw new Error("User not authenticated or email not available");
 
-    const { priceType } = await req.json();
+    const { priceType, packageId } = await req.json();
     
     const stripe = new Stripe(Deno.env.get("STRIPE_SECRET_KEY") || "", { apiVersion: "2023-10-16" });
     const customers = await stripe.customers.list({ email: user.email, limit: 1 });
@@ -36,12 +36,22 @@ serve(async (req) => {
 
     let lineItems;
     if (priceType === 'credits') {
-      // One-time credit purchase
+      // Credit packages with different amounts
+      const creditPackages = {
+        starter: { credits: 50, price: 599, name: "50 Credits" },
+        popular: { credits: 110, price: 999, name: "100 Credits + 10 Bonus" },
+        value: { credits: 300, price: 1999, name: "250 Credits + 50 Bonus" },
+        premium: { credits: 650, price: 3499, name: "500 Credits + 150 Bonus" }
+      };
+      
+      const selectedPackage = creditPackages[packageId as keyof typeof creditPackages];
+      if (!selectedPackage) throw new Error("Invalid package selected");
+      
       lineItems = [{
         price_data: {
           currency: "usd",
-          product_data: { name: "100 Credits" },
-          unit_amount: 999, // $9.99
+          product_data: { name: selectedPackage.name },
+          unit_amount: selectedPackage.price,
         },
         quantity: 1,
       }];
