@@ -120,9 +120,15 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     });
 
     if (error) {
+      const isEmailAlreadyExists = error.message.includes('already registered') || 
+                                   error.message.includes('already exists') ||
+                                   error.message.includes('User already registered');
+      
       toast({
         title: "Signup Error",
-        description: error.message,
+        description: isEmailAlreadyExists 
+          ? "This email is already in the database. Please log in instead."
+          : error.message,
         variant: "destructive",
       });
     } else {
