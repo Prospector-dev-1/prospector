@@ -14,7 +14,129 @@ export type Database = {
   }
   public: {
     Tables: {
-      [_ in never]: never
+      calls: {
+        Row: {
+          ai_feedback: string | null
+          call_status: string
+          clarity_score: number | null
+          closing_score: number | null
+          confidence_score: number | null
+          created_at: string
+          difficulty_level: number
+          duration_seconds: number | null
+          id: string
+          objection_handling_score: number | null
+          overall_score: number | null
+          persuasiveness_score: number | null
+          tone_score: number | null
+          transcript: string | null
+          user_id: string
+        }
+        Insert: {
+          ai_feedback?: string | null
+          call_status?: string
+          clarity_score?: number | null
+          closing_score?: number | null
+          confidence_score?: number | null
+          created_at?: string
+          difficulty_level: number
+          duration_seconds?: number | null
+          id?: string
+          objection_handling_score?: number | null
+          overall_score?: number | null
+          persuasiveness_score?: number | null
+          tone_score?: number | null
+          transcript?: string | null
+          user_id: string
+        }
+        Update: {
+          ai_feedback?: string | null
+          call_status?: string
+          clarity_score?: number | null
+          closing_score?: number | null
+          confidence_score?: number | null
+          created_at?: string
+          difficulty_level?: number
+          duration_seconds?: number | null
+          id?: string
+          objection_handling_score?: number | null
+          overall_score?: number | null
+          persuasiveness_score?: number | null
+          tone_score?: number | null
+          transcript?: string | null
+          user_id?: string
+        }
+        Relationships: []
+      }
+      credit_transactions: {
+        Row: {
+          amount: number
+          created_at: string
+          description: string | null
+          id: string
+          stripe_session_id: string | null
+          type: string
+          user_id: string
+        }
+        Insert: {
+          amount: number
+          created_at?: string
+          description?: string | null
+          id?: string
+          stripe_session_id?: string | null
+          type: string
+          user_id: string
+        }
+        Update: {
+          amount?: number
+          created_at?: string
+          description?: string | null
+          id?: string
+          stripe_session_id?: string | null
+          type?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      profiles: {
+        Row: {
+          created_at: string
+          credits: number
+          email: string
+          first_name: string | null
+          id: string
+          last_name: string | null
+          subscription_end: string | null
+          subscription_type: string | null
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          credits?: number
+          email: string
+          first_name?: string | null
+          id?: string
+          last_name?: string | null
+          subscription_end?: string | null
+          subscription_type?: string | null
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          credits?: number
+          email?: string
+          first_name?: string | null
+          id?: string
+          last_name?: string | null
+          subscription_end?: string | null
+          subscription_type?: string | null
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
