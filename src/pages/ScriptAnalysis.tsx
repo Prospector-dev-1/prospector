@@ -28,6 +28,8 @@ const ScriptAnalysis = () => {
   const [script, setScript] = useState('');
   const [analysis, setAnalysis] = useState<ScriptAnalysis | null>(null);
   const [loading, setLoading] = useState(false);
+  const [rewriteLoading, setRewriteLoading] = useState(false);
+  const [rewrittenScript, setRewrittenScript] = useState<string | null>(null);
   const [creditsRemaining, setCreditsRemaining] = useState<number | null>(null);
   
   const { user, profile, refreshProfile } = useAuth();
@@ -110,6 +112,87 @@ const ScriptAnalysis = () => {
       });
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleRewrite = async () => {
+    if (!analysis || !script.trim()) {
+      toast({
+        title: "Cannot Rewrite",
+        description: "Please analyze a script first before rewriting.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    if (!user) {
+      toast({
+        title: "Authentication Required",
+        description: "Please log in to rewrite your script.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    if (profile && profile.credits < 0.5) {
+      toast({
+        title: "Insufficient Credits",
+        description: "You need at least 0.5 credits to rewrite a script.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    setRewriteLoading(true);
+    try {
+      const { data, error } = await supabase.functions.invoke('rewrite-script', {
+        body: { 
+          originalScript: script,
+          analysis: analysis
+        }
+      });
+
+      if (error) {
+        throw error;
+      }
+
+      if (data.error) {
+        throw new Error(data.error);
+      }
+
+      setRewrittenScript(data.rewritten_script);
+      setCreditsRemaining(data.credits_remaining);
+      await refreshProfile();
+      
+      toast({
+        title: "Script Rewritten",
+        description: "Your script has been rewritten successfully!",
+      });
+    } catch (error: any) {
+      console.error('Rewrite error:', error);
+      toast({
+        title: "Rewrite Failed",
+        description: error.message || "Failed to rewrite script. Please try again.",
+        variant: "destructive",
+      });
+    } finally {
+      setRewriteLoading(false);
+    }
+  };
+
+  const copyToClipboard = async (text: string) => {
+    try {
+      await navigator.clipboard.writeText(text);
+      toast({
+        title: "Copied",
+        description: "Script copied to clipboard!",
+      });
+    } catch (error) {
+      toast({
+        title: "Copy Failed",
+        description: "Unable to copy to clipboard.",
+        variant: "destructive",
+      });
     }
   };
 
@@ -381,6 +464,62 @@ const ScriptAnalysis = () => {
                 </CardContent>
               </Card>
             </div>
+
+            {/* Rewrite Script Section */}
+            <Card>
+              <CardHeader className="pb-3 sm:pb-6">
+                <CardTitle className="flex items-center gap-2 text-base sm:text-lg">
+                  <FileText className="h-4 w-4 sm:h-5 sm:w-5" />
+                  AI Script Rewrite
+                </CardTitle>
+                <CardDescription className="text-sm">
+                  Get an improved version of your script based on the analysis feedback. Costs 0.5 credits.
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <Button 
+                  onClick={handleRewrite}
+                  disabled={rewriteLoading || !analysis || (profile && profile.credits < 0.5)}
+                  className="flex items-center gap-2 w-full sm:w-auto"
+                  size="lg"
+                  variant="secondary"
+                >
+                  {rewriteLoading ? (
+                    <>
+                      <Loader2 className="h-4 w-4 animate-spin" />
+                      <span className="text-sm sm:text-base">Rewriting Script...</span>
+                    </>
+                  ) : (
+                    <>
+                      <TrendingUp className="h-4 w-4" />
+                      <span className="text-sm sm:text-base">Rewrite Script (0.5 credits)</span>
+                    </>
+                  )}
+                </Button>
+
+                {rewrittenScript && (
+                  <div className="space-y-3">
+                    <div className="flex items-center justify-between">
+                      <h4 className="text-sm sm:text-base font-semibold text-foreground">Improved Script:</h4>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => copyToClipboard(rewrittenScript)}
+                        className="flex items-center gap-2"
+                      >
+                        <Clipboard className="h-4 w-4" />
+                        <span className="hidden sm:inline">Copy</span>
+                      </Button>
+                    </div>
+                    <div className="p-3 sm:p-4 bg-muted rounded-lg border">
+                      <p className="text-xs sm:text-sm text-foreground whitespace-pre-wrap leading-relaxed">
+                        {rewrittenScript}
+                      </p>
+                    </div>
+                  </div>
+                )}
+              </CardContent>
+            </Card>
 
             {/* Credits Info */}
             {creditsRemaining !== null && (
