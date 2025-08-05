@@ -167,6 +167,11 @@ const CallSimulation = () => {
 
     setIsConnecting(true);
     
+    console.log('=== STARTING CALL DEBUG ===');
+    console.log('Selected difficulty level:', difficultyLevel[0]);
+    console.log('User credits:', profile.credits);
+    console.log('Subscription type:', profile.subscription_type);
+    
     try {
       // Start call through our edge function
       const { data, error } = await supabase.functions.invoke('start-call', {
