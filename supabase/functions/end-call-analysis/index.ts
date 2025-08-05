@@ -42,6 +42,11 @@ serve(async (req) => {
       throw new Error('Call record not found');
     }
 
+    console.log('=== ANALYSIS DEBUG ===');
+    console.log('Transcript received:', transcript);
+    console.log('Transcript length:', transcript.length);
+    console.log('Duration:', duration);
+
     // Analyze the call transcript using OpenAI
     const analysisPrompt = `
 Analyze this cold calling transcript and provide scores (1-10) for each category. The caller was trying to sell a website to a business owner.
@@ -101,13 +106,17 @@ Respond in JSON format:
     });
 
     const openAIData = await openAIResponse.json();
+    console.log('OpenAI response:', openAIData);
     const analysisText = openAIData.choices[0].message.content;
+    console.log('Analysis text from OpenAI:', analysisText);
     
     // Parse the JSON response
     let analysis;
     try {
       analysis = JSON.parse(analysisText);
+      console.log('Parsed analysis:', analysis);
     } catch (e) {
+      console.log('JSON parsing failed, using fallback. Error:', e);
       // Fallback if JSON parsing fails
       analysis = {
         confidence_score: 5,
