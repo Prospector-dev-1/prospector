@@ -139,32 +139,25 @@ const CallSimulation = () => {
         body: { difficulty_level: difficultyLevel[0] }
       });
 
+      console.log('Edge function response:', { data, error });
+
       if (error) {
+        console.error('Supabase function error:', error);
         throw new Error(error.message);
       }
 
       if (data.error) {
+        console.error('Edge function returned error:', data.error);
         throw new Error(data.error);
       }
 
+      console.log('Call data received:', data);
       setCallRecordId(data.callRecordId);
       setCallStarted(true);
       
       // Start the Vapi call with the assistant
-      const assistantOverrides = {
-        model: {
-          provider: 'openai',
-          model: 'gpt-4o-mini',
-          messages: [
-            {
-              role: 'system',
-              content: `You are a business owner prospect at difficulty level ${difficultyLevel[0]}/10. The caller is trying to sell you a website. Respond naturally and stay in character throughout the call.`
-            }
-          ]
-        }
-      };
-      
-      await vapiRef.current.start(data.assistantId, assistantOverrides);
+      console.log('Starting Vapi call with assistant ID:', data.assistantId);
+      await vapiRef.current.start(data.assistantId);
       
       // Refresh profile to update credits
       await refreshProfile();
