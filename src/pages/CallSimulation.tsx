@@ -58,7 +58,8 @@ const CallSimulation = () => {
 
         vapiRef.current.on('call-end', () => {
           console.log('=== CALL END EVENT TRIGGERED ===');
-          console.log('Call ended - duration was:', callDuration);
+          console.log('Call ended - duration from ref at event time:', callDurationRef.current);
+          console.log('Call ended - duration from state at event time:', callDuration);
           console.log('Call record ID from state:', callRecordId);
           console.log('Call record ID from ref:', callRecordIdRef.current);
           console.log('Transcript length:', transcriptRef.current.length);
