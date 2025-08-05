@@ -109,7 +109,7 @@ Important: Stay in character throughout the entire call. Don't break character o
         },
         voice: {
           provider: 'azure',
-          voiceId: difficulty_level <= 5 ? 'jenny' : 'davis'
+          voiceId: difficulty_level <= 5 ? 'en-US-JennyNeural' : 'en-US-DavisNeural'
         },
         firstMessage: difficulty_level <= 3 
           ? "Hello? Who is this?" 
