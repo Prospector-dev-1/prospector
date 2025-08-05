@@ -105,7 +105,7 @@ const Dashboard = () => {
                 <p className="text-sm font-bold text-primary">{profile?.credits || 0}</p>
               </div>
               <div className="text-right sm:hidden">
-                <p className="text-xs font-bold text-primary">{profile?.credits || 0} Credits Remaining</p>
+                <p className="text-xs font-bold text-primary cursor-pointer hover:underline" onClick={() => navigate('/profile?tab=subscription')}>{profile?.credits || 0} Credits Remaining</p>
               </div>
               <Button variant="ghost" size="icon" onClick={() => navigate('/profile')}>
                 <User className="h-4 w-4" />
