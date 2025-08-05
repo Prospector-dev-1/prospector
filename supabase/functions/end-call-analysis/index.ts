@@ -47,7 +47,65 @@ serve(async (req) => {
     console.log('Transcript length:', transcript.length);
     console.log('Duration:', duration);
 
-    // Analyze the call transcript using OpenAI
+    // Check if the transcript shows meaningful caller participation
+    const transcriptLower = transcript.toLowerCase();
+    const callerIndicators = ['hello', 'hi', 'this is', 'i am', 'calling', 'would like', 'interested in', 'website', 'business'];
+    const hasCallerContent = callerIndicators.some(indicator => transcriptLower.includes(indicator));
+    
+    console.log('Has caller content:', hasCallerContent);
+    
+    // If no meaningful caller participation, return zeros immediately
+    if (!hasCallerContent || transcript.length < 50) {
+      console.log('Insufficient caller participation detected');
+      const analysis = {
+        confidence_score: 0,
+        objection_handling_score: 0,
+        clarity_score: 0,
+        persuasiveness_score: 0,
+        tone_score: 0,
+        overall_pitch_score: 0,
+        closing_score: 0,
+        overall_score: 0,
+        successful_sale: false,
+        feedback: "No meaningful sales conversation detected. To receive feedback, you need to actively participate in the call by introducing yourself, making a pitch, and responding to the prospect's questions or objections."
+      };
+      
+      console.log('Using zero scores for insufficient participation');
+      
+      // Update call record with analysis
+      const { error: updateError } = await supabaseService
+        .from('calls')
+        .update({
+          duration_seconds: duration,
+          confidence_score: analysis.confidence_score,
+          objection_handling_score: analysis.objection_handling_score,
+          clarity_score: analysis.clarity_score,
+          persuasiveness_score: analysis.persuasiveness_score,
+          tone_score: analysis.tone_score,
+          overall_pitch_score: analysis.overall_pitch_score,
+          closing_score: analysis.closing_score,
+          overall_score: analysis.overall_score,
+          successful_sale: analysis.successful_sale,
+          transcript: transcript,
+          ai_feedback: analysis.feedback,
+          call_status: 'completed'
+        })
+        .eq('id', callRecordId);
+
+      if (updateError) {
+        console.error('Error updating call record:', updateError);
+      }
+
+      return new Response(JSON.stringify({ 
+        success: true, 
+        analysis: analysis 
+      }), {
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
+    }
+
+    // Only do OpenAI analysis if there's meaningful caller participation
+    console.log('Meaningful conversation detected, proceeding with AI analysis');
     const analysisPrompt = `
 Analyze this cold calling transcript and provide scores (1-10) for each category. The caller was trying to sell a website to a business owner.
 
