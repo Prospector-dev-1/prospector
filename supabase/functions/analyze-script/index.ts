@@ -20,43 +20,51 @@ serve(async (req) => {
   }
 
   try {
+    console.log('=== STEP 1: Parsing request body ===');
     // Parse request body
     const { script } = await req.json();
     console.log('Script length:', script?.length);
 
     if (!script || script.trim().length === 0) {
+      console.log('=== ERROR: No script provided ===');
       return new Response(JSON.stringify({ error: 'Script content is required' }), {
         status: 400,
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       });
     }
 
+    console.log('=== STEP 2: Checking auth header ===');
     // Get user from auth header
     const authHeader = req.headers.get('Authorization');
     if (!authHeader) {
+      console.log('=== ERROR: No auth header ===');
       return new Response(JSON.stringify({ error: 'Authorization required' }), {
         status: 401,
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       });
     }
 
+    console.log('=== STEP 3: Creating Supabase client ===');
     // Create Supabase client with service role key for admin operations
     const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
+    console.log('=== STEP 4: Verifying user token ===');
     // Verify user token and get user info
     const token = authHeader.replace('Bearer ', '');
     const { data: { user }, error: authError } = await supabase.auth.getUser(token);
     
     if (authError || !user) {
-      console.error('Auth error:', authError);
+      console.error('=== ERROR: Auth error ===', authError);
       return new Response(JSON.stringify({ error: 'Invalid authentication' }), {
         status: 401,
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       });
     }
 
+    console.log('=== STEP 5: User authenticated successfully ===');
     console.log('User ID:', user.id);
 
+    console.log('=== STEP 6: Fetching user profile ===');
     // Get user profile to check credits
     const { data: profile, error: profileError } = await supabase
       .from('profiles')
@@ -65,12 +73,15 @@ serve(async (req) => {
       .single();
 
     if (profileError || !profile) {
-      console.error('Profile error:', profileError);
+      console.error('=== ERROR: Profile error ===', profileError);
       return new Response(JSON.stringify({ error: 'User profile not found' }), {
         status: 404,
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       });
     }
+
+    console.log('=== STEP 7: Checking credits ===');
+    console.log('Profile credits:', profile.credits, typeof profile.credits);
 
     // Check if user has enough credits (need 0.5 credits)
     if (profile.credits < 0.5) {
