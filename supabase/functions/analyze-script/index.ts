@@ -7,19 +7,42 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 };
 
-const openAIApiKey = Deno.env.get('OPENAI_API_KEY');
-const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
-const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
-
 serve(async (req) => {
-  console.log('=== SCRIPT ANALYSIS REQUEST ===');
+  console.log('=== SCRIPT ANALYSIS REQUEST STARTED ===');
   
   // Handle CORS preflight requests
   if (req.method === 'OPTIONS') {
+    console.log('=== CORS OPTIONS REQUEST ===');
     return new Response(null, { headers: corsHeaders });
   }
 
   try {
+    // Check environment variables first
+    const openAIApiKey = Deno.env.get('OPENAI_API_KEY');
+    const supabaseUrl = Deno.env.get('SUPABASE_URL');
+    const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY');
+
+    console.log('=== ENV CHECK ===');
+    console.log('OpenAI key exists:', !!openAIApiKey);
+    console.log('Supabase URL exists:', !!supabaseUrl);
+    console.log('Supabase service key exists:', !!supabaseServiceKey);
+
+    if (!openAIApiKey) {
+      console.error('=== ERROR: Missing OpenAI API key ===');
+      return new Response(JSON.stringify({ error: 'OpenAI API key not configured' }), {
+        status: 500,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
+    }
+
+    if (!supabaseUrl || !supabaseServiceKey) {
+      console.error('=== ERROR: Missing Supabase credentials ===');
+      return new Response(JSON.stringify({ error: 'Supabase credentials not configured' }), {
+        status: 500,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
+    }
+
     console.log('=== STEP 1: Parsing request body ===');
     // Parse request body
     const { script } = await req.json();
@@ -84,7 +107,8 @@ serve(async (req) => {
     console.log('Profile credits:', profile.credits, typeof profile.credits);
 
     // Check if user has enough credits (need 0.5 credits)
-    if (profile.credits < 0.5) {
+    if (Number(profile.credits) < 0.5) {
+      console.log('=== ERROR: Insufficient credits ===');
       return new Response(JSON.stringify({ 
         error: 'Insufficient credits. You need at least 0.5 credits to analyze a script.' 
       }), {
@@ -93,11 +117,11 @@ serve(async (req) => {
       });
     }
 
-    console.log('User has sufficient credits:', profile.credits);
-
+    console.log('=== STEP 8: Deducting credits ===');
     // Calculate new credit amount (ensure it's a number with proper decimal handling)
-    const newCreditAmount = Number((profile.credits - 0.5).toFixed(2));
-    console.log('Deducting 0.5 credits. New amount:', newCreditAmount);
+    const currentCredits = Number(profile.credits);
+    const newCreditAmount = Number((currentCredits - 0.5).toFixed(2));
+    console.log('Current credits:', currentCredits, 'New amount:', newCreditAmount);
 
     // Deduct 0.5 credits
     const { error: updateError } = await supabase
@@ -106,13 +130,14 @@ serve(async (req) => {
       .eq('user_id', user.id);
 
     if (updateError) {
-      console.error('Error deducting credits:', updateError);
+      console.error('=== ERROR: Failed to deduct credits ===', updateError);
       return new Response(JSON.stringify({ error: 'Failed to deduct credits' }), {
         status: 500,
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       });
     }
 
+    console.log('=== STEP 9: Recording transaction ===');
     // Record the credit transaction
     const { error: transactionError } = await supabase
       .from('credit_transactions')
@@ -124,12 +149,11 @@ serve(async (req) => {
       });
 
     if (transactionError) {
-      console.error('Error recording transaction:', transactionError);
+      console.error('=== WARNING: Transaction recording failed ===', transactionError);
       // Continue anyway, as the main operation succeeded
     }
 
-    console.log('Credits deducted successfully');
-
+    console.log('=== STEP 10: Calling OpenAI ===');
     // Analyze script with OpenAI
     const prompt = `You are a professional sales coach and communication expert. Analyze the following sales script/pitch and provide detailed feedback.
 
@@ -162,8 +186,6 @@ Focus on:
 
 Provide specific, actionable feedback that will help improve sales performance.`;
 
-    console.log('Sending analysis prompt to OpenAI...');
-
     const openAIResponse = await fetch('https://api.openai.com/v1/chat/completions', {
       method: 'POST',
       headers: {
@@ -187,11 +209,12 @@ Provide specific, actionable feedback that will help improve sales performance.`
       }),
     });
 
+    console.log('=== STEP 11: Processing OpenAI response ===');
     console.log('OpenAI response status:', openAIResponse.status);
 
     if (!openAIResponse.ok) {
       const errorText = await openAIResponse.text();
-      console.error('OpenAI API error:', errorText);
+      console.error('=== ERROR: OpenAI API error ===', errorText);
       return new Response(JSON.stringify({ error: 'Failed to analyze script with AI' }), {
         status: 500,
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
@@ -199,17 +222,17 @@ Provide specific, actionable feedback that will help improve sales performance.`
     }
 
     const openAIData = await openAIResponse.json();
-    console.log('OpenAI response received successfully');
+    console.log('=== STEP 12: Parsing analysis ===');
 
     const analysisText = openAIData.choices[0].message.content;
-    console.log('Analysis text from OpenAI:', analysisText);
+    console.log('Analysis text from OpenAI (first 200 chars):', analysisText?.substring(0, 200));
 
     let analysis;
     try {
       analysis = JSON.parse(analysisText);
-      console.log('Parsed analysis successfully');
+      console.log('=== STEP 13: Analysis parsed successfully ===');
     } catch (parseError) {
-      console.error('Failed to parse OpenAI response as JSON:', parseError);
+      console.error('=== WARNING: Failed to parse OpenAI response ===', parseError);
       // Fallback analysis
       analysis = {
         overall_score: 5,
@@ -226,6 +249,7 @@ Provide specific, actionable feedback that will help improve sales performance.`
       };
     }
 
+    console.log('=== STEP 14: Returning successful response ===');
     // Return the analysis
     return new Response(JSON.stringify({
       success: true,
@@ -236,7 +260,10 @@ Provide specific, actionable feedback that will help improve sales performance.`
     });
 
   } catch (error) {
-    console.error('Error in analyze-script function:', error);
+    console.error('=== FATAL ERROR in analyze-script function ===', error);
+    console.error('Error name:', error.name);
+    console.error('Error message:', error.message);
+    console.error('Error stack:', error.stack);
     return new Response(JSON.stringify({ 
       error: 'Internal server error',
       details: error.message 
