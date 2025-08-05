@@ -321,7 +321,7 @@ const Profile = () => {
             <p className="text-sm sm:text-base text-muted-foreground">Manage your account and view your progress</p>
           </div>
           <div className="flex gap-2">
-            <Button variant="outline" size="sm" onClick={() => navigate('/dashboard')}>
+            <Button variant="outline" size="sm" onClick={() => navigate('/')}>
               <span className="hidden sm:inline">Back to Dashboard</span>
               <span className="sm:hidden">Dashboard</span>
             </Button>
