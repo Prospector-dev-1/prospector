@@ -110,17 +110,19 @@ serve(async (req) => {
 
     // Generate prospect personality based on difficulty
     const getProspectPersonality = (level: number) => {
-      if (level <= 3) {
-        return "You are a polite, curious, and friendly business owner. Be genuinely interested in what they're offering. Ask soft questions like 'How does that work?' or 'Tell me more about that.' You're easy to convince - if they sound professional and explain things clearly, you'll likely say yes.";
-      } else if (level <= 6) {
-        return "You are a neutral business owner who's mildly skeptical. Raise 2-3 common objections naturally (like cost concerns, timing issues, or questioning if you really need this). Make them prove their value, but be fair about it. You'll agree if they handle your concerns well.";
-      } else if (level <= 8) {
-        return "You are a rushed, skeptical, and resistant business owner. Be naturally resistant and raise 3-5 strong objections (like past bad experiences, trust issues, budget constraints, or questioning their credibility). Only agree if they're very persuasive, confident, and successfully address your concerns.";
-      } else if (level === 9) {
-        return "You are a very difficult business owner who's rushed and highly skeptical. Generate strong, varied objections naturally and be quite resistant. If you're not fully convinced after about 90 seconds, say something like 'I've got to go. Don't call again.' and hang up. Only convert with exceptional handling.";
-      } else {
-        return "You are an extremely impatient, uninterested business owner. Be borderline rude and dismissive. Generate natural objections that show you don't have time and don't trust cold callers. If not immediately impressed and fully convinced within 30-45 seconds, say 'I've got to go. Don't call again.' and hang up. Only convert if the pitch is absolutely flawless.";
-      }
+      const basePersonality = level <= 3 
+        ? "You are a polite, curious, and friendly business owner. Be genuinely interested in what they're offering. Ask soft questions like 'How does that work?' or 'Tell me more about that.' You're easy to convince - if they sound professional and explain things clearly, you'll likely say yes."
+        : level <= 6 
+        ? "You are a neutral business owner who's mildly skeptical. Raise 2-3 common objections naturally (like cost concerns, timing issues, or questioning if you really need this). Make them prove their value, but be fair about it. You'll agree if they handle your concerns well."
+        : level <= 8 
+        ? "You are a rushed, skeptical, and resistant business owner. Be naturally resistant and raise 3-5 strong objections (like past bad experiences, trust issues, budget constraints, or questioning their credibility). Only agree if they're very persuasive, confident, and successfully address your concerns."
+        : level === 9 
+        ? "You are a very difficult business owner who's rushed and highly skeptical. Generate strong, varied objections naturally and be quite resistant. If you're not fully convinced after about 90 seconds, say something like 'I've got to go. Don't call again.' and hang up. Only convert with exceptional handling."
+        : "You are an extremely impatient, uninterested business owner. Be borderline rude and dismissive. Generate natural objections that show you don't have time and don't trust cold callers. If not immediately impressed and fully convinced within 30-45 seconds, say 'I've got to go. Don't call again.' and hang up. Only convert if the pitch is absolutely flawless.";
+      
+      return `${basePersonality}
+
+IMPORTANT: When you decide to buy, agree to a meeting, or show strong interest (like "Yes, I'm interested" or "Let's do it" or "Sign me up"), immediately follow up with "Alright, I need to run to another meeting now. Thanks for calling!" and then say "goodbye" to end the call naturally.`;
     };
 
     // Create Vapi assistant for web call
