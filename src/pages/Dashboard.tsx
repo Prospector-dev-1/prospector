@@ -5,7 +5,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Badge } from '@/components/ui/badge';
 import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/integrations/supabase/client';
-import { Phone, TrendingUp, User, Settings, LogOut, CreditCard, FileText } from 'lucide-react';
+import { Phone, TrendingUp, User, Settings, LogOut, CreditCard, FileText, Sparkles } from 'lucide-react';
 interface CallRecord {
   id: string;
   difficulty_level: number;
@@ -155,6 +155,21 @@ const Dashboard = () => {
             <CardContent className="pt-0">
               <Button variant="secondary" className="w-full" size="lg">
                 Analyze Script
+              </Button>
+            </CardContent>
+          </Card>
+
+          <Card className="hover:shadow-lg transition-shadow cursor-pointer" onClick={() => navigate('/custom-script')}>
+            <CardHeader className="text-center pb-3">
+              <Sparkles className="h-8 w-8 sm:h-10 sm:w-10 text-accent mx-auto mb-2" />
+              <CardTitle className="text-base sm:text-lg">Custom Script</CardTitle>
+              <CardDescription className="text-sm">
+                Generate a personalized sales script
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="pt-0">
+              <Button variant="outline" className="w-full" size="lg">
+                Generate Script
               </Button>
             </CardContent>
           </Card>

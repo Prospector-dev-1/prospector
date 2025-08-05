@@ -10,6 +10,7 @@ import CallSimulation from "./pages/CallSimulation";
 import CallResults from "./pages/CallResults";
 import Profile from "./pages/Profile";
 import ScriptAnalysis from "./pages/ScriptAnalysis";
+import CustomScriptGenerator from "./pages/CustomScriptGenerator";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -28,6 +29,7 @@ const App = () => (
             <Route path="/call-results/:callId" element={<CallResults />} />
             <Route path="/profile" element={<Profile />} />
             <Route path="/script-analysis" element={<ScriptAnalysis />} />
+            <Route path="/custom-script" element={<CustomScriptGenerator />} />
             {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
             <Route path="*" element={<NotFound />} />
           </Routes>
