@@ -30,6 +30,7 @@ const CallSimulation = () => {
   const vapiRef = useRef<any>(null);
   const timerRef = useRef<NodeJS.Timeout | null>(null);
   const transcriptRef = useRef<string>('');
+  const callRecordIdRef = useRef<string | null>(null);
 
   useEffect(() => {
     const initVapi = async () => {
@@ -57,7 +58,8 @@ const CallSimulation = () => {
         vapiRef.current.on('call-end', () => {
           console.log('=== CALL END EVENT TRIGGERED ===');
           console.log('Call ended - duration was:', callDuration);
-          console.log('Call record ID:', callRecordId);
+          console.log('Call record ID from state:', callRecordId);
+          console.log('Call record ID from ref:', callRecordIdRef.current);
           console.log('Transcript length:', transcriptRef.current.length);
           console.log('About to call handleCallEnd...');
           handleCallEnd();
@@ -173,8 +175,14 @@ const CallSimulation = () => {
       }
 
       console.log('Call data received:', data);
+      console.log('Setting callRecordId to:', data.callRecordId);
       setCallRecordId(data.callRecordId);
+      callRecordIdRef.current = data.callRecordId; // Store in ref too
       setCallStarted(true);
+      
+      // Debug: Check if callRecordId was set properly
+      console.log('callRecordId state should now be:', data.callRecordId);
+      console.log('callRecordId ref should now be:', callRecordIdRef.current);
       
       // Start the Vapi call with the assistant
       console.log('Starting Vapi call with assistant ID:', data.assistantId);
@@ -206,7 +214,10 @@ const CallSimulation = () => {
     setIsCallActive(false);
     setCallStarted(false);
 
-    if (callRecordId) {
+    // Use the ref instead of state to avoid closure issues
+    const currentCallRecordId = callRecordIdRef.current;
+    
+    if (currentCallRecordId) {
       console.log('Call record ID exists, proceeding with analysis...');
       try {
         // Get current duration at the time of call end
@@ -217,7 +228,7 @@ const CallSimulation = () => {
         console.log('About to invoke end-call-analysis function...');
         const { data, error } = await supabase.functions.invoke('end-call-analysis', {
           body: {
-            callRecordId,
+            callRecordId: currentCallRecordId,
             transcript: transcriptRef.current || 'No transcript available',
             duration: finalDuration
           }
@@ -233,7 +244,7 @@ const CallSimulation = () => {
 
         // Navigate to results page
         console.log('Navigating to results page...');
-        navigate(`/call-results/${callRecordId}`);
+        navigate(`/call-results/${currentCallRecordId}`);
       } catch (error) {
         console.error('Error handling call end:', error);
         toast({
