@@ -128,7 +128,8 @@ Important: Stay in character throughout the entire call. Don't break character o
     const vapiData = await vapiResponse.json();
     
     if (!vapiResponse.ok) {
-      throw new Error(`Vapi error: ${vapiData.message || 'Unknown error'}`);
+      console.error('Vapi error response:', vapiData);
+      throw new Error(`Vapi error: ${vapiData.message || JSON.stringify(vapiData)}`);
     }
 
     // Create call record in database
