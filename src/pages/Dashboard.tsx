@@ -129,8 +129,8 @@ const Dashboard = () => {
 
         {/* Action Cards */}
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
-          <Card className="hover:shadow-lg transition-shadow cursor-pointer" onClick={() => navigate('/call-simulation')}>
-            <CardHeader className="text-center pb-3">
+          <Card className="hover:shadow-lg transition-shadow cursor-pointer flex flex-col" onClick={() => navigate('/call-simulation')}>
+            <CardHeader className="text-center pb-3 flex-1">
               <Phone className="h-8 w-8 sm:h-10 sm:w-10 text-primary mx-auto mb-2" />
               <CardTitle className="text-base sm:text-lg">Start Practice Call</CardTitle>
               <CardDescription className="text-sm">
@@ -138,14 +138,14 @@ const Dashboard = () => {
               </CardDescription>
             </CardHeader>
             <CardContent className="pt-0">
-              <Button className="w-full" size="lg">
+              <Button className="w-full h-12" size="lg">
                 Start New Call
               </Button>
             </CardContent>
           </Card>
 
-          <Card className="hover:shadow-lg transition-shadow cursor-pointer" onClick={() => navigate('/script-analysis')}>
-            <CardHeader className="text-center pb-3">
+          <Card className="hover:shadow-lg transition-shadow cursor-pointer flex flex-col" onClick={() => navigate('/script-analysis')}>
+            <CardHeader className="text-center pb-3 flex-1">
               <FileText className="h-8 w-8 sm:h-10 sm:w-10 text-secondary mx-auto mb-2" />
               <CardTitle className="text-base sm:text-lg">Script Analysis</CardTitle>
               <CardDescription className="text-sm">
@@ -153,14 +153,14 @@ const Dashboard = () => {
               </CardDescription>
             </CardHeader>
             <CardContent className="pt-0">
-              <Button className="w-full" size="lg">
+              <Button className="w-full h-12" size="lg">
                 Analyze Script
               </Button>
             </CardContent>
           </Card>
 
-          <Card className="hover:shadow-lg transition-shadow cursor-pointer" onClick={() => navigate('/custom-script')}>
-            <CardHeader className="text-center pb-3">
+          <Card className="hover:shadow-lg transition-shadow cursor-pointer flex flex-col" onClick={() => navigate('/custom-script')}>
+            <CardHeader className="text-center pb-3 flex-1">
               <Sparkles className="h-8 w-8 sm:h-10 sm:w-10 text-accent mx-auto mb-2" />
               <CardTitle className="text-base sm:text-lg">Custom Script</CardTitle>
               <CardDescription className="text-sm">
@@ -168,14 +168,14 @@ const Dashboard = () => {
               </CardDescription>
             </CardHeader>
             <CardContent className="pt-0">
-              <Button className="w-full" size="lg">
+              <Button className="w-full h-12" size="lg">
                 Generate Script
               </Button>
             </CardContent>
           </Card>
 
-          <Card className="hover:shadow-lg transition-shadow">
-            <CardHeader className="text-center pb-3">
+          <Card className="hover:shadow-lg transition-shadow flex flex-col">
+            <CardHeader className="text-center pb-3 flex-1">
               <TrendingUp className="h-8 w-8 sm:h-10 sm:w-10 text-accent mx-auto mb-2" />
               <CardTitle className="text-base sm:text-lg">Performance</CardTitle>
               <CardDescription className="text-sm">
@@ -183,7 +183,7 @@ const Dashboard = () => {
               </CardDescription>
             </CardHeader>
             <CardContent className="pt-0">
-              <div className="space-y-1">
+              <div className="space-y-1 mb-4">
                 <p className="text-xs sm:text-sm text-muted-foreground">
                   Total Calls: {totalCallsCount}
                 </p>
@@ -194,8 +194,8 @@ const Dashboard = () => {
             </CardContent>
           </Card>
 
-          <Card className="hover:shadow-lg transition-shadow sm:col-span-2 lg:col-span-1">
-            <CardHeader className="text-center pb-3">
+          <Card className="hover:shadow-lg transition-shadow sm:col-span-2 lg:col-span-1 flex flex-col">
+            <CardHeader className="text-center pb-3 flex-1">
               <CreditCard className="h-8 w-8 sm:h-10 sm:w-10 text-info mx-auto mb-2" />
               <CardTitle className="text-base sm:text-lg">Credits</CardTitle>
               <CardDescription className="text-sm">
@@ -203,7 +203,7 @@ const Dashboard = () => {
               </CardDescription>
             </CardHeader>
             <CardContent className="pt-0">
-              <Button className="w-full" onClick={() => navigate('/profile?tab=subscription')}>
+              <Button className="w-full h-12" onClick={() => navigate('/profile?tab=subscription')}>
                 Buy More Credits
               </Button>
             </CardContent>
