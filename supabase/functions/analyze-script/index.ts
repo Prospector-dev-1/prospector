@@ -138,13 +138,13 @@ serve(async (req) => {
     }
 
     console.log('=== STEP 9: Recording transaction ===');
-    // Record the credit transaction
+    // Record the credit transaction (amount needs to be integer, so use -50 to represent -0.5 credits)
     const { error: transactionError } = await supabase
       .from('credit_transactions')
       .insert({
         user_id: user.id,
         type: 'script_analysis',
-        amount: -0.5,
+        amount: -50, // Store as -50 to represent -0.5 credits (multiply by 100)
         description: 'Script analysis with AI feedback'
       });
 
@@ -229,7 +229,15 @@ Provide specific, actionable feedback that will help improve sales performance.`
 
     let analysis;
     try {
-      analysis = JSON.parse(analysisText);
+      // Remove markdown code blocks if present
+      let cleanedText = analysisText.trim();
+      if (cleanedText.startsWith('```json')) {
+        cleanedText = cleanedText.replace(/^```json\s*/, '').replace(/\s*```$/, '');
+      } else if (cleanedText.startsWith('```')) {
+        cleanedText = cleanedText.replace(/^```\s*/, '').replace(/\s*```$/, '');
+      }
+      
+      analysis = JSON.parse(cleanedText);
       console.log('=== STEP 13: Analysis parsed successfully ===');
     } catch (parseError) {
       console.error('=== WARNING: Failed to parse OpenAI response ===', parseError);
