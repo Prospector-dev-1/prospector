@@ -4,6 +4,8 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Slider } from '@/components/ui/slider';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
 import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/components/ui/use-toast';
@@ -17,6 +19,7 @@ const CallSimulation = () => {
   
   // Call setup states
   const [difficultyLevel, setDifficultyLevel] = useState([5]);
+  const [salesScenario, setSalesScenario] = useState("");
   const [isCallActive, setIsCallActive] = useState(false);
   const [callStarted, setCallStarted] = useState(false);
   const [isConnecting, setIsConnecting] = useState(false);
@@ -153,7 +156,10 @@ const CallSimulation = () => {
     try {
       // Start call through our edge function
       const { data, error } = await supabase.functions.invoke('start-call', {
-        body: { difficulty_level: difficultyLevel[0] }
+        body: { 
+          difficulty_level: difficultyLevel[0],
+          sales_scenario: salesScenario || "selling a website"
+        }
       });
 
       console.log('Edge function response:', { data, error });
@@ -282,6 +288,20 @@ const CallSimulation = () => {
               </CardHeader>
               <CardContent className="space-y-6">
                 <div className="space-y-4">
+                  <div>
+                    <Label htmlFor="sales-scenario">What are you selling?</Label>
+                    <Input
+                      id="sales-scenario"
+                      placeholder="e.g., website design services, insurance, software, consulting..."
+                      value={salesScenario}
+                      onChange={(e) => setSalesScenario(e.target.value)}
+                      className="mt-1"
+                    />
+                    <p className="text-xs text-muted-foreground mt-1">
+                      Describe what you're selling so the AI prospect knows what to respond to
+                    </p>
+                  </div>
+                  
                   <div className="flex items-center justify-between">
                     <span className="text-sm font-medium">Difficulty: {difficultyLevel[0]}/10</span>
                     <Badge className={getDifficultyColor(difficultyLevel[0])}>
@@ -319,14 +339,14 @@ const CallSimulation = () => {
                 <div className="bg-muted p-4 rounded-lg">
                   <h4 className="font-medium mb-2">Your Mission:</h4>
                   <p className="text-sm text-muted-foreground">
-                    You're a sales representative calling a business owner who doesn't have a website. 
-                    Your goal is to convince them they need one and schedule a follow-up meeting or close the sale.
+                    You're calling a business owner to sell them {salesScenario || "your product/service"}. 
+                    Your goal is to build rapport, handle objections, and either close the sale or schedule a follow-up meeting.
                   </p>
                 </div>
 
                 <Button 
                   onClick={startCall} 
-                  disabled={isConnecting || (profile.subscription_type !== 'premium' && profile.credits <= 0)}
+                  disabled={isConnecting || !salesScenario.trim() || (profile.subscription_type !== 'premium' && profile.credits <= 0)}
                   className="w-full"
                   size="lg"
                 >

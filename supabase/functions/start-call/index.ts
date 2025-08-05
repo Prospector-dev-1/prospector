@@ -12,7 +12,7 @@ serve(async (req) => {
   }
 
   try {
-    const { difficulty_level } = await req.json();
+    const { difficulty_level, sales_scenario } = await req.json();
     
     // Authenticate user
     const authHeader = req.headers.get('Authorization')!;
@@ -63,7 +63,7 @@ serve(async (req) => {
           user_id: userData.user.id,
           amount: -1,
           type: 'deduction',
-          description: `AI practice call - Difficulty Level ${difficulty_level}`
+           description: `AI practice call - Difficulty Level ${difficulty_level} - Sales Scenario: ${sales_scenario || "General Sales"}`
         });
     }
 
@@ -87,15 +87,15 @@ serve(async (req) => {
     // Generate prospect personality based on difficulty
     const getProspectPersonality = (level: number) => {
       const personalities = {
-        1: "You are Sarah, a friendly small business owner who is very interested in getting a website. You're eager to learn and ask clarifying questions. You have minimal objections and are easy to convince.",
+        1: "You are Sarah, a friendly small business owner who is very interested in what the caller is offering. You're eager to learn and ask clarifying questions. You have minimal objections and are easy to convince.",
         2: "You are Mike, a business owner who is somewhat interested but has basic concerns about cost. You ask a few questions about pricing but are generally open to the idea.",
         3: "You are Lisa, a business owner who is moderately interested but wants to understand the value. You ask about ROI and have some budget concerns.",
-        4: "You are Tom, a business owner who is cautious about new investments. You have concerns about time commitment and whether you really need a website.",
-        5: "You are Jennifer, a business owner who is neutral. You have standard objections about budget, timing, and whether websites actually help businesses.",
+        4: "You are Tom, a business owner who is cautious about new investments. You have concerns about time commitment and whether you really need what they're selling.",
+        5: "You are Jennifer, a business owner who is neutral. You have standard objections about budget, timing, and whether this product/service actually helps businesses.",
         6: "You are David, a business owner who is somewhat skeptical. You question the caller's credibility and have concerns about being scammed or wasting money.",
         7: "You are Rachel, a business owner who is quite resistant. You've had bad experiences with salespeople before and are defensive. You have strong price objections. If the caller uses pushy sales tactics, sounds unprofessional, or can't answer your questions properly, you will hang up after giving them one warning.",
         8: "You are Steve, a business owner who is very skeptical and resistant. You interrupt frequently, question everything, and have multiple strong objections about cost, time, and effectiveness. If the caller sounds like a scammer, uses high-pressure tactics, or wastes your time with a poor pitch, you will hang up. You have no patience for bad salespeople.",
-        9: "You are Karen, a business owner who is extremely difficult. You're rude, dismissive, and bring up every possible objection. You're convinced you don't need a website and are annoyed by the call. If the caller stutters, sounds nervous, uses bad grammar, or can't immediately prove their value, you will hang up within the first minute. You hang up by saying something like 'This is a waste of my time, don't call me again!' and then end the call.",
+        9: "You are Karen, a business owner who is extremely difficult. You're rude, dismissive, and bring up every possible objection. You're convinced you don't need what they're selling and are annoyed by the call. If the caller stutters, sounds nervous, uses bad grammar, or can't immediately prove their value, you will hang up within the first minute. You hang up by saying something like 'This is a waste of my time, don't call me again!' and then end the call.",
         10: "You are Frank, an extremely hostile and aggressive business owner. You HATE cold calls and immediately become furious when called. You interrupt constantly, yell, use phrases like 'I'M NOT INTERESTED!', 'STOP WASTING MY TIME!', 'GET OFF MY PHONE!', and 'DON'T CALL ME AGAIN!' If the caller doesn't immediately hook you with a PERFECT opening (within 15-20 seconds), if they sound scripted, nervous, or unprofessional, or if they can't handle your aggressive objections expertly, you will hang up immediately. You hang up by shouting something like 'I'M DONE WITH THIS GARBAGE!' or 'NEVER CALL ME AGAIN!' and then end the call. You are EXTREMELY rude, hostile, and nearly impossible to convince."
       };
       return personalities[level as keyof typeof personalities] || personalities[5];
@@ -118,7 +118,7 @@ serve(async (req) => {
               role: 'system',
               content: `${getProspectPersonality(difficulty_level)} 
 
-The caller is trying to sell you a website for your business. You should respond naturally and in character. Keep responses conversational and realistic. If they handle your objections well, you can gradually become more interested. The difficulty level is ${difficulty_level}/10.
+The caller is trying to sell you: ${sales_scenario || "a product or service"}. You should respond naturally and in character. Keep responses conversational and realistic. If they handle your objections well, you can gradually become more interested. The difficulty level is ${difficulty_level}/10.
 
 ${difficulty_level >= 7 ? `
 IMPORTANT HANG-UP INSTRUCTIONS: When you decide to hang up (based on your personality), say your final hang-up line and then immediately say "goodbye" to end the call. Examples:
