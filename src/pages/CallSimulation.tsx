@@ -289,7 +289,7 @@ const CallSimulation = () => {
               <CardContent className="space-y-6">
                 <div className="space-y-4">
                   <div>
-                    <Label htmlFor="sales-scenario">What are you selling?</Label>
+                    <Label htmlFor="sales-scenario">What are you selling? (for your reference)</Label>
                     <Input
                       id="sales-scenario"
                       placeholder="e.g., website design services, insurance, software, consulting..."
@@ -298,7 +298,7 @@ const CallSimulation = () => {
                       className="mt-1"
                     />
                     <p className="text-xs text-muted-foreground mt-1">
-                      Describe what you're selling so the AI prospect knows what to respond to
+                      This is just for logging - the AI prospect won't know what you're selling until you tell them!
                     </p>
                   </div>
                   
@@ -340,6 +340,7 @@ const CallSimulation = () => {
                   <h4 className="font-medium mb-2">Your Mission:</h4>
                   <p className="text-sm text-muted-foreground">
                     You're calling a business owner to sell them {salesScenario || "your product/service"}. 
+                    The prospect doesn't know what you're selling yet - you need to introduce yourself and your offering naturally. 
                     Your goal is to build rapport, handle objections, and either close the sale or schedule a follow-up meeting.
                   </p>
                 </div>
