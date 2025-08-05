@@ -162,6 +162,15 @@ const Profile = () => {
   };
 
   const handlePasswordChange = async () => {
+    if (!passwordForm.currentPassword) {
+      toast({
+        title: "Error",
+        description: "Please enter your current password",
+        variant: "destructive"
+      });
+      return;
+    }
+
     if (passwordForm.newPassword !== passwordForm.confirmPassword) {
       toast({
         title: "Error",
@@ -181,6 +190,22 @@ const Profile = () => {
     }
 
     try {
+      // First verify current password by trying to sign in
+      const { error: signInError } = await supabase.auth.signInWithPassword({
+        email: user?.email || '',
+        password: passwordForm.currentPassword
+      });
+
+      if (signInError) {
+        toast({
+          title: "Error",
+          description: "Current password is incorrect",
+          variant: "destructive"
+        });
+        return;
+      }
+
+      // Update password if current password is correct
       const { error } = await supabase.auth.updateUser({
         password: passwordForm.newPassword
       });
@@ -596,6 +621,16 @@ const Profile = () => {
                 
                 {showPasswordForm && (
                   <div className="space-y-4 pt-4 border-t">
+                    <div>
+                      <Label htmlFor="currentPassword">Current Password</Label>
+                      <Input
+                        id="currentPassword"
+                        type="password"
+                        value={passwordForm.currentPassword}
+                        onChange={(e) => setPasswordForm(prev => ({ ...prev, currentPassword: e.target.value }))}
+                        placeholder="Enter current password"
+                      />
+                    </div>
                     <div>
                       <Label htmlFor="newPassword">New Password</Label>
                       <Input
