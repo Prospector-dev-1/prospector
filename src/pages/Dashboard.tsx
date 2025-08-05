@@ -174,7 +174,7 @@ const Dashboard = () => {
             </CardContent>
           </Card>
 
-          <Card className="hover:shadow-lg transition-shadow sm:col-span-2 lg:col-span-1 flex flex-col">
+          <Card className="hover:shadow-lg transition-shadow flex flex-col">
             <CardHeader className="text-center pb-3 flex-1">
               <CreditCard className="h-8 w-8 sm:h-10 sm:w-10 text-info mx-auto mb-2" />
               <CardTitle className="text-base sm:text-lg">Credits</CardTitle>
