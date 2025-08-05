@@ -645,7 +645,7 @@ const Profile = () => {
                 <CardTitle>Change Email Address</CardTitle>
                 <CardDescription>Update your email address. You'll need to confirm the change via email.</CardDescription>
               </CardHeader>
-              <CardContent className="space-y-4">
+              <CardContent className="space-y-3 p-3 sm:p-6 sm:space-y-4">
                 <div className="flex items-center justify-between">
                   <div>
                     <p className="font-medium">Current Email</p>
