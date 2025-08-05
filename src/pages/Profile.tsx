@@ -53,10 +53,21 @@ const Profile = () => {
   const [callHistory, setCallHistory] = useState<CallHistory[]>([]);
   const [loading, setLoading] = useState(true);
   const [isEditing, setIsEditing] = useState(false);
+  const [showPasswordForm, setShowPasswordForm] = useState(false);
+  const [showEmailForm, setShowEmailForm] = useState(false);
   const [editForm, setEditForm] = useState({
     first_name: '',
     last_name: '',
     phone_number: ''
+  });
+  const [passwordForm, setPasswordForm] = useState({
+    currentPassword: '',
+    newPassword: '',
+    confirmPassword: ''
+  });
+  const [emailForm, setEmailForm] = useState({
+    newEmail: '',
+    password: ''
   });
 
   useEffect(() => {
@@ -147,6 +158,90 @@ const Profile = () => {
       navigate('/auth');
     } catch (error) {
       console.error('Error logging out:', error);
+    }
+  };
+
+  const handlePasswordChange = async () => {
+    if (passwordForm.newPassword !== passwordForm.confirmPassword) {
+      toast({
+        title: "Error",
+        description: "New passwords do not match",
+        variant: "destructive"
+      });
+      return;
+    }
+
+    if (passwordForm.newPassword.length < 8) {
+      toast({
+        title: "Error", 
+        description: "Password must be at least 8 characters long",
+        variant: "destructive"
+      });
+      return;
+    }
+
+    try {
+      const { error } = await supabase.auth.updateUser({
+        password: passwordForm.newPassword
+      });
+
+      if (error) throw error;
+
+      toast({
+        title: "Success",
+        description: "Password updated successfully"
+      });
+
+      setPasswordForm({
+        currentPassword: '',
+        newPassword: '',
+        confirmPassword: ''
+      });
+      setShowPasswordForm(false);
+    } catch (error: any) {
+      console.error('Error updating password:', error);
+      toast({
+        title: "Error",
+        description: error.message || "Failed to update password",
+        variant: "destructive"
+      });
+    }
+  };
+
+  const handleEmailChange = async () => {
+    if (!emailForm.newEmail) {
+      toast({
+        title: "Error",
+        description: "Please enter a new email address",
+        variant: "destructive"
+      });
+      return;
+    }
+
+    try {
+      const { error } = await supabase.auth.updateUser({
+        email: emailForm.newEmail
+      });
+
+      if (error) throw error;
+
+      toast({
+        title: "Success",
+        description: "Confirmation email sent to your new email address. Please check your email to confirm the change.",
+      });
+
+      setEmailForm({
+        newEmail: '',
+        password: ''
+      });
+      setShowEmailForm(false);
+    } catch (error: any) {
+      console.error('Error updating email:', error);
+      toast({
+        title: "Error",
+        description: error.message || "Failed to update email",
+        variant: "destructive"
+      });
     }
   };
 
@@ -269,7 +364,7 @@ const Profile = () => {
                       disabled 
                       className="bg-muted"
                     />
-                    <p className="text-xs text-muted-foreground mt-1">Email cannot be changed</p>
+                    <p className="text-xs text-muted-foreground mt-1">Change email in Settings tab</p>
                   </div>
                   <div>
                     <Label htmlFor="phone">Phone Number</Label>
@@ -420,36 +515,137 @@ const Profile = () => {
 
           {/* Settings Tab */}
           <TabsContent value="settings" className="space-y-6">
+            {/* Email Change Section */}
             <Card>
               <CardHeader>
-                <CardTitle>Account Settings</CardTitle>
-                <CardDescription>Manage your account preferences and security</CardDescription>
+                <CardTitle>Change Email Address</CardTitle>
+                <CardDescription>Update your email address. You'll need to confirm the change via email.</CardDescription>
               </CardHeader>
               <CardContent className="space-y-4">
-                <div className="space-y-4">
-                  <h4 className="font-medium">Password</h4>
-                  <Button variant="outline" disabled>
-                    Change Password (Coming Soon)
-                  </Button>
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="font-medium">Current Email</p>
+                    <p className="text-sm text-muted-foreground">{profile.email}</p>
+                  </div>
+                  {!showEmailForm ? (
+                    <Button variant="outline" onClick={() => setShowEmailForm(true)}>
+                      Change Email
+                    </Button>
+                  ) : (
+                    <div className="flex gap-2">
+                      <Button variant="outline" onClick={() => {
+                        setShowEmailForm(false);
+                        setEmailForm({ newEmail: '', password: '' });
+                      }}>
+                        Cancel
+                      </Button>
+                      <Button onClick={handleEmailChange}>
+                        Update Email
+                      </Button>
+                    </div>
+                  )}
                 </div>
                 
-                <Separator />
-                
-                <div className="space-y-4">
-                  <h4 className="font-medium">Data Export</h4>
-                  <Button variant="outline" disabled>
-                    Download My Data (Coming Soon)
-                  </Button>
+                {showEmailForm && (
+                  <div className="space-y-4 pt-4 border-t">
+                    <div>
+                      <Label htmlFor="newEmail">New Email Address</Label>
+                      <Input
+                        id="newEmail"
+                        type="email"
+                        value={emailForm.newEmail}
+                        onChange={(e) => setEmailForm(prev => ({ ...prev, newEmail: e.target.value }))}
+                        placeholder="Enter new email address"
+                      />
+                    </div>
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+
+            {/* Password Change Section */}
+            <Card>
+              <CardHeader>
+                <CardTitle>Change Password</CardTitle>
+                <CardDescription>Update your account password. Use a strong password for better security.</CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="font-medium">Password</p>
+                    <p className="text-sm text-muted-foreground">Last updated: Unknown</p>
+                  </div>
+                  {!showPasswordForm ? (
+                    <Button variant="outline" onClick={() => setShowPasswordForm(true)}>
+                      Change Password
+                    </Button>
+                  ) : (
+                    <div className="flex gap-2">
+                      <Button variant="outline" onClick={() => {
+                        setShowPasswordForm(false);
+                        setPasswordForm({ currentPassword: '', newPassword: '', confirmPassword: '' });
+                      }}>
+                        Cancel
+                      </Button>
+                      <Button onClick={handlePasswordChange}>
+                        Update Password
+                      </Button>
+                    </div>
+                  )}
                 </div>
                 
-                <Separator />
-                
-                <div className="space-y-4">
-                  <h4 className="font-medium text-red-600">Danger Zone</h4>
-                  <Button variant="destructive" disabled>
-                    Delete Account (Coming Soon)
-                  </Button>
-                </div>
+                {showPasswordForm && (
+                  <div className="space-y-4 pt-4 border-t">
+                    <div>
+                      <Label htmlFor="newPassword">New Password</Label>
+                      <Input
+                        id="newPassword"
+                        type="password"
+                        value={passwordForm.newPassword}
+                        onChange={(e) => setPasswordForm(prev => ({ ...prev, newPassword: e.target.value }))}
+                        placeholder="Enter new password (min 8 characters)"
+                      />
+                    </div>
+                    <div>
+                      <Label htmlFor="confirmPassword">Confirm New Password</Label>
+                      <Input
+                        id="confirmPassword"
+                        type="password"
+                        value={passwordForm.confirmPassword}
+                        onChange={(e) => setPasswordForm(prev => ({ ...prev, confirmPassword: e.target.value }))}
+                        placeholder="Confirm new password"
+                      />
+                    </div>
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+            
+            <Separator />
+            
+            {/* Data Export Section */}
+            <Card>
+              <CardHeader>
+                <CardTitle>Data Export</CardTitle>
+                <CardDescription>Download your personal data and call history</CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <Button variant="outline" disabled>
+                  Download My Data (Coming Soon)
+                </Button>
+              </CardContent>
+            </Card>
+            
+            {/* Danger Zone */}
+            <Card>
+              <CardHeader>
+                <CardTitle className="text-red-600">Danger Zone</CardTitle>
+                <CardDescription>Irreversible account actions</CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <Button variant="destructive" disabled>
+                  Delete Account (Coming Soon)
+                </Button>
               </CardContent>
             </Card>
           </TabsContent>
