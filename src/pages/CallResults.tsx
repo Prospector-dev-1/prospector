@@ -19,6 +19,7 @@ interface CallRecord {
   tone_score: number;
   closing_score: number;
   overall_score: number;
+  successful_sale: boolean;
   transcript: string;
   ai_feedback: string;
   created_at: string;
@@ -159,6 +160,14 @@ const CallResults = () => {
             </CardDescription>
           </CardHeader>
           <CardContent>
+            <div className="mb-6 text-center">
+              <div className="inline-flex items-center space-x-2">
+                <span className="text-sm text-muted-foreground">Sale Result:</span>
+                <Badge variant={callRecord.successful_sale ? "default" : "secondary"} className="ml-2">
+                  {callRecord.successful_sale ? "✅ Successful Sale" : "❌ No Sale"}
+                </Badge>
+              </div>
+            </div>
             <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-center">
               <div>
                 <p className="text-sm text-muted-foreground">Difficulty</p>

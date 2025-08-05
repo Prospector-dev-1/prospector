@@ -56,6 +56,7 @@ Please provide scores and brief feedback for:
 4. Persuasiveness - How compelling were their arguments and value propositions?
 5. Tone - How appropriate and engaging was their tone?
 6. Closing Ability - How effectively did they attempt to close or advance the sale?
+7. Sale Success - Did the prospect agree to buy, schedule a meeting, or show strong interest? (true/false)
 
 Respond in JSON format:
 {
@@ -66,6 +67,7 @@ Respond in JSON format:
   "tone_score": number,
   "closing_score": number,
   "overall_score": number,
+  "successful_sale": boolean,
   "feedback": "Detailed feedback with specific examples and suggestions for improvement"
 }`;
 
@@ -105,6 +107,7 @@ Respond in JSON format:
         tone_score: 5,
         closing_score: 5,
         overall_score: 5,
+        successful_sale: false,
         feedback: "Analysis could not be completed. Please try again."
       };
     }
@@ -121,6 +124,7 @@ Respond in JSON format:
         tone_score: analysis.tone_score,
         closing_score: analysis.closing_score,
         overall_score: analysis.overall_score,
+        successful_sale: analysis.successful_sale,
         transcript: transcript,
         ai_feedback: analysis.feedback,
         call_status: 'completed'
