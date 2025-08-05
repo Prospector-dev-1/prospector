@@ -24,6 +24,7 @@ const Dashboard = () => {
   const { user, profile, signOut } = useAuth();
   const [recentCalls, setRecentCalls] = useState<CallRecord[]>([]);
   const [totalCallsCount, setTotalCallsCount] = useState<number>(0);
+  const [thisWeekCallsCount, setThisWeekCallsCount] = useState<number>(0);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -59,6 +60,20 @@ const Dashboard = () => {
         console.error('Error fetching call count:', countError);
       } else {
         setTotalCallsCount(count || 0);
+      }
+
+      // Fetch count of calls made this week
+      const oneWeekAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString();
+      const { count: thisWeekCount, error: thisWeekError } = await supabase
+        .from('calls')
+        .select('*', { count: 'exact', head: true })
+        .eq('user_id', user.id)
+        .gte('created_at', oneWeekAgo);
+
+      if (thisWeekError) {
+        console.error('Error fetching this week call count:', thisWeekError);
+      } else {
+        setThisWeekCallsCount(thisWeekCount || 0);
       }
 
     } catch (error) {
@@ -147,9 +162,7 @@ const Dashboard = () => {
                   Total Calls: {totalCallsCount}
                 </p>
                 <p className="text-sm text-muted-foreground">
-                  This Week: {recentCalls.filter(call => 
-                    new Date(call.created_at) > new Date(Date.now() - 7 * 24 * 60 * 60 * 1000)
-                  ).length}
+                  This Week: {thisWeekCallsCount}
                 </p>
               </div>
             </CardContent>
