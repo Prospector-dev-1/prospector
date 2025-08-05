@@ -112,43 +112,41 @@ serve(async (req) => {
     // For any participation, use AI analysis for rigorous scoring
     console.log('Participation detected, proceeding with rigorous AI analysis');
     const analysisPrompt = `
-Analyze this cold calling transcript and provide scores (1-10) for each category. The caller was trying to sell a website to a business owner.
+Analyze this cold calling transcript and provide detailed, personalized feedback. The transcript shows a conversation between a CALLER (salesperson) and a PROSPECT (business owner).
 
-IMPORTANT: Only analyze and score if the CALLER (salesperson) actually spoke and made a sales pitch. If the transcript shows only the prospect speaking or very minimal caller participation, return all scores as 0 and indicate insufficient data.
-
-Transcript:
+TRANSCRIPT:
 ${transcript}
 
-Please analyze WHO is speaking in this transcript:
-- The CALLER (salesperson) - this is who we're evaluating
-- The PROSPECT (business owner) - this is who the caller is trying to sell to
+TASK: Analyze the CALLER'S performance only. Provide scores (1-10) for each category and detailed personalized feedback.
 
-If the caller didn't make a meaningful sales attempt (less than 20 words of sales content), return all scores as 0 with feedback explaining insufficient sales attempt.
+SCORING GUIDELINES:
+- 1-3: Poor performance, major issues
+- 4-6: Average performance, needs improvement  
+- 7-8: Good performance, minor tweaks needed
+- 9-10: Excellent performance, professional level
 
-If there IS a meaningful sales conversation from the caller, provide scores and brief feedback for:
-1. ❓ Objection Handling (objection_handling_score) - Did they turn around the objection or ignore it?
-2. 🧠 Confidence (confidence_score) - Was their tone assertive or hesitant?
-3. 🎯 Clarity (clarity_score) - Was their message focused?
-4. 💡 Persuasion (persuasiveness_score) - Did they appeal emotionally or logically?
-5. 👂 Listening & Response (tone_score) - Did they tailor answers or script-dump?
-6. 📋 Overall Pitch / Script (overall_pitch_score) - How well structured and delivered was their overall pitch?
-7. Closing Ability (closing_score) - How effectively did they attempt to close or advance the sale?
-8. Sale Success - Did the prospect agree to buy, schedule a meeting, or show strong interest? (true/false)
+ANALYSIS REQUIREMENTS:
+1. Quote specific things the caller said (good and bad)
+2. Identify what the caller did well
+3. Identify specific areas for improvement
+4. Give actionable advice for next time
 
-Respond in JSON format:
+Respond in this EXACT JSON format:
 {
-  "confidence_score": number,
-  "objection_handling_score": number,
-  "clarity_score": number,
-  "persuasiveness_score": number,
-  "tone_score": number,
-  "overall_pitch_score": number,
-  "closing_score": number,
-  "overall_score": number,
-  "successful_sale": boolean,
-  "feedback": "Detailed feedback with specific examples and suggestions for improvement. If insufficient data, explain that the caller needs to actually participate in the conversation to receive meaningful feedback."
+  "confidence_score": [1-10 number],
+  "objection_handling_score": [1-10 number], 
+  "clarity_score": [1-10 number],
+  "persuasiveness_score": [1-10 number],
+  "tone_score": [1-10 number],
+  "overall_pitch_score": [1-10 number],
+  "closing_score": [1-10 number],
+  "overall_score": [1-10 number],
+  "successful_sale": [true/false],
+  "feedback": "WHAT YOU DID WELL:\\n[Specific examples from the call]\\n\\nAREAS FOR IMPROVEMENT:\\n[Specific issues with quotes]\\n\\nHOW TO IMPROVE:\\n[Actionable advice for next call]"
 }`;
 
+    console.log('Sending analysis prompt to OpenAI...');
+    
     const openAIResponse = await fetch('https://api.openai.com/v1/chat/completions', {
       method: 'POST',
       headers: {
@@ -160,18 +158,20 @@ Respond in JSON format:
         messages: [
           { 
             role: 'system', 
-            content: 'You are an expert sales coach who analyzes cold calling performance. You MUST respond with valid JSON only. Provide honest, constructive feedback with specific examples from the transcript.' 
+            content: 'You are an expert sales coach. You MUST respond with valid JSON only. Analyze cold calling performance and provide specific, actionable feedback with quotes from the transcript.' 
           },
           { role: 'user', content: analysisPrompt }
         ],
-        temperature: 0.1,
+        temperature: 0.2,
+        max_tokens: 1000,
       }),
     });
 
     console.log('OpenAI response status:', openAIResponse.status);
     if (!openAIResponse.ok) {
-      console.log('OpenAI API error:', await openAIResponse.text());
-      throw new Error(`OpenAI API failed with status ${openAIResponse.status}`);
+      const errorText = await openAIResponse.text();
+      console.log('OpenAI API error:', errorText);
+      throw new Error(`OpenAI API failed with status ${openAIResponse.status}: ${errorText}`);
     }
 
     const openAIData = await openAIResponse.json();
