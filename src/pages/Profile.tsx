@@ -638,15 +638,15 @@ const Profile = () => {
           </TabsContent>
 
           {/* Settings Tab */}
-          <TabsContent value="settings" className="space-y-6">
+          <TabsContent value="settings" className="space-y-3 sm:space-y-6">
             {/* Email Change Section */}
             <Card>
-              <CardHeader>
-                <CardTitle>Change Email Address</CardTitle>
-                <CardDescription>Update your email address. You'll need to confirm the change via email.</CardDescription>
+              <CardHeader className="p-3 sm:p-6 pb-2 sm:pb-6">
+                <CardTitle className="text-base sm:text-lg">Change Email Address</CardTitle>
+                <CardDescription className="text-sm">Update your email address. You'll need to confirm the change via email.</CardDescription>
               </CardHeader>
               <CardContent className="space-y-3 p-3 sm:p-6 sm:space-y-4">
-                <div className="flex items-center justify-between">
+                <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 sm:gap-0">
                   <div>
                     <p className="font-medium">Current Email</p>
                     <p className="text-sm text-muted-foreground">{profile.email}</p>
@@ -656,14 +656,14 @@ const Profile = () => {
                       Change Email
                     </Button>
                   ) : (
-                    <div className="flex gap-2">
-                      <Button variant="outline" onClick={() => {
+                    <div className="flex flex-col sm:flex-row gap-2 w-full sm:w-auto">
+                      <Button variant="outline" className="w-full sm:w-auto" onClick={() => {
                         setShowEmailForm(false);
                         setEmailForm({ newEmail: '', password: '' });
                       }}>
                         Cancel
                       </Button>
-                      <Button onClick={handleEmailChange}>
+                      <Button className="w-full sm:w-auto" onClick={handleEmailChange}>
                         Update Email
                       </Button>
                     </div>
@@ -689,11 +689,11 @@ const Profile = () => {
 
             {/* Password Change Section */}
             <Card>
-              <CardHeader>
-                <CardTitle>Change Password</CardTitle>
-                <CardDescription>Update your account password. Use a strong password for better security.</CardDescription>
+              <CardHeader className="p-3 sm:p-6 pb-2 sm:pb-6">
+                <CardTitle className="text-base sm:text-lg">Change Password</CardTitle>
+                <CardDescription className="text-sm">Update your account password. Use a strong password for better security.</CardDescription>
               </CardHeader>
-              <CardContent className="space-y-4">
+              <CardContent className="space-y-3 p-3 sm:p-6 sm:space-y-4">
                 <div className="flex items-center justify-between">
                   <div>
                     <p className="font-medium">Password</p>
@@ -759,11 +759,11 @@ const Profile = () => {
             
             {/* Data Export Section */}
             <Card>
-              <CardHeader>
-                <CardTitle>Data Export</CardTitle>
-                <CardDescription>Download your personal data and call history</CardDescription>
+              <CardHeader className="p-3 sm:p-6 pb-2 sm:pb-6">
+                <CardTitle className="text-base sm:text-lg">Data Export</CardTitle>
+                <CardDescription className="text-sm">Download your personal data and call history</CardDescription>
               </CardHeader>
-              <CardContent className="space-y-4">
+              <CardContent className="space-y-3 p-3 sm:p-6 sm:space-y-4">
                 <Button variant="outline" onClick={handleDataExport}>
                   Download My Data
                 </Button>
@@ -772,11 +772,11 @@ const Profile = () => {
             
             {/* Danger Zone */}
             <Card>
-              <CardHeader>
-                <CardTitle className="text-red-600">Danger Zone</CardTitle>
-                <CardDescription>Irreversible account actions</CardDescription>
+              <CardHeader className="p-3 sm:p-6 pb-2 sm:pb-6">
+                <CardTitle className="text-base sm:text-lg text-red-600">Danger Zone</CardTitle>
+                <CardDescription className="text-sm">Irreversible account actions</CardDescription>
               </CardHeader>
-              <CardContent className="space-y-4">
+              <CardContent className="space-y-3 p-3 sm:p-6 sm:space-y-4">
                 <Button variant="destructive" onClick={handleDeleteAccount}>
                   Delete Account
                 </Button>
