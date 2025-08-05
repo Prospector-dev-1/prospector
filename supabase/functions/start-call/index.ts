@@ -157,8 +157,8 @@ Important: Stay in character throughout the entire call. You don't know what the
         ]
       },
       voice: {
-        provider: 'azure',
-        voiceId: getVoiceForDifficulty(difficulty_level)
+        provider: 'openai',
+        voiceId: 'alloy'
       },
       firstMessage: difficulty_level <= 3 
         ? "Hello? Who is this?" 
