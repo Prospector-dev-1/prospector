@@ -31,6 +31,7 @@ const CallSimulation = () => {
   const timerRef = useRef<NodeJS.Timeout | null>(null);
   const transcriptRef = useRef<string>('');
   const callRecordIdRef = useRef<string | null>(null);
+  const callDurationRef = useRef<number>(0);
 
   useEffect(() => {
     const initVapi = async () => {
@@ -108,7 +109,11 @@ const CallSimulation = () => {
 
   const startTimer = () => {
     timerRef.current = setInterval(() => {
-      setCallDuration(prev => prev + 1);
+      setCallDuration(prev => {
+        const newDuration = prev + 1;
+        callDurationRef.current = newDuration; // Keep ref in sync
+        return newDuration;
+      });
     }, 1000);
   };
 
@@ -220,9 +225,9 @@ const CallSimulation = () => {
     if (currentCallRecordId) {
       console.log('Call record ID exists, proceeding with analysis...');
       try {
-        // Get current duration at the time of call end
-        const finalDuration = callDuration;
-        console.log('Sending to analysis - Duration:', finalDuration, 'Transcript:', transcriptRef.current);
+        // Get current duration at the time of call end from ref
+        const finalDuration = callDurationRef.current;
+        console.log('Sending to analysis - Duration from ref:', finalDuration, 'Duration from state:', callDuration, 'Transcript:', transcriptRef.current);
         
         // Send transcript for analysis (even if empty)
         console.log('About to invoke end-call-analysis function...');
@@ -257,10 +262,12 @@ const CallSimulation = () => {
       console.error('No call record ID available for analysis');
     }
 
-    // Reset state
+    // Reset state and refs
     console.log('Resetting state...');
     setCallDuration(0);
+    callDurationRef.current = 0;
     setCallRecordId(null);
+    callRecordIdRef.current = null;
     transcriptRef.current = '';
     console.log('=== HANDLE CALL END FUNCTION COMPLETED ===');
   };
