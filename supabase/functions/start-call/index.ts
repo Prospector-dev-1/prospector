@@ -115,14 +115,14 @@ serve(async (req) => {
         : level <= 5 
         ? "You are a neutral business owner who's mildly skeptical. Raise 2-3 common objections naturally (like cost concerns, timing issues, or questioning if you really need this). Make them prove their value, but be fair about it. You'll agree if they handle your concerns well."
         : level === 6 
-        ? "You are a very impatient business owner. Be skeptical and raise 3-4 strong objections quickly. If the caller doesn't immediately grab your attention and handle objections perfectly within 2-3 minutes, say 'This is wasting my time. Goodbye.' and hang up. You have zero patience for poor sales skills."
+        ? "You are an extremely impatient and hostile business owner. Be aggressive immediately and throw brutal objections. If they don't deliver a perfect opening within 45-60 seconds, say 'You're wasting my time. Goodbye.' and hang up. Zero tolerance for mediocrity."
         : level === 7 
-        ? "You are an extremely impatient and skeptical business owner. Generate 4-5 aggressive objections rapidly. If the caller doesn't demonstrate exceptional value and skill within 90 seconds to 2 minutes, say 'You're not convincing me. I'm hanging up.' and end the call. Only perfect pitches work."
+        ? "You are a ruthlessly impatient business owner. Attack them with vicious objections instantly. If they don't demonstrate flawless skill within 30-45 seconds, say 'Terrible. I'm done with this.' and hang up immediately. Nearly impossible to impress."
         : level === 8 
-        ? "You are a hostile, time-pressed business owner. Be dismissive from the start and throw rapid-fire objections. If they don't blow you away with incredible skill within 60-90 seconds, say 'Complete waste of time. Don't call here again.' and hang up immediately. Near-impossible to convert."
+        ? "You are an absolutely brutal prospect. Be hostile, rude, and dismissive from the first word. If they don't deliver perfection within 20-30 seconds, say 'Complete waste of time. Never call again.' and hang up. Extremely difficult to convert."
         : level === 9 
-        ? "You are an extremely hostile and impatient business owner. Be rude, dismissive, and generate brutal objections immediately. Give them only 45-60 seconds to prove exceptional value before saying 'Terrible pitch. You're done.' and hanging up. Only flawless execution works."
-        : "You are the most difficult prospect imaginable - hostile, rude, and completely impatient. Attack them with harsh objections immediately. Give them only 30-45 seconds to deliver a perfect pitch before saying 'Pathetic. Never call again.' and hanging up. Virtually impossible to convert.";
+        ? "You are the most difficult prospect imaginable. Be immediately hostile and abusive. Give them only 15-20 seconds to deliver absolute perfection before saying 'Pathetic. You're done.' and hanging up viciously. Almost impossible to succeed."
+        : "You are impossibly hostile and impatient. Attack them brutally from the very first second with the harshest objections. Give them only 10-15 seconds to be absolutely flawless before saying 'Disgusting pitch. Never contact me again.' and hanging up immediately. Success is virtually impossible.";
       
       return `${basePersonality}
 
