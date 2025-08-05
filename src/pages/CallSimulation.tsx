@@ -32,46 +32,63 @@ const CallSimulation = () => {
   const transcriptRef = useRef<string>('');
 
   useEffect(() => {
-    // Initialize Vapi with public key
-    vapiRef.current = new Vapi("18174775-469e-4464-ba7a-9623e0b71e80");
-    
-    // Set up event listeners
-    vapiRef.current.on('call-start', () => {
-      console.log('Call started');
-      setIsCallActive(true);
-      setIsConnecting(false);
-      startTimer();
-    });
+    const initVapi = async () => {
+      try {
+        // Get the public key from our edge function
+        const { data: keyData, error: keyError } = await supabase.functions.invoke('get-vapi-key');
+        
+        if (keyError || !keyData?.publicKey) {
+          console.error('Failed to get Vapi public key:', keyError);
+          return;
+        }
 
-    vapiRef.current.on('call-end', () => {
-      console.log('Call ended');
-      handleCallEnd();
-    });
+        // Initialize Vapi with public key
+        vapiRef.current = new Vapi(keyData.publicKey);
+        console.log('Vapi initialized with public key');
+        
+        // Set up event listeners
+        vapiRef.current.on('call-start', () => {
+          console.log('Call started');
+          setIsCallActive(true);
+          setIsConnecting(false);
+          startTimer();
+        });
 
-    vapiRef.current.on('speech-start', () => {
-      console.log('Speech started');
-    });
+        vapiRef.current.on('call-end', () => {
+          console.log('Call ended');
+          handleCallEnd();
+        });
 
-    vapiRef.current.on('speech-end', () => {
-      console.log('Speech ended');
-    });
+        vapiRef.current.on('speech-start', () => {
+          console.log('Speech started');
+        });
 
-    vapiRef.current.on('message', (message: any) => {
-      if (message.transcript) {
-        transcriptRef.current += message.transcript + ' ';
+        vapiRef.current.on('speech-end', () => {
+          console.log('Speech ended');
+        });
+
+        vapiRef.current.on('message', (message: any) => {
+          if (message.transcript) {
+            transcriptRef.current += message.transcript + ' ';
+          }
+        });
+
+        vapiRef.current.on('error', (error: any) => {
+          console.error('Vapi error:', error);
+          toast({
+            title: "Call Error",
+            description: "There was an error with the call. Please try again.",
+            variant: "destructive",
+          });
+          setIsCallActive(false);
+          setIsConnecting(false);
+        });
+      } catch (error) {
+        console.error('Error initializing Vapi:', error);
       }
-    });
+    };
 
-    vapiRef.current.on('error', (error: any) => {
-      console.error('Vapi error:', error);
-      toast({
-        title: "Call Error",
-        description: "There was an error with the call. Please try again.",
-        variant: "destructive",
-      });
-      setIsCallActive(false);
-      setIsConnecting(false);
-    });
+    initVapi();
 
     return () => {
       if (vapiRef.current) {
