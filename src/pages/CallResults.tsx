@@ -6,7 +6,7 @@ import { Badge } from '@/components/ui/badge';
 import { Progress } from '@/components/ui/progress';
 import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/integrations/supabase/client';
-import { ArrowLeft, Trophy, TrendingUp, MessageSquare, Star } from 'lucide-react';
+import { ArrowLeft, Trophy, TrendingUp, MessageSquare, Star, HelpCircle, Brain, Target, Lightbulb, Ear, DollarSign } from 'lucide-react';
 
 interface CallRecord {
   id: string;
@@ -117,12 +117,12 @@ const CallResults = () => {
   }
 
   const scoreCategories = [
-    { name: 'Confidence', score: callRecord.confidence_score, icon: Star },
-    { name: 'Objection Handling', score: callRecord.objection_handling_score, icon: MessageSquare },
-    { name: 'Clarity', score: callRecord.clarity_score, icon: MessageSquare },
-    { name: 'Persuasiveness', score: callRecord.persuasiveness_score, icon: TrendingUp },
-    { name: 'Tone', score: callRecord.tone_score, icon: Star },
-    { name: 'Closing Ability', score: callRecord.closing_score, icon: Trophy },
+    { name: '❓ Objection Handling', description: 'Did they turn around the objection or ignore it?', score: callRecord.objection_handling_score, icon: HelpCircle },
+    { name: '🧠 Confidence', description: 'Was their tone assertive or hesitant?', score: callRecord.confidence_score, icon: Brain },
+    { name: '🎯 Clarity', description: 'Was their message focused?', score: callRecord.clarity_score, icon: Target },
+    { name: '💡 Persuasion', description: 'Did they appeal emotionally or logically?', score: callRecord.persuasiveness_score, icon: Lightbulb },
+    { name: '👂 Listening & Response', description: 'Did they tailor answers or script-dump?', score: callRecord.tone_score, icon: Ear },
+    { name: 'Closing Ability', description: 'How effectively did they close or advance the sale?', score: callRecord.closing_score, icon: DollarSign },
   ];
 
   return (
@@ -205,7 +205,10 @@ const CallResults = () => {
                   <div className="flex items-center justify-between">
                     <div className="flex items-center space-x-2">
                       <category.icon className="h-4 w-4 text-muted-foreground" />
-                      <span className="font-medium">{category.name}</span>
+                      <div>
+                        <span className="font-medium">{category.name}</span>
+                        <p className="text-xs text-muted-foreground">{category.description}</p>
+                      </div>
                     </div>
                     <span className={`font-bold ${getScoreColor(category.score || 0)}`}>
                       {category.score || 0}/10

@@ -50,12 +50,12 @@ Transcript:
 ${transcript}
 
 Please provide scores and brief feedback for:
-1. Confidence - How confident and professional did the caller sound?
-2. Objection Handling - How well did they handle prospect objections?
-3. Clarity - How clear and articulate was their communication?
-4. Persuasiveness - How compelling were their arguments and value propositions?
-5. Tone - How appropriate and engaging was their tone?
-6. Closing Ability - How effectively did they attempt to close or advance the sale?
+1. ❓ Objection Handling (objection_handling_score) - Did they turn around the objection or ignore it?
+2. 🧠 Confidence (confidence_score) - Was their tone assertive or hesitant?
+3. 🎯 Clarity (clarity_score) - Was their message focused?
+4. 💡 Persuasion (persuasiveness_score) - Did they appeal emotionally or logically?
+5. 👂 Listening & Response (tone_score) - Did they tailor answers or script-dump?
+6. Closing Ability (closing_score) - How effectively did they attempt to close or advance the sale?
 7. Sale Success - Did the prospect agree to buy, schedule a meeting, or show strong interest? (true/false)
 
 Respond in JSON format:
