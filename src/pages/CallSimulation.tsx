@@ -53,7 +53,9 @@ const CallSimulation = () => {
           console.log('Call started');
           setIsCallActive(true);
           setIsConnecting(false);
+          console.log('About to start timer...');
           startTimer();
+          console.log('Timer started');
         });
 
         vapiRef.current.on('call-end', () => {
@@ -109,13 +111,16 @@ const CallSimulation = () => {
   }, []);
 
   const startTimer = () => {
+    console.log('startTimer function called');
     timerRef.current = setInterval(() => {
       setCallDuration(prev => {
         const newDuration = prev + 1;
         callDurationRef.current = newDuration; // Keep ref in sync
+        console.log(`Timer tick: duration is now ${newDuration}, ref is now ${callDurationRef.current}`);
         return newDuration;
       });
     }, 1000);
+    console.log('setInterval created, timerRef.current:', timerRef.current);
   };
 
   const stopTimer = () => {
