@@ -7,7 +7,7 @@ import { Separator } from '@/components/ui/separator';
 import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
-import { Loader2, FileText, Target, TrendingUp, MessageSquare, Star, CheckCircle, AlertCircle, ArrowLeft, Clipboard } from 'lucide-react';
+import { Loader2, FileText, Target, TrendingUp, MessageSquare, Star, CheckCircle, AlertCircle, ArrowLeft, Clipboard, Maximize2, Minimize2 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 
 interface ScriptAnalysis {
@@ -31,6 +31,7 @@ const ScriptAnalysis = () => {
   const [rewriteLoading, setRewriteLoading] = useState(false);
   const [rewrittenScript, setRewrittenScript] = useState<string | null>(null);
   const [creditsRemaining, setCreditsRemaining] = useState<number | null>(null);
+  const [isExpanded, setIsExpanded] = useState(false);
   
   const { user, profile, refreshProfile } = useAuth();
   const { toast } = useToast();
@@ -249,7 +250,7 @@ const ScriptAnalysis = () => {
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
-            <div className="space-y-2">
+              <div className="space-y-2">
               <div className="flex gap-2">
                 <Button
                   variant="outline"
@@ -262,12 +263,31 @@ const ScriptAnalysis = () => {
                   <span className="sm:hidden">Paste</span>
                 </Button>
               </div>
-              <Textarea
-                placeholder="Enter your sales script or pitch here..."
-                value={script}
-                onChange={(e) => setScript(e.target.value)}
-                className="min-h-[150px] sm:min-h-[200px] resize-none text-sm sm:text-base"
-              />
+              <div className="relative">
+                <Textarea
+                  placeholder="Enter your sales script or pitch here..."
+                  value={script}
+                  onChange={(e) => setScript(e.target.value)}
+                  className={`resize-none text-sm sm:text-base transition-all duration-300 ${
+                    isExpanded 
+                      ? "min-h-[400px] sm:min-h-[500px]" 
+                      : "min-h-[150px] sm:min-h-[200px]"
+                  }`}
+                />
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => setIsExpanded(!isExpanded)}
+                  className="absolute bottom-2 right-2 h-6 w-6 p-0 hover:bg-muted/80"
+                  title={isExpanded ? "Collapse" : "Expand"}
+                >
+                  {isExpanded ? (
+                    <Minimize2 className="h-3 w-3" />
+                  ) : (
+                    <Maximize2 className="h-3 w-3" />
+                  )}
+                </Button>
+              </div>
             </div>
             <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-3">
               <p className="text-xs sm:text-sm text-muted-foreground">
