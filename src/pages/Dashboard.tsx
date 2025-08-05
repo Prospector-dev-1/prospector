@@ -203,7 +203,7 @@ const Dashboard = () => {
               </CardDescription>
             </CardHeader>
             <CardContent className="pt-0">
-              <Button variant="outline" className="w-full">
+              <Button variant="outline" className="w-full" onClick={() => navigate('/profile?tab=subscription')}>
                 Buy More Credits
               </Button>
             </CardContent>
