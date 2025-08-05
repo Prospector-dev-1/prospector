@@ -23,6 +23,7 @@ interface CallRecord {
 const Dashboard = () => {
   const { user, profile, signOut } = useAuth();
   const [recentCalls, setRecentCalls] = useState<CallRecord[]>([]);
+  const [totalCallsCount, setTotalCallsCount] = useState<number>(0);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -33,6 +34,7 @@ const Dashboard = () => {
     if (!user) return;
 
     try {
+      // Fetch recent calls (for display)
       const { data, error } = await supabase
         .from('calls')
         .select('*')
@@ -46,6 +48,19 @@ const Dashboard = () => {
       }
 
       setRecentCalls(data || []);
+
+      // Fetch total count of all calls
+      const { count, error: countError } = await supabase
+        .from('calls')
+        .select('*', { count: 'exact', head: true })
+        .eq('user_id', user.id);
+
+      if (countError) {
+        console.error('Error fetching call count:', countError);
+      } else {
+        setTotalCallsCount(count || 0);
+      }
+
     } catch (error) {
       console.error('Error fetching calls:', error);
     } finally {
@@ -129,7 +144,7 @@ const Dashboard = () => {
             <CardContent>
               <div className="space-y-2">
                 <p className="text-sm text-muted-foreground">
-                  Total Calls: {recentCalls.length}
+                  Total Calls: {totalCallsCount}
                 </p>
                 <p className="text-sm text-muted-foreground">
                   This Week: {recentCalls.filter(call => 
