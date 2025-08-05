@@ -151,8 +151,8 @@ const CallSimulation = () => {
     setIsConnecting(true);
     
     try {
-      // Test function first
-      const { data, error } = await supabase.functions.invoke('test-function', {
+      // Start call through our edge function
+      const { data, error } = await supabase.functions.invoke('start-call', {
         body: { difficulty_level: difficultyLevel[0] }
       });
 

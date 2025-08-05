@@ -128,21 +128,15 @@ serve(async (req) => {
     // Create Vapi assistant for web call
     console.log('Creating Vapi assistant...');
     
-    const vapiResponse = await fetch('https://api.vapi.ai/assistant', {
-      method: 'POST',
-      headers: {
-        'Authorization': `Bearer ${vapiApiKey}`,
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        name: `Cold Call Practice - Level ${difficulty_level}`,
-        model: {
-          provider: 'openai',
-          model: 'gpt-4o-mini',
-          messages: [
-            {
-              role: 'system',
-              content: `${getProspectPersonality(difficulty_level)} 
+    const assistantConfig = {
+      name: `Cold Call Practice - Level ${difficulty_level}`,
+      model: {
+        provider: 'openai',
+        model: 'gpt-4o-mini',
+        messages: [
+          {
+            role: 'system',
+            content: `${getProspectPersonality(difficulty_level)} 
 
 You are receiving a cold call from a salesperson, but you don't know what they're selling yet. They will reveal what they're offering during the conversation. Respond naturally and in character based on how they present themselves and what they're selling. Keep responses conversational and realistic. If they handle your objections well, you can gradually become more interested. The difficulty level is ${difficulty_level}/10.
 
@@ -160,25 +154,35 @@ You WILL hang up if the caller:
 - Takes too long to get to the point (Level 9-10: within 60 seconds, Level 7-8: within 2 minutes)` : ''}
 
 Important: Stay in character throughout the entire call. You don't know what they're selling until they tell you. React naturally to whatever they're offering. Don't break character or mention that you're an AI.`
-            }
-          ]
-        },
-        voice: {
-          provider: 'azure',
-          voiceId: getVoiceForDifficulty(difficulty_level)
-        },
-        firstMessage: difficulty_level <= 3 
-          ? "Hello? Who is this?" 
-          : difficulty_level <= 7 
-            ? "Yeah, hello? What do you want?" 
-            : "What? Who is this and why are you calling me?",
-        endCallMessage: "Thanks for calling, goodbye.",
-        endCallPhrases: ["goodbye", "hang up", "end call"],
-        recordingEnabled: true,
-        maxDurationSeconds: 600, // 10 minutes max
-        silenceTimeoutSeconds: 30,
-        responseDelaySeconds: 0.4
-      }),
+          }
+        ]
+      },
+      voice: {
+        provider: 'azure',
+        voiceId: getVoiceForDifficulty(difficulty_level)
+      },
+      firstMessage: difficulty_level <= 3 
+        ? "Hello? Who is this?" 
+        : difficulty_level <= 7 
+          ? "Yeah, hello? What do you want?" 
+          : "What? Who is this and why are you calling me?",
+      endCallMessage: "Thanks for calling, goodbye.",
+      endCallPhrases: ["goodbye", "hang up", "end call"],
+      recordingEnabled: true,
+      maxDurationSeconds: 600, // 10 minutes max
+      silenceTimeoutSeconds: 30,
+      responseDelaySeconds: 0.4
+    };
+
+    console.log('Assistant config:', JSON.stringify(assistantConfig, null, 2));
+    
+    const vapiResponse = await fetch('https://api.vapi.ai/assistant', {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${vapiApiKey}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(assistantConfig),
     });
 
     console.log('Vapi response status:', vapiResponse.status);
