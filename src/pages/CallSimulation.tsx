@@ -85,6 +85,13 @@ const CallSimulation = () => {
 
         vapiRef.current.on('error', (error: any) => {
           console.error('Vapi error:', error);
+          
+          // Don't show error toast for normal call ending
+          if (error?.error?.type === 'ejected' && error?.errorMsg === 'Meeting has ended') {
+            console.log('Call ended normally');
+            return;
+          }
+          
           toast({
             title: "Call Error",
             description: "There was an error with the call. Please try again.",
