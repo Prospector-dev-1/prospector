@@ -1,5 +1,5 @@
-import { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
+import React, { useState, useEffect } from 'react';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/integrations/supabase/client';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -46,9 +46,11 @@ interface CallHistory {
 }
 
 const Profile = () => {
+  const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
   const { user, signOut } = useAuth();
   const { toast } = useToast();
-  const navigate = useNavigate();
+  const [activeTab, setActiveTab] = useState(searchParams.get('tab') || 'profile');
   const [profile, setProfile] = useState<Profile | null>(null);
   const [callHistory, setCallHistory] = useState<CallHistory[]>([]);
   const [loading, setLoading] = useState(true);
@@ -332,7 +334,7 @@ const Profile = () => {
           </div>
         </div>
 
-        <Tabs defaultValue="profile" className="space-y-4 sm:space-y-6">
+        <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-4 sm:space-y-6">
           <TabsList className="grid w-full grid-cols-2 sm:grid-cols-4 h-auto">
             <TabsTrigger value="profile" className="flex items-center gap-1 sm:gap-2 text-xs sm:text-sm py-2">
               <User className="h-3 w-3 sm:h-4 sm:w-4" />
