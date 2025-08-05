@@ -100,7 +100,10 @@ const Dashboard = () => {
 
         {/* Action Cards */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
-          <Card className="hover:shadow-lg transition-shadow cursor-pointer">
+          <Card 
+            className="hover:shadow-lg transition-shadow cursor-pointer"
+            onClick={() => window.location.href = '/call-simulation'}
+          >
             <CardHeader className="text-center">
               <Phone className="h-12 w-12 text-primary mx-auto mb-2" />
               <CardTitle>Start Practice Call</CardTitle>
