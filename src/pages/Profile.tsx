@@ -272,6 +272,98 @@ const Profile = () => {
     }
   };
 
+  const handleDataExport = async () => {
+    try {
+      // Get user profile and call history
+      const [profileData, callsData] = await Promise.all([
+        supabase.from('profiles').select('*').eq('user_id', user?.id),
+        supabase.from('calls').select('*').eq('user_id', user?.id)
+      ]);
+
+      const exportData = {
+        profile: profileData.data?.[0] || {},
+        calls: callsData.data || [],
+        exported_at: new Date().toISOString()
+      };
+
+      // Create and download file
+      const dataStr = JSON.stringify(exportData, null, 2);
+      const dataBlob = new Blob([dataStr], { type: 'application/json' });
+      const url = URL.createObjectURL(dataBlob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = `prospector-data-${new Date().toISOString().split('T')[0]}.json`;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      URL.revokeObjectURL(url);
+
+      toast({
+        title: "Success",
+        description: "Your data has been downloaded successfully"
+      });
+    } catch (error) {
+      console.error('Error exporting data:', error);
+      toast({
+        title: "Error",
+        description: "Failed to export data",
+        variant: "destructive"
+      });
+    }
+  };
+
+  const handleDeleteAccount = async () => {
+    const confirmed = window.confirm(
+      "Are you sure you want to delete your account? This action cannot be undone and will permanently delete all your data including call history, profile information, and credits."
+    );
+
+    if (!confirmed) return;
+
+    const finalConfirm = window.confirm(
+      "This is your final warning. Type 'DELETE' in the next prompt to confirm account deletion."
+    );
+
+    if (!finalConfirm) return;
+
+    const deleteConfirmation = window.prompt(
+      "Please type 'DELETE' (all caps) to confirm account deletion:"
+    );
+
+    if (deleteConfirmation !== 'DELETE') {
+      toast({
+        title: "Account deletion cancelled",
+        description: "Account deletion was cancelled because the confirmation text was incorrect.",
+      });
+      return;
+    }
+
+    try {
+      // Delete profile and calls (will cascade due to foreign key constraints)
+      await supabase.from('profiles').delete().eq('user_id', user?.id);
+      
+      // Delete the user account
+      const { error } = await supabase.auth.admin.deleteUser(user?.id || '');
+      
+      if (error) throw error;
+
+      toast({
+        title: "Account deleted",
+        description: "Your account has been permanently deleted."
+      });
+
+      // Sign out and redirect
+      await signOut();
+      navigate('/auth');
+    } catch (error) {
+      console.error('Error deleting account:', error);
+      toast({
+        title: "Error",
+        description: "Failed to delete account. Please contact support.",
+        variant: "destructive"
+      });
+    }
+  };
+
   const formatDate = (dateString: string) => {
     return new Date(dateString).toLocaleDateString('en-US', {
       year: 'numeric',
@@ -672,8 +764,8 @@ const Profile = () => {
                 <CardDescription>Download your personal data and call history</CardDescription>
               </CardHeader>
               <CardContent className="space-y-4">
-                <Button variant="outline" disabled>
-                  Download My Data (Coming Soon)
+                <Button variant="outline" onClick={handleDataExport}>
+                  Download My Data
                 </Button>
               </CardContent>
             </Card>
@@ -685,8 +777,8 @@ const Profile = () => {
                 <CardDescription>Irreversible account actions</CardDescription>
               </CardHeader>
               <CardContent className="space-y-4">
-                <Button variant="destructive" disabled>
-                  Delete Account (Coming Soon)
+                <Button variant="destructive" onClick={handleDeleteAccount}>
+                  Delete Account
                 </Button>
               </CardContent>
             </Card>
