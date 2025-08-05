@@ -12,7 +12,7 @@ serve(async (req) => {
   }
 
   try {
-    const { difficulty_level, sales_scenario } = await req.json();
+    const { difficulty_level } = await req.json();
     
     // Authenticate user
     const authHeader = req.headers.get('Authorization')!;
@@ -63,7 +63,7 @@ serve(async (req) => {
           user_id: userData.user.id,
           amount: -1,
           type: 'deduction',
-           description: `AI practice call - Difficulty Level ${difficulty_level} - Sales Scenario: ${sales_scenario || "General Sales"}`
+           description: `AI practice call - Difficulty Level ${difficulty_level}`
         });
     }
 
