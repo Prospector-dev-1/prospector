@@ -84,10 +84,14 @@ serve(async (req) => {
 
     console.log('User has sufficient credits:', profile.credits);
 
+    // Calculate new credit amount (ensure it's a number with proper decimal handling)
+    const newCreditAmount = Number((profile.credits - 0.5).toFixed(2));
+    console.log('Deducting 0.5 credits. New amount:', newCreditAmount);
+
     // Deduct 0.5 credits
     const { error: updateError } = await supabase
       .from('profiles')
-      .update({ credits: profile.credits - 0.5 })
+      .update({ credits: newCreditAmount })
       .eq('user_id', user.id);
 
     if (updateError) {
@@ -215,7 +219,7 @@ Provide specific, actionable feedback that will help improve sales performance.`
     return new Response(JSON.stringify({
       success: true,
       analysis: analysis,
-      credits_remaining: profile.credits - 0.5
+      credits_remaining: newCreditAmount
     }), {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
     });
