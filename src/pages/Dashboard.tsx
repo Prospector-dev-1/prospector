@@ -153,7 +153,7 @@ const Dashboard = () => {
               </CardDescription>
             </CardHeader>
             <CardContent className="pt-0">
-              <Button variant="secondary" className="w-full" size="lg">
+              <Button className="w-full" size="lg">
                 Analyze Script
               </Button>
             </CardContent>
@@ -168,7 +168,7 @@ const Dashboard = () => {
               </CardDescription>
             </CardHeader>
             <CardContent className="pt-0">
-              <Button variant="outline" className="w-full" size="lg">
+              <Button className="w-full" size="lg">
                 Generate Script
               </Button>
             </CardContent>
@@ -203,7 +203,7 @@ const Dashboard = () => {
               </CardDescription>
             </CardHeader>
             <CardContent className="pt-0">
-              <Button variant="outline" className="w-full" onClick={() => navigate('/profile?tab=subscription')}>
+              <Button className="w-full" onClick={() => navigate('/profile?tab=subscription')}>
                 Buy More Credits
               </Button>
             </CardContent>
