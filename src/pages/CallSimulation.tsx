@@ -55,9 +55,11 @@ const CallSimulation = () => {
         });
 
         vapiRef.current.on('call-end', () => {
+          console.log('=== CALL END EVENT TRIGGERED ===');
           console.log('Call ended - duration was:', callDuration);
           console.log('Call record ID:', callRecordId);
           console.log('Transcript length:', transcriptRef.current.length);
+          console.log('About to call handleCallEnd...');
           handleCallEnd();
         });
 
@@ -199,17 +201,20 @@ const CallSimulation = () => {
   };
 
   const handleCallEnd = async () => {
+    console.log('=== HANDLE CALL END FUNCTION STARTED ===');
     stopTimer();
     setIsCallActive(false);
     setCallStarted(false);
 
     if (callRecordId) {
+      console.log('Call record ID exists, proceeding with analysis...');
       try {
         // Get current duration at the time of call end
         const finalDuration = callDuration;
         console.log('Sending to analysis - Duration:', finalDuration, 'Transcript:', transcriptRef.current);
         
         // Send transcript for analysis (even if empty)
+        console.log('About to invoke end-call-analysis function...');
         const { data, error } = await supabase.functions.invoke('end-call-analysis', {
           body: {
             callRecordId,
@@ -218,6 +223,8 @@ const CallSimulation = () => {
           }
         });
 
+        console.log('end-call-analysis function response:', { data, error });
+
         if (error) {
           console.error('Error analyzing call:', error);
         } else {
@@ -225,6 +232,7 @@ const CallSimulation = () => {
         }
 
         // Navigate to results page
+        console.log('Navigating to results page...');
         navigate(`/call-results/${callRecordId}`);
       } catch (error) {
         console.error('Error handling call end:', error);
@@ -239,9 +247,11 @@ const CallSimulation = () => {
     }
 
     // Reset state
+    console.log('Resetting state...');
     setCallDuration(0);
     setCallRecordId(null);
     transcriptRef.current = '';
+    console.log('=== HANDLE CALL END FUNCTION COMPLETED ===');
   };
 
   const toggleMute = () => {
