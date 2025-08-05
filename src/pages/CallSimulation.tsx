@@ -78,9 +78,44 @@ const CallSimulation = () => {
         });
 
         vapiRef.current.on('message', (message: any) => {
+          console.log('Vapi message received:', message);
+          
+          // Capture various types of transcript data
           if (message.transcript) {
             transcriptRef.current += message.transcript + ' ';
+            console.log('Transcript added from message.transcript:', message.transcript);
           }
+          
+          // Also capture conversation transcript if available
+          if (message.type === 'conversation-update' && message.conversation) {
+            const conversationText = message.conversation.map((item: any) => {
+              if (item.role === 'user' && item.transcript) {
+                return `User: ${item.transcript}`;
+              } else if (item.role === 'assistant' && item.transcript) {
+                return `Assistant: ${item.transcript}`;
+              }
+              return '';
+            }).filter(Boolean).join('\n');
+            
+            if (conversationText) {
+              transcriptRef.current = conversationText; // Replace with full conversation
+              console.log('Updated full conversation transcript:', conversationText);
+            }
+          }
+          
+          // Capture user speech
+          if (message.type === 'speech-update' && message.role === 'user') {
+            transcriptRef.current += `User: ${message.transcript || message.text || ''} `;
+            console.log('User speech captured:', message.transcript || message.text);
+          }
+          
+          // Capture assistant speech
+          if (message.type === 'speech-update' && message.role === 'assistant') {
+            transcriptRef.current += `Assistant: ${message.transcript || message.text || ''} `;
+            console.log('Assistant speech captured:', message.transcript || message.text);
+          }
+          
+          console.log('Current transcript length:', transcriptRef.current.length);
         });
 
         vapiRef.current.on('error', (error: any) => {
