@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -22,6 +23,7 @@ interface CallRecord {
 
 const Dashboard = () => {
   const { user, profile, signOut } = useAuth();
+  const navigate = useNavigate();
   const [recentCalls, setRecentCalls] = useState<CallRecord[]>([]);
   const [totalCallsCount, setTotalCallsCount] = useState<number>(0);
   const [thisWeekCallsCount, setThisWeekCallsCount] = useState<number>(0);
@@ -109,7 +111,7 @@ const Dashboard = () => {
                 <p className="text-sm text-muted-foreground">Credits</p>
                 <p className="font-bold text-primary">{profile?.credits || 0}</p>
               </div>
-              <Button variant="ghost" size="icon" onClick={() => window.location.href = '/profile'}>
+              <Button variant="ghost" size="icon" onClick={() => navigate('/profile')}>
                 <User className="h-4 w-4" />
               </Button>
               <Button variant="ghost" size="icon" onClick={signOut}>
@@ -135,7 +137,7 @@ const Dashboard = () => {
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
           <Card 
             className="hover:shadow-lg transition-shadow cursor-pointer"
-            onClick={() => window.location.href = '/call-simulation'}
+            onClick={() => navigate('/call-simulation')}
           >
             <CardHeader className="text-center">
               <Phone className="h-12 w-12 text-primary mx-auto mb-2" />
@@ -235,9 +237,9 @@ const Dashboard = () => {
                       <Button 
                         variant="ghost" 
                         size="sm"
-                        onClick={() => window.location.href = `/call-results/${call.id}`}
+                        onClick={() => navigate(`/call-results/${call.id}`)}
                       >
-                        {call.overall_score ? 'View Details' : 'View Details'}
+                        View Details
                       </Button>
                     </div>
                   </div>
