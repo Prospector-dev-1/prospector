@@ -102,8 +102,8 @@ serve(async (req) => {
         6: 'en-US-ChristopherNeural', // Slightly stern male
         7: 'en-US-EricNeural',       // More serious male
         8: 'en-US-GuyNeural',        // Stern/aggressive male
-        9: 'en-US-TonyNeural',       // Very aggressive male
-        10: 'en-US-RyanNeural'       // Most aggressive/hostile male
+        9: 'en-US-BrianNeural',      // Reuse Brian for level 9 (valid voice)
+        10: 'en-US-GuyNeural'        // Reuse Guy for level 10 (valid voice)
       };
       return voices[level as keyof typeof voices] || voices[5];
     };
