@@ -46,10 +46,18 @@ serve(async (req) => {
     const analysisPrompt = `
 Analyze this cold calling transcript and provide scores (1-10) for each category. The caller was trying to sell a website to a business owner.
 
+IMPORTANT: Only analyze and score if the CALLER (salesperson) actually spoke and made a sales pitch. If the transcript shows only the prospect speaking or very minimal caller participation, return all scores as 0 and indicate insufficient data.
+
 Transcript:
 ${transcript}
 
-Please provide scores and brief feedback for:
+Please analyze WHO is speaking in this transcript:
+- The CALLER (salesperson) - this is who we're evaluating
+- The PROSPECT (business owner) - this is who the caller is trying to sell to
+
+If the caller didn't make a meaningful sales attempt (less than 20 words of sales content), return all scores as 0 with feedback explaining insufficient sales attempt.
+
+If there IS a meaningful sales conversation from the caller, provide scores and brief feedback for:
 1. ❓ Objection Handling (objection_handling_score) - Did they turn around the objection or ignore it?
 2. 🧠 Confidence (confidence_score) - Was their tone assertive or hesitant?
 3. 🎯 Clarity (clarity_score) - Was their message focused?
@@ -70,7 +78,7 @@ Respond in JSON format:
   "closing_score": number,
   "overall_score": number,
   "successful_sale": boolean,
-  "feedback": "Detailed feedback with specific examples and suggestions for improvement"
+  "feedback": "Detailed feedback with specific examples and suggestions for improvement. If insufficient data, explain that the caller needs to actually participate in the conversation to receive meaningful feedback."
 }`;
 
     const openAIResponse = await fetch('https://api.openai.com/v1/chat/completions', {
