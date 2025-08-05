@@ -205,9 +205,8 @@ const Dashboard = () => {
                         variant="ghost" 
                         size="sm"
                         onClick={() => window.location.href = `/call-results/${call.id}`}
-                        disabled={!call.overall_score}
                       >
-                        {call.overall_score ? 'View Details' : 'Incomplete'}
+                        {call.overall_score ? 'View Details' : 'View Details'}
                       </Button>
                     </div>
                   </div>
