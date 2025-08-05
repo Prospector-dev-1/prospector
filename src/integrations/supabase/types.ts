@@ -26,6 +26,7 @@ export type Database = {
           duration_seconds: number | null
           id: string
           objection_handling_score: number | null
+          overall_pitch_score: number | null
           overall_score: number | null
           persuasiveness_score: number | null
           successful_sale: boolean | null
@@ -44,6 +45,7 @@ export type Database = {
           duration_seconds?: number | null
           id?: string
           objection_handling_score?: number | null
+          overall_pitch_score?: number | null
           overall_score?: number | null
           persuasiveness_score?: number | null
           successful_sale?: boolean | null
@@ -62,6 +64,7 @@ export type Database = {
           duration_seconds?: number | null
           id?: string
           objection_handling_score?: number | null
+          overall_pitch_score?: number | null
           overall_score?: number | null
           persuasiveness_score?: number | null
           successful_sale?: boolean | null

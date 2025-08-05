@@ -55,8 +55,9 @@ Please provide scores and brief feedback for:
 3. 🎯 Clarity (clarity_score) - Was their message focused?
 4. 💡 Persuasion (persuasiveness_score) - Did they appeal emotionally or logically?
 5. 👂 Listening & Response (tone_score) - Did they tailor answers or script-dump?
-6. Closing Ability (closing_score) - How effectively did they attempt to close or advance the sale?
-7. Sale Success - Did the prospect agree to buy, schedule a meeting, or show strong interest? (true/false)
+6. 📋 Overall Pitch / Script (overall_pitch_score) - How well structured and delivered was their overall pitch?
+7. Closing Ability (closing_score) - How effectively did they attempt to close or advance the sale?
+8. Sale Success - Did the prospect agree to buy, schedule a meeting, or show strong interest? (true/false)
 
 Respond in JSON format:
 {
@@ -65,6 +66,7 @@ Respond in JSON format:
   "clarity_score": number,
   "persuasiveness_score": number,
   "tone_score": number,
+  "overall_pitch_score": number,
   "closing_score": number,
   "overall_score": number,
   "successful_sale": boolean,
@@ -105,6 +107,7 @@ Respond in JSON format:
         clarity_score: 5,
         persuasiveness_score: 5,
         tone_score: 5,
+        overall_pitch_score: 5,
         closing_score: 5,
         overall_score: 5,
         successful_sale: false,
@@ -122,6 +125,7 @@ Respond in JSON format:
         clarity_score: analysis.clarity_score,
         persuasiveness_score: analysis.persuasiveness_score,
         tone_score: analysis.tone_score,
+        overall_pitch_score: analysis.overall_pitch_score,
         closing_score: analysis.closing_score,
         overall_score: analysis.overall_score,
         successful_sale: analysis.successful_sale,

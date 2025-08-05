@@ -6,7 +6,7 @@ import { Badge } from '@/components/ui/badge';
 import { Progress } from '@/components/ui/progress';
 import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/integrations/supabase/client';
-import { ArrowLeft, Trophy, TrendingUp, MessageSquare, Star, HelpCircle, Brain, Target, Lightbulb, Ear, DollarSign } from 'lucide-react';
+import { ArrowLeft, Trophy, TrendingUp, MessageSquare, Star, HelpCircle, Brain, Target, Lightbulb, Ear, DollarSign, FileText } from 'lucide-react';
 
 interface CallRecord {
   id: string;
@@ -17,6 +17,7 @@ interface CallRecord {
   clarity_score: number;
   persuasiveness_score: number;
   tone_score: number;
+  overall_pitch_score: number;
   closing_score: number;
   overall_score: number;
   successful_sale: boolean;
@@ -122,6 +123,7 @@ const CallResults = () => {
     { name: '🎯 Clarity', description: 'Was their message focused?', score: callRecord.clarity_score, icon: Target },
     { name: '💡 Persuasion', description: 'Did they appeal emotionally or logically?', score: callRecord.persuasiveness_score, icon: Lightbulb },
     { name: '👂 Listening & Response', description: 'Did they tailor answers or script-dump?', score: callRecord.tone_score, icon: Ear },
+    { name: '📋 Overall Pitch / Script', description: 'How well structured and delivered was their overall pitch?', score: callRecord.overall_pitch_score, icon: FileText },
     { name: 'Closing Ability', description: 'How effectively did they close or advance the sale?', score: callRecord.closing_score, icon: DollarSign },
   ];
 
