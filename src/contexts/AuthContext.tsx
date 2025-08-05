@@ -105,25 +105,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   }, []);
 
   const signUp = async (email: string, password: string, firstName?: string, lastName?: string) => {
-    // Check if email already exists in profiles table
-    const { data: existingProfile, error: profileError } = await supabase
-      .from('profiles')
-      .select('email')
-      .eq('email', email)
-      .maybeSingle();
-    
-    console.log('Checking existing profile:', { existingProfile, profileError });
-    
-    if (existingProfile) {
-      console.log('Email already exists, showing error');
-      toast({
-        title: "Email Already Exists",
-        description: "This email is already in the database. Please log in instead.",
-        variant: "destructive",
-      });
-      return { error: { message: "Email already exists" } };
-    }
-    
     const redirectUrl = `${window.location.origin}/`;
     
     const { error } = await supabase.auth.signUp({
@@ -138,12 +119,18 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       }
     });
 
-    console.log('Signup result:', { error });
-
     if (error) {
+      // Check if it's a duplicate email error from the unique constraint
+      const isDuplicateEmail = error.message.includes('duplicate key') || 
+                               error.message.includes('unique_email') ||
+                               error.message.includes('already exists') ||
+                               error.message.includes('already registered');
+      
       toast({
         title: "Signup Error",
-        description: error.message,
+        description: isDuplicateEmail 
+          ? "This email is already in the database. Please log in instead."
+          : error.message,
         variant: "destructive",
       });
     } else {
