@@ -38,10 +38,10 @@ serve(async (req) => {
     if (priceType === 'credits') {
       // Credit packages with different amounts
       const creditPackages = {
-        starter: { credits: 50, price: 599, name: "50 Credits" },
-        popular: { credits: 110, price: 999, name: "100 Credits + 10 Bonus" },
-        value: { credits: 300, price: 1999, name: "250 Credits + 50 Bonus" },
-        premium: { credits: 650, price: 3499, name: "500 Credits + 150 Bonus" }
+        starter: { credits: 5, price: 499, name: "5 Credits" },
+        value: { credits: 15, price: 949, name: "15 Credits" },
+        popular: { credits: 40, price: 1499, name: "40 Credits" },
+        premium: { credits: 100, price: 1949, name: "100 Credits" }
       };
       
       const selectedPackage = creditPackages[packageId as keyof typeof creditPackages];

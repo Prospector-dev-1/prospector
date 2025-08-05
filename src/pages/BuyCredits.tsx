@@ -20,30 +20,27 @@ interface CreditPackage {
 const creditPackages: CreditPackage[] = [
   {
     id: 'starter',
-    credits: 50,
-    price: 599, // $5.99
-  },
-  {
-    id: 'popular',
-    credits: 100,
-    price: 999, // $9.99
-    popular: true,
-    bonus: 10,
-    savings: '17%'
+    credits: 5,
+    price: 499, // $4.99
   },
   {
     id: 'value',
-    credits: 250,
-    price: 1999, // $19.99
-    bonus: 50,
-    savings: '33%'
+    credits: 15,
+    price: 949, // $9.49
+    savings: '37%'
+  },
+  {
+    id: 'popular',
+    credits: 40,
+    price: 1499, // $14.99
+    popular: true,
+    savings: '62%'
   },
   {
     id: 'premium',
-    credits: 500,
-    price: 3499, // $34.99
-    bonus: 150,
-    savings: '46%'
+    credits: 100,
+    price: 1949, // $19.49
+    savings: '81%'
   }
 ];
 
@@ -134,15 +131,8 @@ const BuyCredits = () => {
               
               <CardHeader className="text-center pb-4">
                 <CardTitle className="text-2xl">
-                  {pkg.credits}{pkg.bonus ? `+${pkg.bonus}` : ''} Credits
+                  {pkg.credits} Credits
                 </CardTitle>
-                <CardDescription>
-                  {pkg.bonus && (
-                    <span className="text-green-600 font-medium">
-                      {pkg.bonus} bonus credits included!
-                    </span>
-                  )}
-                </CardDescription>
               </CardHeader>
 
               <CardContent className="text-center space-y-4">
