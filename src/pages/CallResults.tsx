@@ -57,12 +57,52 @@ const CallResults = () => {
       }
 
       setCallRecord(data);
+
+      // If analysis is not complete yet (no overall_score), poll for completion
+      if (data && data.overall_score === null) {
+        console.log('Analysis not complete, starting polling...');
+        pollForAnalysisCompletion();
+      } else {
+        setLoading(false);
+      }
     } catch (error) {
       console.error('Error fetching call record:', error);
       navigate('/');
-    } finally {
-      setLoading(false);
     }
+  };
+
+  const pollForAnalysisCompletion = async () => {
+    let attempts = 0;
+    const maxAttempts = 30; // Poll for up to 30 seconds
+    
+    const pollInterval = setInterval(async () => {
+      attempts++;
+      
+      if (attempts >= maxAttempts) {
+        console.log('Max polling attempts reached');
+        clearInterval(pollInterval);
+        setLoading(false);
+        return;
+      }
+
+      try {
+        const { data, error } = await supabase
+          .from('calls')
+          .select('*')
+          .eq('id', callId)
+          .eq('user_id', user.id)
+          .single();
+
+        if (!error && data && data.overall_score !== null) {
+          console.log('Analysis completed, updating call record');
+          setCallRecord(data);
+          setLoading(false);
+          clearInterval(pollInterval);
+        }
+      } catch (error) {
+        console.error('Error polling for analysis completion:', error);
+      }
+    }, 1000); // Poll every second
   };
 
   const formatDuration = (seconds: number) => {

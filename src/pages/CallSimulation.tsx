@@ -241,40 +241,36 @@ const CallSimulation = () => {
     const currentCallRecordId = callRecordIdRef.current;
     
     if (currentCallRecordId) {
-      console.log('Call record ID exists, proceeding with analysis...');
+      console.log('Call record ID exists, navigating to results...');
+      
+      // Navigate immediately to results page
+      console.log('Navigating to results page...');
+      navigate(`/call-results/${currentCallRecordId}`);
+
+      // Start analysis in background
       try {
         // Get current duration at the time of call end from ref
         const finalDuration = callDurationRef.current;
-        console.log('Sending to analysis - Duration from ref:', finalDuration, 'Duration from state:', callDuration, 'Transcript:', transcriptRef.current);
+        console.log('Starting background analysis - Duration from ref:', finalDuration, 'Transcript:', transcriptRef.current);
         
-        // Send transcript for analysis (even if empty)
-        console.log('About to invoke end-call-analysis function...');
-        const { data, error } = await supabase.functions.invoke('end-call-analysis', {
+        // Send transcript for analysis (even if empty) - don't await
+        supabase.functions.invoke('end-call-analysis', {
           body: {
             callRecordId: currentCallRecordId,
             transcript: transcriptRef.current || 'No transcript available',
             duration: finalDuration
           }
+        }).then(({ data, error }) => {
+          console.log('Background analysis completed:', { data, error });
+          if (error) {
+            console.error('Error analyzing call:', error);
+          }
+        }).catch(error => {
+          console.error('Error in background analysis:', error);
         });
 
-        console.log('end-call-analysis function response:', { data, error });
-
-        if (error) {
-          console.error('Error analyzing call:', error);
-        } else {
-          console.log('Analysis response:', data);
-        }
-
-        // Navigate to results page
-        console.log('Navigating to results page...');
-        navigate(`/call-results/${currentCallRecordId}`);
       } catch (error) {
-        console.error('Error handling call end:', error);
-        toast({
-          title: "Analysis Error",
-          description: "Could not analyze the call. Please check your call history.",
-          variant: "destructive",
-        });
+        console.error('Error starting background analysis:', error);
       }
     } else {
       console.error('No call record ID available for analysis');
