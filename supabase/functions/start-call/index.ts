@@ -12,7 +12,9 @@ serve(async (req) => {
   }
 
   try {
+    console.log('Start-call function called');
     const { difficulty_level } = await req.json();
+    console.log('Difficulty level:', difficulty_level);
     
     // Authenticate user
     const authHeader = req.headers.get('Authorization')!;
@@ -25,10 +27,13 @@ serve(async (req) => {
       { auth: { persistSession: false } }
     );
 
+    console.log('Getting user data...');
     const { data: userData } = await supabaseService.auth.getUser(token);
     if (!userData.user) {
+      console.error('User not found');
       throw new Error('Unauthorized');
     }
+    console.log('User authenticated:', userData.user.id);
 
     // Check user credits
     const { data: profile, error: profileError } = await supabaseService
@@ -102,10 +107,16 @@ serve(async (req) => {
     };
 
     // Create Vapi assistant for web call
+    console.log('Creating Vapi assistant...');
+    const vapiApiKey = Deno.env.get('VAPI_API_KEY');
+    if (!vapiApiKey) {
+      throw new Error('VAPI_API_KEY not configured');
+    }
+    
     const vapiResponse = await fetch('https://api.vapi.ai/assistant', {
       method: 'POST',
       headers: {
-        'Authorization': `Bearer ${Deno.env.get('VAPI_API_KEY')}`,
+        'Authorization': `Bearer ${vapiApiKey}`,
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({
@@ -155,7 +166,9 @@ Important: Stay in character throughout the entire call. You don't know what the
       }),
     });
 
+    console.log('Vapi response status:', vapiResponse.status);
     const vapiData = await vapiResponse.json();
+    console.log('Vapi response data:', vapiData);
     
     if (!vapiResponse.ok) {
       console.error('Vapi error response:', vapiData);
