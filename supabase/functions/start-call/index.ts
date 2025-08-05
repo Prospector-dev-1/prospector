@@ -84,47 +84,44 @@ serve(async (req) => {
       return personalities[level as keyof typeof personalities] || personalities[5];
     };
 
-    // Create Vapi call
-    const vapiResponse = await fetch('https://api.vapi.ai/call/phone', {
+    // Create Vapi assistant for web call
+    const vapiResponse = await fetch('https://api.vapi.ai/assistant', {
       method: 'POST',
       headers: {
         'Authorization': `Bearer ${Deno.env.get('VAPI_API_KEY')}`,
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({
-        phoneNumberId: '18174775-469e-4464-ba7a-9623e0b71e80',
-        assistant: {
-          model: {
-            provider: 'openai',
-            model: 'gpt-4o-mini',
-            messages: [
-              {
-                role: 'system',
-                content: `${getProspectPersonality(difficulty_level)} 
+        name: `Cold Call Practice - Level ${difficulty_level}`,
+        model: {
+          provider: 'openai',
+          model: 'gpt-4o-mini',
+          messages: [
+            {
+              role: 'system',
+              content: `${getProspectPersonality(difficulty_level)} 
 
 The caller is trying to sell you a website for your business. You should respond naturally and in character. Keep responses conversational and realistic. If they handle your objections well, you can gradually become more interested. The difficulty level is ${difficulty_level}/10.
 
 Important: Stay in character throughout the entire call. Don't break character or mention that you're an AI.`
-              }
-            ]
-          },
-          voice: {
-            provider: 'azure',
-            voiceId: difficulty_level <= 5 ? 'jenny' : 'davis'
-          },
-          firstMessage: difficulty_level <= 3 
-            ? "Hello? Who is this?" 
-            : difficulty_level <= 7 
-              ? "Yeah, hello? What do you want?" 
-              : "What? Who is this and why are you calling me?",
-          endCallMessage: "Thanks for calling, goodbye.",
-          endCallPhrases: ["goodbye", "hang up", "end call"],
-          recordingEnabled: true,
-          maxDurationSeconds: 600 // 10 minutes max
+            }
+          ]
         },
-        customer: {
-          number: "+1234567890" // Placeholder - will be replaced by actual call initiation
-        }
+        voice: {
+          provider: 'azure',
+          voiceId: difficulty_level <= 5 ? 'jenny' : 'davis'
+        },
+        firstMessage: difficulty_level <= 3 
+          ? "Hello? Who is this?" 
+          : difficulty_level <= 7 
+            ? "Yeah, hello? What do you want?" 
+            : "What? Who is this and why are you calling me?",
+        endCallMessage: "Thanks for calling, goodbye.",
+        endCallPhrases: ["goodbye", "hang up", "end call"],
+        recordingEnabled: true,
+        maxDurationSeconds: 600, // 10 minutes max
+        silenceTimeoutSeconds: 30,
+        responseDelaySeconds: 0.4
       }),
     });
 
@@ -151,9 +148,8 @@ Important: Stay in character throughout the entire call. Don't break character o
 
     return new Response(JSON.stringify({ 
       success: true, 
-      callId: vapiData.id,
-      callRecordId: callRecord?.id,
-      assistantId: vapiData.assistantId 
+      assistantId: vapiData.id,
+      callRecordId: callRecord?.id
     }), {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
     });

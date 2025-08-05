@@ -32,7 +32,7 @@ const CallSimulation = () => {
   const transcriptRef = useRef<string>('');
 
   useEffect(() => {
-    // Initialize Vapi
+    // Initialize Vapi with public key
     vapiRef.current = new Vapi("18174775-469e-4464-ba7a-9623e0b71e80");
     
     // Set up event listeners
@@ -150,8 +150,21 @@ const CallSimulation = () => {
       setCallRecordId(data.callRecordId);
       setCallStarted(true);
       
-      // Start the Vapi call
-      await vapiRef.current.start();
+      // Start the Vapi call with the assistant
+      const assistantOverrides = {
+        model: {
+          provider: 'openai',
+          model: 'gpt-4o-mini',
+          messages: [
+            {
+              role: 'system',
+              content: `You are a business owner prospect at difficulty level ${difficultyLevel[0]}/10. The caller is trying to sell you a website. Respond naturally and stay in character throughout the call.`
+            }
+          ]
+        }
+      };
+      
+      await vapiRef.current.start(data.assistantId, assistantOverrides);
       
       // Refresh profile to update credits
       await refreshProfile();
