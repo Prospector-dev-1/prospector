@@ -55,7 +55,9 @@ const CallSimulation = () => {
         });
 
         vapiRef.current.on('call-end', () => {
-          console.log('Call ended');
+          console.log('Call ended - duration was:', callDuration);
+          console.log('Call record ID:', callRecordId);
+          console.log('Transcript length:', transcriptRef.current.length);
           handleCallEnd();
         });
 
@@ -201,19 +203,25 @@ const CallSimulation = () => {
     setIsCallActive(false);
     setCallStarted(false);
 
-    if (callRecordId && transcriptRef.current) {
+    if (callRecordId) {
       try {
-        // Send transcript for analysis
+        // Get current duration at the time of call end
+        const finalDuration = callDuration;
+        console.log('Sending to analysis - Duration:', finalDuration, 'Transcript:', transcriptRef.current);
+        
+        // Send transcript for analysis (even if empty)
         const { data, error } = await supabase.functions.invoke('end-call-analysis', {
           body: {
             callRecordId,
-            transcript: transcriptRef.current,
-            duration: callDuration
+            transcript: transcriptRef.current || 'No transcript available',
+            duration: finalDuration
           }
         });
 
         if (error) {
           console.error('Error analyzing call:', error);
+        } else {
+          console.log('Analysis response:', data);
         }
 
         // Navigate to results page
@@ -226,6 +234,8 @@ const CallSimulation = () => {
           variant: "destructive",
         });
       }
+    } else {
+      console.error('No call record ID available for analysis');
     }
 
     // Reset state
