@@ -201,8 +201,13 @@ const Dashboard = () => {
                       <p className="text-sm text-muted-foreground">
                         {new Date(call.created_at).toLocaleDateString()}
                       </p>
-                      <Button variant="ghost" size="sm">
-                        View Details
+                      <Button 
+                        variant="ghost" 
+                        size="sm"
+                        onClick={() => window.location.href = `/call-results/${call.id}`}
+                        disabled={!call.overall_score}
+                      >
+                        {call.overall_score ? 'View Details' : 'Incomplete'}
                       </Button>
                     </div>
                   </div>
