@@ -67,6 +67,23 @@ serve(async (req) => {
         });
     }
 
+    // Get voice based on difficulty - progressively more aggressive
+    const getVoiceForDifficulty = (level: number) => {
+      const voices = {
+        1: 'en-US-JennyNeural',      // Very friendly female
+        2: 'en-US-AriaNeural',       // Friendly female  
+        3: 'en-US-SaraNeural',       // Pleasant female
+        4: 'en-US-DavisNeural',      // Professional male
+        5: 'en-US-BrianNeural',      // Neutral male
+        6: 'en-US-ChristopherNeural', // Slightly stern male
+        7: 'en-US-EricNeural',       // More serious male
+        8: 'en-US-GuyNeural',        // Stern/aggressive male
+        9: 'en-US-TonyNeural',       // Very aggressive male
+        10: 'en-US-RyanNeural'       // Most aggressive/hostile male
+      };
+      return voices[level as keyof typeof voices] || voices[5];
+    };
+
     // Generate prospect personality based on difficulty
     const getProspectPersonality = (level: number) => {
       const personalities = {
@@ -122,7 +139,7 @@ Important: Stay in character throughout the entire call. Don't break character o
         },
         voice: {
           provider: 'azure',
-          voiceId: difficulty_level <= 5 ? 'en-US-JennyNeural' : 'en-US-DavisNeural'
+          voiceId: getVoiceForDifficulty(difficulty_level)
         },
         firstMessage: difficulty_level <= 3 
           ? "Hello? Who is this?" 
