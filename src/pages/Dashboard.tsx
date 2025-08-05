@@ -174,6 +174,21 @@ const Dashboard = () => {
             </CardContent>
           </Card>
 
+          <Card className="hover:shadow-lg transition-shadow sm:col-span-2 lg:col-span-1 flex flex-col">
+            <CardHeader className="text-center pb-3 flex-1">
+              <CreditCard className="h-8 w-8 sm:h-10 sm:w-10 text-info mx-auto mb-2" />
+              <CardTitle className="text-base sm:text-lg">Credits</CardTitle>
+              <CardDescription className="text-sm">
+                {profile?.credits || 0} calls remaining
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="pt-0">
+              <Button className="w-full h-12" onClick={() => navigate('/profile?tab=subscription')}>
+                Buy More Credits
+              </Button>
+            </CardContent>
+          </Card>
+
           <Card className="hover:shadow-lg transition-shadow flex flex-col">
             <CardHeader className="text-center pb-3 flex-1">
               <TrendingUp className="h-8 w-8 sm:h-10 sm:w-10 text-accent mx-auto mb-2" />
@@ -191,21 +206,6 @@ const Dashboard = () => {
                   This Week: {thisWeekCallsCount}
                 </p>
               </div>
-            </CardContent>
-          </Card>
-
-          <Card className="hover:shadow-lg transition-shadow sm:col-span-2 lg:col-span-1 flex flex-col">
-            <CardHeader className="text-center pb-3 flex-1">
-              <CreditCard className="h-8 w-8 sm:h-10 sm:w-10 text-info mx-auto mb-2" />
-              <CardTitle className="text-base sm:text-lg">Credits</CardTitle>
-              <CardDescription className="text-sm">
-                {profile?.credits || 0} calls remaining
-              </CardDescription>
-            </CardHeader>
-            <CardContent className="pt-0">
-              <Button className="w-full h-12" onClick={() => navigate('/profile?tab=subscription')}>
-                Buy More Credits
-              </Button>
             </CardContent>
           </Card>
         </div>
