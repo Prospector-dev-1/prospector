@@ -19,7 +19,8 @@ import {
   LogOut,
   Edit,
   Save,
-  X
+  X,
+  Loader2
 } from 'lucide-react';
 
 interface Profile {
@@ -71,6 +72,7 @@ const Profile = () => {
     newEmail: '',
     password: ''
   });
+  const [purchaseLoading, setPurchaseLoading] = useState<string | null>(null);
 
   useEffect(() => {
     if (!user) {
@@ -309,6 +311,34 @@ const Profile = () => {
         description: "Failed to export data",
         variant: "destructive"
       });
+    }
+  };
+
+  const handlePurchase = async (type: 'credits' | 'premium') => {
+    if (!user) return;
+    
+    setPurchaseLoading(type);
+    try {
+      const { data, error } = await supabase.functions.invoke('create-checkout', {
+        body: { priceType: type }
+      });
+
+      if (error) throw error;
+
+      if (data?.url) {
+        window.location.href = data.url;
+      } else {
+        throw new Error('No checkout URL received');
+      }
+    } catch (error) {
+      console.error('Error creating checkout:', error);
+      toast({
+        title: "Error",
+        description: "Failed to start checkout process",
+        variant: "destructive"
+      });
+    } finally {
+      setPurchaseLoading(null);
     }
   };
 
@@ -625,11 +655,35 @@ const Profile = () => {
                 <div className="space-y-4">
                   <h4 className="font-medium">Actions</h4>
                   <div className="flex flex-col sm:flex-row gap-3">
-                    <Button variant="outline" disabled className="w-full sm:w-auto">
-                      Buy Credits (Coming Soon)
+                    <Button 
+                      variant="outline" 
+                      className="w-full sm:w-auto"
+                      onClick={() => handlePurchase('credits')}
+                      disabled={!!purchaseLoading}
+                    >
+                      {purchaseLoading === 'credits' ? (
+                        <>
+                          <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                          Processing...
+                        </>
+                      ) : (
+                        'Buy 100 Credits - $9.99'
+                      )}
                     </Button>
-                    <Button variant="outline" disabled className="w-full sm:w-auto">
-                      Upgrade to Premium (Coming Soon)
+                    <Button 
+                      variant="outline" 
+                      className="w-full sm:w-auto"
+                      onClick={() => handlePurchase('premium')}
+                      disabled={!!purchaseLoading}
+                    >
+                      {purchaseLoading === 'premium' ? (
+                        <>
+                          <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                          Processing...
+                        </>
+                      ) : (
+                        'Upgrade to Premium - $19.99/month'
+                      )}
                     </Button>
                   </div>
                 </div>
