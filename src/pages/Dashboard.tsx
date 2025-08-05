@@ -109,6 +109,9 @@ const Dashboard = () => {
                 <p className="text-sm text-muted-foreground">Credits</p>
                 <p className="font-bold text-primary">{profile?.credits || 0}</p>
               </div>
+              <Button variant="ghost" size="icon" onClick={() => window.location.href = '/profile'}>
+                <User className="h-4 w-4" />
+              </Button>
               <Button variant="ghost" size="icon" onClick={signOut}>
                 <LogOut className="h-4 w-4" />
               </Button>
