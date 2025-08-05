@@ -105,6 +105,21 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   }, []);
 
   const signUp = async (email: string, password: string, firstName?: string, lastName?: string) => {
+    // First check if email already exists by attempting to reset password
+    const { error: resetError } = await supabase.auth.resetPasswordForEmail(email, {
+      redirectTo: `${window.location.origin}/reset-password`
+    });
+    
+    // If no error on reset, email exists in system
+    if (!resetError) {
+      toast({
+        title: "Email Already Exists",
+        description: "This email is already in the database. Please log in instead.",
+        variant: "destructive",
+      });
+      return { error: { message: "Email already exists" } };
+    }
+    
     const redirectUrl = `${window.location.origin}/`;
     
     const { error } = await supabase.auth.signUp({
@@ -120,15 +135,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     });
 
     if (error) {
-      const isEmailAlreadyExists = error.message.includes('already registered') || 
-                                   error.message.includes('already exists') ||
-                                   error.message.includes('User already registered');
-      
       toast({
         title: "Signup Error",
-        description: isEmailAlreadyExists 
-          ? "This email is already in the database. Please log in instead."
-          : error.message,
+        description: error.message,
         variant: "destructive",
       });
     } else {
