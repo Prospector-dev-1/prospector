@@ -110,4 +110,22 @@ All colors MUST be HSL.
   body {
     @apply bg-background text-foreground;
   }
+
+  /* Mobile-first responsive improvements */
+  @media (max-width: 768px) {
+    .container {
+      @apply px-3;
+    }
+  }
+
+  /* Ensure touch targets are large enough on mobile */
+  button, [role="button"] {
+    min-height: 44px;
+    min-width: 44px;
+  }
+
+  /* Better text scaling on mobile */
+  html {
+    -webkit-text-size-adjust: 100%;
+  }
 }

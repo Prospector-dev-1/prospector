@@ -309,23 +309,23 @@ const CallSimulation = () => {
     <div className="min-h-screen bg-background">
       {/* Header */}
       <div className="border-b border-border bg-card">
-        <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex justify-between items-center py-4">
-            <div className="flex items-center space-x-3">
-              <Button variant="ghost" size="icon" onClick={() => navigate('/')}>
+        <div className="px-3 sm:px-4 lg:px-8">
+          <div className="flex justify-between items-center py-3">
+            <div className="flex items-center space-x-2">
+              <Button variant="ghost" size="icon" onClick={() => navigate('/dashboard')}>
                 <ArrowLeft className="h-4 w-4" />
               </Button>
-              <h1 className="text-2xl font-bold text-primary">Practice Call</h1>
+              <h1 className="text-lg sm:text-xl font-bold text-primary">Practice Call</h1>
             </div>
             <div className="text-right">
-              <p className="text-sm text-muted-foreground">Credits</p>
-              <p className="font-bold text-primary">{profile.credits}</p>
+              <p className="text-xs text-muted-foreground">Credits</p>
+              <p className="text-sm font-bold text-primary">{profile.credits}</p>
             </div>
           </div>
         </div>
       </div>
 
-      <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+      <div className="px-3 sm:px-4 lg:px-8 py-4 sm:py-6">
         {!callStarted ? (
           // Call Setup
           <div className="space-y-8">
@@ -352,7 +352,7 @@ const CallSimulation = () => {
                     step={1}
                     className="w-full"
                   />
-                  <div className="grid grid-cols-2 gap-4 text-sm text-muted-foreground">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs sm:text-sm text-muted-foreground">
                     <div>
                       <p className="font-medium">Level 1-3: Beginner</p>
                       <p>Friendly prospects, minimal objections</p>

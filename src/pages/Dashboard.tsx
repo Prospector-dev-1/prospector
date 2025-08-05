@@ -100,16 +100,19 @@ const Dashboard = () => {
     <div className="min-h-screen bg-background">
       {/* Header */}
       <div className="border-b border-border bg-card">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex justify-between items-center py-4">
-            <div className="flex items-center space-x-3">
-              <h1 className="text-2xl font-bold text-primary">Prospector</h1>
+        <div className="px-3 sm:px-4 lg:px-8">
+          <div className="flex justify-between items-center py-3">
+            <div className="flex items-center space-x-2">
+              <h1 className="text-lg sm:text-xl font-bold text-primary">Prospector</h1>
               {getSubscriptionBadge()}
             </div>
-            <div className="flex items-center space-x-4">
-              <div className="text-right">
-                <p className="text-sm text-muted-foreground">Credits</p>
-                <p className="font-bold text-primary">{profile?.credits || 0}</p>
+            <div className="flex items-center space-x-2 sm:space-x-3">
+              <div className="text-right hidden sm:block">
+                <p className="text-xs text-muted-foreground">Credits</p>
+                <p className="text-sm font-bold text-primary">{profile?.credits || 0}</p>
+              </div>
+              <div className="text-right sm:hidden">
+                <p className="text-xs font-bold text-primary">{profile?.credits || 0}</p>
               </div>
               <Button variant="ghost" size="icon" onClick={() => navigate('/profile')}>
                 <User className="h-4 w-4" />
@@ -122,31 +125,31 @@ const Dashboard = () => {
         </div>
       </div>
 
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+      <div className="px-3 sm:px-4 lg:px-8 py-4 sm:py-6">
         {/* Welcome Section */}
-        <div className="mb-8">
-          <h2 className="text-3xl font-bold mb-2">
+        <div className="mb-6">
+          <h2 className="text-xl sm:text-2xl lg:text-3xl font-bold mb-2">
             Welcome back, {profile?.first_name || 'Prospector'}!
           </h2>
-          <p className="text-muted-foreground">
+          <p className="text-sm sm:text-base text-muted-foreground">
             Ready to improve your cold calling skills? Start a new practice session or review your progress.
           </p>
         </div>
 
         {/* Action Cards */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 mb-6">
           <Card 
             className="hover:shadow-lg transition-shadow cursor-pointer"
             onClick={() => navigate('/call-simulation')}
           >
-            <CardHeader className="text-center">
-              <Phone className="h-12 w-12 text-primary mx-auto mb-2" />
-              <CardTitle>Start Practice Call</CardTitle>
-              <CardDescription>
+            <CardHeader className="text-center pb-3">
+              <Phone className="h-8 w-8 sm:h-10 sm:w-10 text-primary mx-auto mb-2" />
+              <CardTitle className="text-base sm:text-lg">Start Practice Call</CardTitle>
+              <CardDescription className="text-sm">
                 Begin a new AI-powered cold calling session
               </CardDescription>
             </CardHeader>
-            <CardContent>
+            <CardContent className="pt-0">
               <Button className="w-full" size="lg">
                 Start New Call
               </Button>
@@ -154,34 +157,34 @@ const Dashboard = () => {
           </Card>
 
           <Card className="hover:shadow-lg transition-shadow">
-            <CardHeader className="text-center">
-              <TrendingUp className="h-12 w-12 text-accent mx-auto mb-2" />
-              <CardTitle>Performance</CardTitle>
-              <CardDescription>
+            <CardHeader className="text-center pb-3">
+              <TrendingUp className="h-8 w-8 sm:h-10 sm:w-10 text-accent mx-auto mb-2" />
+              <CardTitle className="text-base sm:text-lg">Performance</CardTitle>
+              <CardDescription className="text-sm">
                 Average Score: {averageScore}/10
               </CardDescription>
             </CardHeader>
-            <CardContent>
-              <div className="space-y-2">
-                <p className="text-sm text-muted-foreground">
+            <CardContent className="pt-0">
+              <div className="space-y-1">
+                <p className="text-xs sm:text-sm text-muted-foreground">
                   Total Calls: {totalCallsCount}
                 </p>
-                <p className="text-sm text-muted-foreground">
+                <p className="text-xs sm:text-sm text-muted-foreground">
                   This Week: {thisWeekCallsCount}
                 </p>
               </div>
             </CardContent>
           </Card>
 
-          <Card className="hover:shadow-lg transition-shadow">
-            <CardHeader className="text-center">
-              <CreditCard className="h-12 w-12 text-info mx-auto mb-2" />
-              <CardTitle>Credits</CardTitle>
-              <CardDescription>
+          <Card className="hover:shadow-lg transition-shadow sm:col-span-2 lg:col-span-1">
+            <CardHeader className="text-center pb-3">
+              <CreditCard className="h-8 w-8 sm:h-10 sm:w-10 text-info mx-auto mb-2" />
+              <CardTitle className="text-base sm:text-lg">Credits</CardTitle>
+              <CardDescription className="text-sm">
                 {profile?.credits || 0} calls remaining
               </CardDescription>
             </CardHeader>
-            <CardContent>
+            <CardContent className="pt-0">
               <Button variant="outline" className="w-full">
                 Buy More Credits
               </Button>
@@ -191,52 +194,56 @@ const Dashboard = () => {
 
         {/* Recent Calls */}
         <Card>
-          <CardHeader>
-            <CardTitle>Recent Practice Sessions</CardTitle>
-            <CardDescription>
+          <CardHeader className="pb-3">
+            <CardTitle className="text-base sm:text-lg">Recent Practice Sessions</CardTitle>
+            <CardDescription className="text-sm">
               Your latest cold calling practice sessions
             </CardDescription>
           </CardHeader>
           <CardContent>
             {loading ? (
-              <div className="text-center py-8">
-                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto"></div>
-                <p className="mt-4 text-muted-foreground">Loading calls...</p>
+              <div className="text-center py-6">
+                <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-primary mx-auto"></div>
+                <p className="mt-3 text-sm text-muted-foreground">Loading calls...</p>
               </div>
             ) : recentCalls.length === 0 ? (
-              <div className="text-center py-8">
-                <Phone className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
-                <p className="text-muted-foreground">No practice sessions yet</p>
-                <p className="text-sm text-muted-foreground mt-2">
+              <div className="text-center py-6">
+                <Phone className="h-8 w-8 text-muted-foreground mx-auto mb-3" />
+                <p className="text-sm text-muted-foreground">No practice sessions yet</p>
+                <p className="text-xs text-muted-foreground mt-1">
                   Start your first call to see your progress here
                 </p>
               </div>
             ) : (
-              <div className="space-y-4">
+              <div className="space-y-3">
                 {recentCalls.map((call) => (
-                  <div key={call.id} className="flex items-center justify-between p-4 border border-border rounded-lg">
-                    <div className="flex items-center space-x-4">
+                  <div key={call.id} className="flex flex-col sm:flex-row sm:items-center sm:justify-between p-3 border border-border rounded-lg space-y-2 sm:space-y-0">
+                    <div className="flex items-center space-x-3">
                       <div className="flex-shrink-0">
-                        <Badge variant={call.difficulty_level <= 3 ? "secondary" : call.difficulty_level <= 7 ? "default" : "destructive"}>
+                        <Badge 
+                          variant={call.difficulty_level <= 3 ? "secondary" : call.difficulty_level <= 7 ? "default" : "destructive"}
+                          className="text-xs"
+                        >
                           Level {call.difficulty_level}
                         </Badge>
                       </div>
                       <div>
-                        <p className="font-medium">
+                        <p className="text-sm font-medium">
                           Score: {call.overall_score}/10
                         </p>
-                        <p className="text-sm text-muted-foreground">
+                        <p className="text-xs text-muted-foreground">
                           {Math.floor((call.duration_seconds || 0) / 60)}m {(call.duration_seconds || 0) % 60}s
                         </p>
                       </div>
                     </div>
-                    <div className="text-right">
-                      <p className="text-sm text-muted-foreground">
+                    <div className="flex items-center justify-between sm:flex-col sm:items-end space-x-2 sm:space-x-0">
+                      <p className="text-xs text-muted-foreground">
                         {new Date(call.created_at).toLocaleDateString()}
                       </p>
                       <Button 
                         variant="ghost" 
                         size="sm"
+                        className="h-8 text-xs"
                         onClick={() => navigate(`/call-results/${call.id}`)}
                       >
                         View Details
