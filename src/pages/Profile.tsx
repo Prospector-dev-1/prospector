@@ -530,11 +530,11 @@ const Profile = () => {
                 
                 <div className="space-y-4">
                   <h4 className="font-medium">Actions</h4>
-                  <div className="flex gap-2">
-                    <Button variant="outline" disabled>
+                  <div className="flex flex-col sm:flex-row gap-3">
+                    <Button variant="outline" disabled className="w-full sm:w-auto">
                       Buy Credits (Coming Soon)
                     </Button>
-                    <Button variant="outline" disabled>
+                    <Button variant="outline" disabled className="w-full sm:w-auto">
                       Upgrade to Premium (Coming Soon)
                     </Button>
                   </div>
