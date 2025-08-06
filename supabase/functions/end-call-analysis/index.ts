@@ -131,6 +131,13 @@ ANALYSIS REQUIREMENTS:
 3. Identify specific areas for improvement
 4. Give actionable advice for next time
 
+IMPORTANT: Set "successful_sale" to TRUE if any of these occurred:
+- Prospect agreed to an appointment, meeting, or call
+- Prospect said they're interested and want to schedule something
+- Prospect gave availability/times they're free
+- Prospect said "yes", "sounds good", "that works", "perfect" in response to scheduling
+- Any form of commitment to next steps was made
+
 Respond in this EXACT JSON format:
 {
   "confidence_score": [1-10 number],
@@ -210,6 +217,26 @@ Respond in this EXACT JSON format:
                         transcriptLower.includes('can we schedule') || 
                         transcriptLower.includes('when would be good');
       
+      // Check for successful appointment booking or sale indicators
+      const hasAppointmentBooked = transcriptLower.includes('appointment') || 
+                                  transcriptLower.includes('meeting') || 
+                                  transcriptLower.includes('schedule') ||
+                                  transcriptLower.includes('book') ||
+                                  transcriptLower.includes('calendar') ||
+                                  transcriptLower.includes('available') ||
+                                  transcriptLower.includes('free time') ||
+                                  transcriptLower.includes('tomorrow') ||
+                                  transcriptLower.includes('next week') ||
+                                  transcriptLower.includes('monday') ||
+                                  transcriptLower.includes('tuesday') ||
+                                  transcriptLower.includes('wednesday') ||
+                                  transcriptLower.includes('thursday') ||
+                                  transcriptLower.includes('friday') ||
+                                  (transcriptLower.includes('yes') && (transcriptLower.includes('interested') || transcriptLower.includes('like to'))) ||
+                                  transcriptLower.includes('sounds good') ||
+                                  transcriptLower.includes('that works') ||
+                                  transcriptLower.includes('perfect');
+      
       // Harsh but fair scoring - most people should get 1-3 on their first tries
       const introScore = hasProperIntro ? 4 : 1;
       const pitchScore = hasValueProp ? 5 : 2;
@@ -226,7 +253,7 @@ Respond in this EXACT JSON format:
         overall_pitch_score: pitchScore,
         closing_score: closingScore,
         overall_score: overallScore,
-        successful_sale: false,
+        successful_sale: hasAppointmentBooked,
         feedback: `Sales Performance Analysis:
 INTRODUCTION: ${hasProperIntro ? 'Good - You introduced yourself professionally' : 'Poor - No professional introduction detected'}
 VALUE PROPOSITION: ${hasValueProp ? 'Fair - You mentioned improvements' : 'Poor - No clear value proposition offered'}
