@@ -185,6 +185,7 @@ const BuyCredits = () => {
         {/* Additional Info */}
         <div className="text-center text-sm text-muted-foreground space-y-2">
           <p>All purchases are secured by Stripe. Credits never expire.</p>
+          <p>Credits are non refundable.</p>
           <p>Need help? Contact our support team.</p>
         </div>
       </div>
