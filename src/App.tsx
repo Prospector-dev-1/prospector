@@ -13,6 +13,7 @@ import BuyCredits from "./pages/BuyCredits";
 import ScriptAnalysis from "./pages/ScriptAnalysis";
 import CustomScriptGenerator from "./pages/CustomScriptGenerator";
 import NotFound from "./pages/NotFound";
+import Help from "./pages/Help";
 
 const queryClient = new QueryClient();
 
@@ -32,6 +33,7 @@ const App = () => (
             <Route path="/buy-credits" element={<BuyCredits />} />
             <Route path="/script-analysis" element={<ScriptAnalysis />} />
             <Route path="/custom-script" element={<CustomScriptGenerator />} />
+            <Route path="/help" element={<Help />} />
             {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
             <Route path="*" element={<NotFound />} />
           </Routes>

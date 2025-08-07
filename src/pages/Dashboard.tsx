@@ -5,7 +5,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Badge } from '@/components/ui/badge';
 import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/integrations/supabase/client';
-import { Phone, TrendingUp, User, Settings, LogOut, CreditCard, FileText, Sparkles } from 'lucide-react';
+import { Phone, TrendingUp, User, Settings, LogOut, CreditCard, FileText, Sparkles, HelpCircle } from 'lucide-react';
 interface CallRecord {
   id: string;
   difficulty_level: number;
@@ -107,7 +107,10 @@ const Dashboard = () => {
               <div className="text-right sm:hidden">
                 <p className="text-xs font-bold text-primary cursor-pointer hover:underline" onClick={() => navigate('/profile?tab=subscription')}>{profile?.credits || 0} Credits Remaining</p>
               </div>
-              <Button variant="ghost" size="icon" onClick={() => navigate('/profile')}>
+              <Button variant="ghost" size="icon" onClick={() => navigate('/help')} aria-label="Help and Support">
+                <HelpCircle className="h-4 w-4" />
+              </Button>
+              <Button variant="ghost" size="icon" onClick={() => navigate('/profile')} aria-label="Profile">
                 <User className="h-4 w-4" />
               </Button>
               
