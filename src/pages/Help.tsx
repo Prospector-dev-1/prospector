@@ -221,7 +221,7 @@ const Help: React.FC = () => {
                     <Button type="submit" disabled={form.formState.isSubmitting} className="px-[50px]">
                       {form.formState.isSubmitting ? "Sending..." : "Send Message"}
                     </Button>
-                    <a href="mailto:prospector@webnixo.net" className="text-sm text-primary underline underline-offset-4">Or email us directly at prospector@webnixo.net</a>
+                    <a href="mailto:prospector@webnixo.net" className="text-sm text-primary underline underline-offset-4">Or email us at prospector@webnixo.net</a>
                   </div>
                 </form>
               </Form>
