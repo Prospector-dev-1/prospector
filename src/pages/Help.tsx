@@ -252,10 +252,10 @@ const Help: React.FC = () => {
                       {form.formState.isSubmitting ? "Sending..." : "Send Message"}
                     </Button>
                     <a
-                      href="mailto:support@example.com"
+                      href="mailto:prospector@webnixo.net"
                       className="text-sm text-primary underline underline-offset-4"
                     >
-                      Or email us directly
+                      Or email us directly at prospector@webnixo.net
                     </a>
                   </div>
                 </form>
