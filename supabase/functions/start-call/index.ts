@@ -94,16 +94,16 @@ serve(async (req) => {
     // Get voice based on difficulty - progressively more aggressive
     const getVoiceForDifficulty = (level: number) => {
       const voices = {
-        1: 'en-US-JennyNeural',      // Very friendly female
-        2: 'en-US-AriaNeural',       // Friendly female  
-        3: 'en-US-SaraNeural',       // Pleasant female
-        4: 'en-US-DavisNeural',      // Professional male
-        5: 'en-US-BrianNeural',      // Neutral male
-        6: 'en-US-ChristopherNeural', // Slightly stern male
-        7: 'en-US-EricNeural',       // More serious male
-        8: 'en-US-GuyNeural',        // Stern/aggressive male
-        9: 'en-US-BrianNeural',      // Reuse Brian for level 9 (valid voice)
-        10: 'en-US-GuyNeural'        // Reuse Guy for level 10 (valid voice)
+        1: 'sage',      // Very friendly female
+        2: 'alloy',     // Friendly neutral  
+        3: 'nova',      // Pleasant female
+        4: 'onyx',      // Professional male
+        5: 'echo',      // Neutral male
+        6: 'fable',     // Slightly stern
+        7: 'onyx',      // More serious male
+        8: 'onyx',      // Stern/aggressive male
+        9: 'echo',      // Harsh and impatient
+        10: 'onyx'      // Most aggressive and brutal
       };
       return voices[level as keyof typeof voices] || voices[5];
     };
@@ -121,8 +121,8 @@ serve(async (req) => {
         : level === 8 
         ? "You are an absolutely brutal prospect. Be hostile, rude, and dismissive from the first word. If they don't deliver perfection within 20-30 seconds, say 'Complete waste of time. Never call again.' then say 'goodbye' to hang up immediately. Extremely difficult to convert."
         : level === 9 
-        ? "You are the most difficult prospect imaginable. Be immediately hostile and abusive. Give them only 15-20 seconds to deliver absolute perfection before saying 'Pathetic. You're done.' then say 'goodbye' to hang up viciously. Almost impossible to succeed."
-        : "You are impossibly hostile and impatient. Attack them brutally from the very first second with the harshest objections. Give them only 10-15 seconds to be absolutely flawless before saying 'Disgusting pitch. Never contact me again.' then say 'goodbye' to hang up immediately. Success is virtually impossible.";
+        ? "You are the most difficult prospect imaginable. Be immediately hostile and abusive. Give them only 30-45 seconds to deliver absolute perfection before saying 'Pathetic. You're done.' then say 'goodbye' to hang up viciously. Almost impossible to succeed."
+        : "You are impossibly hostile and impatient. Attack them brutally from the very first second with the harshest objections. Give them only 15-30 seconds to be absolutely flawless before saying 'Disgusting pitch. Never contact me again.' then say 'goodbye' to hang up immediately. Success is virtually impossible.";
       
       return `${basePersonality}
 
@@ -146,8 +146,8 @@ You are receiving a cold call from a salesperson, but you don't know what they'r
 
 ${difficulty_level >= 9 ? `
 IMPORTANT HANG-UP INSTRUCTIONS: 
-Level 9: Give the caller 2-3 minutes to prove themselves. If not convinced, say "I've got to go. Don't call again." and hang up.
-Level 10: Give the caller about 90 seconds to impress you. If not professional immediately, say "I'm not interested. Don't call again." and hang up.
+Level 9: Give the caller only 30-45 seconds to prove themselves. If not convinced, say "Pathetic. You're done." and hang up.
+Level 10: Give the caller only 15-30 seconds to impress you. If not professional immediately, say "Disgusting pitch. Never contact me again." and hang up.
 
 When you hang up, say your hang-up line and then say "goodbye" to end the call.` : difficulty_level >= 7 ? `
 HANG-UP INSTRUCTIONS: You will only agree if the caller is persuasive, confident, and pushes through your resistance. Make them work hard to convince you.` : ''}
@@ -158,7 +158,7 @@ Important: Stay in character throughout the entire call. You don't know what the
       },
       voice: {
         provider: 'openai',
-        voiceId: 'alloy'
+        voiceId: getVoiceForDifficulty(difficulty_level)
       },
       firstMessage: "hello",
       endCallMessage: "Thanks for calling, goodbye.",
