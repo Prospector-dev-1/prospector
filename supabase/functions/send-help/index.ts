@@ -3,6 +3,7 @@ import { Resend } from "npm:resend@2.0.0";
 
 const resend = new Resend(Deno.env.get("RESEND_API_KEY"));
 const SUPPORT_TO_EMAIL = Deno.env.get("SUPPORT_TO_EMAIL") || "prospector@webnixo.net";
+const SUPPORT_FROM_EMAIL = Deno.env.get("SUPPORT_FROM_EMAIL") || "Support <onboarding@resend.dev>";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -36,7 +37,7 @@ serve(async (req) => {
     }
 
     const emailResponse = await resend.emails.send({
-      from: "Support <onboarding@resend.dev>",
+      from: SUPPORT_FROM_EMAIL,
       to: [SUPPORT_TO_EMAIL],
       reply_to: email,
       subject: `[Help] ${subject}`,
