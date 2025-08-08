@@ -126,7 +126,7 @@ serve(async (req) => {
       
       return `${basePersonality}
 
-IMPORTANT: When you decide to buy, agree to a meeting, or show strong interest (like "Yes, I'm interested" or "Let's do it" or "Sign me up"), immediately follow up with "Alright, I need to run to another meeting now. Thanks for calling!" and then say "goodbye" to end the call naturally.`;
+IMPORTANT: When you decide to buy, agree to a meeting, or show strong interest (like "Yes, I'm interested" or "Let's do it" or "Sign me up"), immediately follow up with something like "Alright, I need to run to another meeting now. Thanks for calling!" and then say "goodbye" to end the call naturally.`;
     };
 
     // Create Vapi assistant for web call
@@ -146,8 +146,8 @@ You are receiving a cold call from a salesperson, but you don't know what they'r
 
 ${difficulty_level >= 9 ? `
 IMPORTANT HANG-UP INSTRUCTIONS: 
-Level 9: Give the caller only 30-45 seconds to prove themselves. If not convinced, say "Pathetic. You're done." and hang up.
-Level 10: Give the caller only 15-30 seconds to impress you. If not professional immediately, say "Disgusting pitch. Never contact me again." and hang up.
+Level 9: Give the caller only 30-45 seconds to prove themselves. If not convinced, say something like "Pathetic. You're done." and hang up.
+Level 10: Give the caller only 15-30 seconds to impress you. If not professional immediately, say something like "Disgusting pitch. Never contact me again." and hang up.
 
 When you hang up, say your hang-up line and then say "goodbye" to end the call.` : difficulty_level >= 7 ? `
 HANG-UP INSTRUCTIONS: You will only agree if the caller is persuasive, confident, and pushes through your resistance. Make them work hard to convince you.` : ''}
