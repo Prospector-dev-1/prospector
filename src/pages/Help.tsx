@@ -107,8 +107,8 @@ const Help: React.FC = () => {
   };
   return <div className="min-h-screen bg-background">
       <header className="border-b border-border bg-card">
-        <div className="max-w-5xl mx-auto px-4 py-6 flex items-center gap-3">
-          <Button variant="ghost" size="sm" className="-ml-2" asChild>
+        <div className="max-w-5xl mx-auto px-4 py-6 flex flex-col gap-2 sm:flex-row sm:items-center sm:gap-3">
+          <Button variant="ghost" size="sm" className="ml-0 sm:-ml-2" asChild>
             <Link to="/" aria-label="Back to dashboard">
               <ArrowLeft className="mr-2 h-4 w-4" />
               Back to dashboard
