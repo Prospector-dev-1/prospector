@@ -50,6 +50,15 @@ serve(async (req) => {
       `,
     });
 
+    // Handle Resend API errors explicitly
+    if ((emailResponse as any)?.error) {
+      console.error("Resend send-help error:", (emailResponse as any).error);
+      return new Response(
+        JSON.stringify({ error: (emailResponse as any).error?.message || "Email sending failed" }),
+        { status: 400, headers: { "Content-Type": "application/json", ...corsHeaders } },
+      );
+    }
+
     return new Response(JSON.stringify(emailResponse), {
       status: 200,
       headers: { "Content-Type": "application/json", ...corsHeaders },
