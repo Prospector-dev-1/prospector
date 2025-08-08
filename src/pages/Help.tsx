@@ -10,6 +10,8 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Form, FormControl, FormDescription, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
+import { Link } from "react-router-dom";
+import { ArrowLeft } from "lucide-react";
 const contactSchema = z.object({
   name: z.string().min(2, "Please enter your name"),
   email: z.string().email("Enter a valid email"),
@@ -105,9 +107,17 @@ const Help: React.FC = () => {
   };
   return <div className="min-h-screen bg-background">
       <header className="border-b border-border bg-card">
-        <div className="max-w-5xl mx-auto px-4 py-6">
-          <h1 className="text-2xl font-bold">Help & Support</h1>
-          <p className="text-sm text-muted-foreground mt-1">FAQs, billing tips, troubleshooting steps, and contact support.</p>
+        <div className="max-w-5xl mx-auto px-4 py-6 flex items-center gap-3">
+          <Button variant="ghost" size="sm" className="-ml-2" asChild>
+            <Link to="/" aria-label="Back to dashboard">
+              <ArrowLeft className="mr-2 h-4 w-4" />
+              Back to dashboard
+            </Link>
+          </Button>
+          <div>
+            <h1 className="text-2xl font-bold">Help & Support</h1>
+            <p className="text-sm text-muted-foreground mt-1">FAQs, billing tips, troubleshooting steps, and contact support.</p>
+          </div>
         </div>
       </header>
 
