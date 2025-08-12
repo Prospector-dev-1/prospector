@@ -10,6 +10,11 @@ const corsHeaders = {
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
 };
 
+const escapeHtml = (input: string = ""): string =>
+  input.replace(/[&<>"']/g, (ch) =>
+    ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" } as Record<string, string>)[ch] || ch
+  );
+
 interface HelpRequest {
   name: string;
   email: string;
@@ -36,20 +41,25 @@ serve(async (req) => {
       });
     }
 
-    const emailResponse = await resend.emails.send({
-      from: SUPPORT_FROM_EMAIL,
-      to: [SUPPORT_TO_EMAIL],
-      reply_to: email,
-      subject: `[Help] ${subject}`,
-      html: `
+const safeName = escapeHtml(name);
+const safeEmail = escapeHtml(email);
+const safeSubject = escapeHtml(subject);
+const safeMessage = escapeHtml(message).replace(/\n/g, '<br/>');
+
+const emailResponse = await resend.emails.send({
+  from: SUPPORT_FROM_EMAIL,
+  to: [SUPPORT_TO_EMAIL],
+  reply_to: email,
+  subject: `[Help] ${safeSubject}`,
+  html: `
         <h2>New Help Request</h2>
-        <p><strong>Name:</strong> ${name}</p>
-        <p><strong>Email:</strong> ${email}</p>
-        <p><strong>Subject:</strong> ${subject}</p>
+        <p><strong>Name:</strong> ${safeName}</p>
+        <p><strong>Email:</strong> ${safeEmail}</p>
+        <p><strong>Subject:</strong> ${safeSubject}</p>
         <p><strong>Message:</strong></p>
-        <p>${message.replace(/\n/g, '<br/>')}</p>
+        <p>${safeMessage}</p>
       `,
-    });
+});
 
     // Handle Resend API errors explicitly
     if ((emailResponse as any)?.error) {

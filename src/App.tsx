@@ -14,6 +14,7 @@ import ScriptAnalysis from "./pages/ScriptAnalysis";
 import CustomScriptGenerator from "./pages/CustomScriptGenerator";
 import NotFound from "./pages/NotFound";
 import Help from "./pages/Help";
+import ProtectedRoute from "@/components/ProtectedRoute";
 
 const queryClient = new QueryClient();
 
@@ -27,12 +28,12 @@ const App = () => (
           <Routes>
             <Route path="/" element={<Index />} />
             <Route path="/auth" element={<Auth />} />
-            <Route path="/call-simulation" element={<CallSimulation />} />
-            <Route path="/call-results/:callId" element={<CallResults />} />
-            <Route path="/profile" element={<Profile />} />
-            <Route path="/buy-credits" element={<BuyCredits />} />
-            <Route path="/script-analysis" element={<ScriptAnalysis />} />
-            <Route path="/custom-script" element={<CustomScriptGenerator />} />
+              <Route path="/call-simulation" element={<ProtectedRoute><CallSimulation /></ProtectedRoute>} />
+              <Route path="/call-results/:callId" element={<ProtectedRoute><CallResults /></ProtectedRoute>} />
+              <Route path="/profile" element={<ProtectedRoute><Profile /></ProtectedRoute>} />
+              <Route path="/buy-credits" element={<ProtectedRoute><BuyCredits /></ProtectedRoute>} />
+              <Route path="/script-analysis" element={<ProtectedRoute><ScriptAnalysis /></ProtectedRoute>} />
+              <Route path="/custom-script" element={<ProtectedRoute><CustomScriptGenerator /></ProtectedRoute>} />
             <Route path="/help" element={<Help />} />
             {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
             <Route path="*" element={<NotFound />} />
