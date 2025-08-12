@@ -455,7 +455,7 @@ const Profile = () => {
                   <div>
                     <Label htmlFor="email">Email</Label>
                     <Input id="email" value={profile.email} disabled className="bg-muted" />
-                    <p className="text-xs text-muted-foreground mt-1">Change email or password in Settings tab</p>
+                    <p className="text-xs text-muted-foreground mt-1">Change email or password in Settings tab.</p>
                   </div>
                   <div>
                     <Label htmlFor="phone">Phone Number</Label>
