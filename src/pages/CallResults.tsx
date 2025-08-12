@@ -195,11 +195,11 @@ const CallResults = () => {
                 {callRecord.overall_score || 0}/10
               </span>
             </CardTitle>
-            <CardDescription className="text-lg">
-              <Badge className="mt-2">
+            <div className="mt-2">
+              <Badge>
                 {getScoreBadge(callRecord.overall_score || 0)}
               </Badge>
-            </CardDescription>
+            </div>
           </CardHeader>
           <CardContent>
             <div className="mb-6 text-center">
