@@ -637,7 +637,8 @@ const Profile = () => {
               <CardContent className="space-y-3 p-3 sm:p-6 sm:space-y-4">
                 <div className="flex items-center justify-between">
                   <div>
-                    <p className="font-medium">Password</p>
+                    <p className="font-medium">
+                  </p>
                     <p className="text-sm text-muted-foreground">Last updated: Unknown</p>
                   </div>
                   {!showPasswordForm ? <Button variant="outline" onClick={() => setShowPasswordForm(true)}>
