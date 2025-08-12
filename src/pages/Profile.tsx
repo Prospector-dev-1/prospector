@@ -635,13 +635,13 @@ const Profile = () => {
                 <CardDescription className="text-sm">Update your account password. Use a strong password for better security.</CardDescription>
               </CardHeader>
               <CardContent className="space-y-3 p-3 sm:p-6 sm:space-y-4">
-                <div className="flex items-center justify-between">
+                <div className="flex items-center justify-between px-[90px]">
                   <div>
                     <p className="font-medium">
                   </p>
                     
                   </div>
-                  {!showPasswordForm ? <Button variant="outline" onClick={() => setShowPasswordForm(true)}>
+                  {!showPasswordForm ? <Button variant="outline" onClick={() => setShowPasswordForm(true)} className="my-0">
                       Change Password
                     </Button> : <div className="flex gap-2">
                       <Button variant="outline" onClick={() => {
