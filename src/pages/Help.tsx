@@ -223,7 +223,7 @@ const Help: React.FC = () => {
                         <FormControl>
                           <Textarea placeholder="Please include as many details as possible" rows={6} {...field} />
                         </FormControl>
-                        <FormDescription>We usually respond within 24–48 hours.</FormDescription>
+                        <FormDescription>You can expect a response within 1–24 hours during business days.</FormDescription>
                         <FormMessage />
                       </FormItem>} />
 
