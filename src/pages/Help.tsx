@@ -12,6 +12,7 @@ import { Form, FormControl, FormDescription, FormField, FormItem, FormLabel, For
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
 import { Link } from "react-router-dom";
 import { ArrowLeft } from "lucide-react";
+import SEO from "@/components/SEO";
 const contactSchema = z.object({
   name: z.string().min(2, "Please enter your name"),
   email: z.string().email("Enter a valid email"),
@@ -24,28 +25,6 @@ const Help: React.FC = () => {
     toast
   } = useToast();
 
-  // Basic SEO tags
-  useEffect(() => {
-    document.title = "Help & Support | Prospector";
-    const desc = "Help center: FAQs, billing/credits tips, troubleshooting, and contact support.";
-    let metaDesc = document.querySelector('meta[name="description"]');
-    if (!metaDesc) {
-      metaDesc = document.createElement("meta");
-      metaDesc.setAttribute("name", "description");
-      document.head.appendChild(metaDesc);
-    }
-    metaDesc.setAttribute("content", desc);
-
-    // Canonical
-    const canonicalHref = `${window.location.origin}/help`;
-    let linkCanonical = document.querySelector('link[rel="canonical"]') as HTMLLinkElement | null;
-    if (!linkCanonical) {
-      linkCanonical = document.createElement("link");
-      linkCanonical.setAttribute("rel", "canonical");
-      document.head.appendChild(linkCanonical);
-    }
-    linkCanonical.setAttribute("href", canonicalHref);
-  }, []);
   const faqs = useMemo(() => [{
     q: "How are credits used?",
     a: "Each practice call or AI action that consumes resources deducts credits. Your current balance is visible on the dashboard header."
@@ -105,7 +84,9 @@ const Help: React.FC = () => {
       }
     }))
   };
-  return <div className="min-h-screen bg-background">
+  return (<>
+      <SEO title="Help & Support | Prospector" description="Help center: FAQs, billing/credits tips, troubleshooting, and contact support." canonicalPath="/help" structuredData={faqJsonLd} />
+      <div className="min-h-screen bg-background">
       <header className="border-b border-border bg-card">
         <div className="max-w-5xl mx-auto px-4 py-6 flex flex-col gap-2 sm:flex-row sm:items-center sm:gap-3">
           <Button variant="ghost" size="sm" className="ml-0 sm:-ml-2" asChild>
@@ -239,10 +220,8 @@ const Help: React.FC = () => {
           </Card>
         </section>
 
-        <script type="application/ld+json" dangerouslySetInnerHTML={{
-        __html: JSON.stringify(faqJsonLd)
-      }} />
       </main>
-    </div>;
+    </div>
+  </>);
 };
 export default Help;
