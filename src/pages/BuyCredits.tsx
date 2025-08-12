@@ -7,6 +7,7 @@ import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
+import SEO from '@/components/SEO';
 
 interface CreditPackage {
   id: string;
@@ -86,7 +87,8 @@ const BuyCredits = () => {
     }
   };
 
-  return (
+  return (<>
+    <SEO title="Buy Credits | Prospector" description="Purchase credits for AI script analysis and call simulations." canonicalPath="/buy-credits" />
     <div className="min-h-screen bg-gradient-to-br from-background to-muted p-4">
       <div className="container mx-auto max-w-6xl py-8">
         {/* Header */}
@@ -190,6 +192,7 @@ const BuyCredits = () => {
         </div>
       </div>
     </div>
+    </>
   );
 };
 

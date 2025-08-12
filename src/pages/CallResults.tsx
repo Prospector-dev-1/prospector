@@ -7,6 +7,7 @@ import { Progress } from '@/components/ui/progress';
 import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/integrations/supabase/client';
 import { ArrowLeft, Trophy, TrendingUp, MessageSquare, Star, HelpCircle, Brain, Target, Lightbulb, Ear, DollarSign, FileText } from 'lucide-react';
+import SEO from '@/components/SEO';
 
 interface CallRecord {
   id: string;
@@ -167,16 +168,15 @@ const CallResults = () => {
     { name: 'Closing Ability', description: 'How effectively did they close or advance the sale?', score: callRecord.closing_score, icon: DollarSign },
   ];
 
-  return (
+  return (<>
+    <SEO title={`Call Results | Score & Feedback`} description="Detailed breakdown of your AI practice call with scores and feedback." canonicalPath={`/call-results/${callId}`} />
     <div className="min-h-screen bg-background">
       {/* Header */}
       <div className="border-b border-border bg-card">
         <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex justify-between items-center py-4">
             <div className="flex items-center space-x-3">
-              <Button variant="ghost" size="icon" onClick={() => navigate('/')}>
-                <ArrowLeft className="h-4 w-4" />
-              </Button>
+              <Button variant="ghost" size="icon" aria-label="Back to dashboard" onClick={() => navigate('/')}>\n                <ArrowLeft className="h-4 w-4" />\n              </Button>
               <h1 className="text-2xl font-bold text-primary">Call Results</h1>
             </div>
           </div>
@@ -310,6 +310,7 @@ const CallResults = () => {
         </div>
       </div>
     </div>
+    </>
   );
 };
 

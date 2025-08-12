@@ -10,6 +10,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import { Loader2, FileText, ArrowLeft, Clipboard, Sparkles, Building, Target, Users, MessageSquare } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
+import SEO from '@/components/SEO';
 
 interface ScriptFormData {
   businessType: string;
@@ -149,7 +150,8 @@ const CustomScriptGenerator = () => {
     setCreditsRemaining(null);
   };
 
-  return (
+  return (<>
+    <SEO title="Custom Script Generator | Prospector" description="Generate personalized cold call scripts tailored to your business." canonicalPath="/custom-script" />
     <div className="min-h-screen bg-background p-2 sm:p-4">
       <div className="max-w-4xl mx-auto space-y-4 sm:space-y-6">
         {/* Header */}
@@ -422,7 +424,7 @@ const CustomScriptGenerator = () => {
         )}
       </div>
     </div>
-  );
+  </>);
 };
 
 export default CustomScriptGenerator;

@@ -7,6 +7,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Eye, EyeOff } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
+import SEO from '@/components/SEO';
 
 const Auth = () => {
   const { user, signIn, signUp, loading } = useAuth();
@@ -55,7 +56,8 @@ const Auth = () => {
     );
   }
 
-  return (
+  return (<>
+    <SEO title="Log in or Sign up | Prospector" description="Access Prospector: AI cold calling practice and script tools." canonicalPath="/auth" />
     <div className="min-h-screen flex items-center justify-center bg-background p-4">
       <div className="w-full max-w-md">
         <div className="text-center mb-8">
@@ -100,6 +102,7 @@ const Auth = () => {
                       />
                       <button
                         type="button"
+                        aria-label="Toggle password visibility"
                         onClick={() => setShowSignInPassword(!showSignInPassword)}
                         className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
                       >
@@ -165,6 +168,7 @@ const Auth = () => {
                       />
                       <button
                         type="button"
+                        aria-label="Toggle password visibility"
                         onClick={() => setShowSignUpPassword(!showSignUpPassword)}
                         className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
                       >
@@ -188,6 +192,7 @@ const Auth = () => {
                       />
                       <button
                         type="button"
+                        aria-label="Toggle password visibility"
                         onClick={() => setShowConfirmPassword(!showConfirmPassword)}
                         className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
                       >
@@ -208,7 +213,7 @@ const Auth = () => {
         </Tabs>
       </div>
     </div>
-  );
+  </>);
 };
 
 export default Auth;

@@ -9,6 +9,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import { Loader2, FileText, Target, TrendingUp, MessageSquare, Star, CheckCircle, AlertCircle, ArrowLeft, Clipboard, Maximize2, Minimize2 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
+import SEO from '@/components/SEO';
 
 interface ScriptAnalysis {
   overall_score: number;
@@ -209,7 +210,8 @@ const ScriptAnalysis = () => {
     return "destructive";
   };
 
-  return (
+  return (<>
+    <SEO title="Script Analysis | AI Sales Coaching" description="Analyze your sales script with AI and get actionable feedback." canonicalPath="/script-analysis" />
     <div className="min-h-screen bg-background p-2 sm:p-4">
       <div className="max-w-4xl mx-auto space-y-4 sm:space-y-6">
         {/* Header */}
@@ -555,7 +557,7 @@ const ScriptAnalysis = () => {
         )}
       </div>
     </div>
-  );
+  </>);
 };
 
 export default ScriptAnalysis;

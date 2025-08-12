@@ -11,6 +11,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Separator } from '@/components/ui/separator';
 import { Badge } from '@/components/ui/badge';
 import { User, Phone, CreditCard, History, Settings, LogOut, Edit, Save, X, Loader2 } from 'lucide-react';
+import SEO from '@/components/SEO';
 interface Profile {
   id: string;
   user_id: string;
@@ -325,20 +326,16 @@ const Profile = () => {
       return;
     }
     try {
-      // Delete profile and calls (will cascade due to foreign key constraints)
-      await supabase.from('profiles').delete().eq('user_id', user?.id);
+      const { data, error } = await supabase.functions.invoke('delete-account');
+      if (error || data?.error) {
+        throw new Error(error?.message || data?.error || 'Failed to delete');
+      }
 
-      // Delete the user account
-      const {
-        error
-      } = await supabase.auth.admin.deleteUser(user?.id || '');
-      if (error) throw error;
       toast({
         title: "Account deleted",
         description: "Your account has been permanently deleted."
       });
 
-      // Sign out and redirect
       await signOut();
       navigate('/auth');
     } catch (error) {
@@ -382,7 +379,8 @@ const Profile = () => {
         <p>Profile not found</p>
       </div>;
   }
-  return <div className="min-h-screen bg-gradient-to-br from-primary/5 to-secondary/5">
+  return (<>
+      <SEO title="Profile & Settings | Prospector" description="Manage your account, credits, subscription, and call history." canonicalPath="/profile" />
       <div className="px-3 sm:px-4 lg:px-8 py-4 sm:py-6">
         {/* Header */}
         <div className="flex flex-col sm:flex-row sm:items-center justify-between mb-6 space-y-3 sm:space-y-0">
@@ -700,7 +698,7 @@ const Profile = () => {
                 </Button>
               </CardContent>
             </Card>
-            
+    </>
             {/* Danger Zone */}
             <Card>
               <CardHeader className="p-3 sm:p-6 pb-2 sm:pb-6">

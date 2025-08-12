@@ -2,6 +2,7 @@ import React from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import Dashboard from './Dashboard';
 import { Navigate } from 'react-router-dom';
+import SEO from '@/components/SEO';
 
 const Index = () => {
   const { user, loading } = useAuth();
@@ -21,7 +22,10 @@ const Index = () => {
     return <Navigate to="/auth" replace />;
   }
 
-  return <Dashboard />;
+  return (<>
+    <SEO title="Prospector Dashboard | AI Cold Call Training" description="Your AI sales training dashboard: credits, calls, insights." canonicalPath="/" />
+    <Dashboard />
+  </>);
 };
 
 export default Index;

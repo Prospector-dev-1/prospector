@@ -9,6 +9,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/components/ui/use-toast';
 import { Phone, PhoneOff, Timer, Mic, MicOff, ArrowLeft, User } from 'lucide-react';
 import Vapi from '@vapi-ai/web';
+import SEO from '@/components/SEO';
 
 const CallSimulation = () => {
   const navigate = useNavigate();
@@ -336,16 +337,15 @@ const CallSimulation = () => {
     return <div>Loading...</div>;
   }
 
-  return (
+  return (<>
+    <SEO title="Practice Call | AI Cold Call Simulator" description="Simulate realistic cold calls with AI; choose difficulty and get coaching." canonicalPath="/call-simulation" />
     <div className="min-h-screen bg-background">
       {/* Header */}
       <div className="border-b border-border bg-card">
         <div className="px-3 sm:px-4 lg:px-8">
           <div className="flex justify-between items-center py-3">
             <div className="flex items-center space-x-2">
-              <Button variant="ghost" size="icon" onClick={() => navigate('/')}>
-                <ArrowLeft className="h-4 w-4" />
-              </Button>
+              <Button variant="ghost" size="icon" aria-label="Back to dashboard" onClick={() => navigate('/')}>\n                <ArrowLeft className="h-4 w-4" />\n              </Button>
               <h1 className="text-lg sm:text-xl font-bold text-primary">Practice Call</h1>
             </div>
             <div className="text-right">
@@ -480,6 +480,7 @@ const CallSimulation = () => {
                       variant="outline"
                       size="icon"
                       onClick={toggleMute}
+                      aria-label={isMuted ? 'Unmute microphone' : 'Mute microphone'}
                       className="rounded-full w-12 h-12"
                     >
                       {isMuted ? <MicOff className="h-4 w-4" /> : <Mic className="h-4 w-4" />}
@@ -528,7 +529,7 @@ const CallSimulation = () => {
         )}
       </div>
     </div>
-  );
+  </>);
 };
 
 export default CallSimulation;
