@@ -204,11 +204,32 @@ serve(async (req) => {
       return Math.max(0.12, +(base + jitter).toFixed(2));
     })();
 
+    // Short, API-safe assistant names (<= 40 chars)
+    const buildAssistantName = (level: number, scenario: ReturnType<typeof generateScenario>) => {
+      const roleMap: Record<string, string> = {
+        'Operations Manager': 'Ops Mgr',
+        'Head of Marketing': 'Head Mktg',
+        'Sales Director': 'Sales Dir',
+      };
+      const indMap: Record<string, string> = {
+        'E-commerce': 'Ecom',
+        'Healthcare': 'Health',
+        'Real Estate': 'RealEst',
+        'Manufacturing': 'Mfg',
+        'Education': 'Edu',
+        'Hospitality': 'Hosp',
+      };
+      const role = roleMap[scenario.role] ?? scenario.role;
+      const industry = indMap[scenario.industry] ?? scenario.industry;
+      const base = `L${level} ${role} - ${industry}`;
+      return base.length <= 40 ? base : `L${level} ${industry}`;
+    };
+
     // Create Vapi assistant for web call with scenario personalization
     console.log('Creating Vapi assistant...');
     
     const assistantConfig = {
-      name: `Practice: ${scenario.role} in ${scenario.industry} (L${difficulty_level})`,
+      name: buildAssistantName(difficulty_level, scenario),
       model: {
         provider: 'openai',
         model: 'gpt-4o-mini',
