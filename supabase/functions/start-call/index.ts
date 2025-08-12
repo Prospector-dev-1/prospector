@@ -44,18 +44,26 @@ serve(async (req) => {
     );
 
     console.log('Getting user data...');
-    const { data: userData } = await supabaseService.auth.getUser(token);
-    if (!userData.user) {
-      console.error('User not found');
+    // Decode JWT directly (Edge Functions verify JWT when verify_jwt = true)
+    const base64Url = token.split('.')[1];
+    let userId: string | undefined;
+    try {
+      const payload = JSON.parse(atob(base64Url));
+      userId = payload?.sub as string | undefined;
+    } catch (_) {
+      userId = undefined;
+    }
+    if (!userId) {
+      console.error('JWT missing or invalid sub');
       throw new Error('Unauthorized');
     }
-    console.log('User authenticated:', userData.user.id);
+    console.log('User authenticated:', userId);
 
     // Check user credits
     const { data: profile, error: profileError } = await supabaseService
       .from('profiles')
       .select('credits, subscription_type')
-      .eq('user_id', userData.user.id)
+      .eq('user_id', userId)
       .single();
 
     if (profileError || !profile) {
@@ -78,13 +86,13 @@ serve(async (req) => {
       await supabaseService
         .from('profiles')
         .update({ credits: profile.credits - 1 })
-        .eq('user_id', userData.user.id);
+        .eq('user_id', userId);
 
       // Log credit transaction
       await supabaseService
         .from('credit_transactions')
         .insert({
-          user_id: userData.user.id,
+          user_id: userId,
           amount: -1,
           type: 'deduction',
           description: `AI practice call - Difficulty Level ${difficulty_level}`
@@ -193,7 +201,7 @@ Important: Stay in character throughout the entire call. You don't know what the
     const { data: callRecord, error: callError } = await supabaseService
       .from('calls')
       .insert({
-        user_id: userData.user.id,
+        user_id: userId,
         difficulty_level,
         call_status: 'started'
       })
