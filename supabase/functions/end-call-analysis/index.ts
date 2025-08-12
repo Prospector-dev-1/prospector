@@ -25,8 +25,16 @@ serve(async (req) => {
       { auth: { persistSession: false } }
     );
 
-    const { data: userData } = await supabaseService.auth.getUser(token);
-    if (!userData.user) {
+    // Decode JWT locally
+    let userId: string | undefined;
+    try {
+      const base64Url = token.split('.')[1];
+      const payload = JSON.parse(atob(base64Url));
+      userId = payload?.sub as string | undefined;
+    } catch (_) {
+      userId = undefined;
+    }
+    if (!userId) {
       throw new Error('Unauthorized');
     }
 
@@ -35,7 +43,7 @@ serve(async (req) => {
       .from('calls')
       .select('*')
       .eq('id', callRecordId)
-      .eq('user_id', userData.user.id)
+      .eq('user_id', userId)
       .single();
 
     if (!callRecord) {

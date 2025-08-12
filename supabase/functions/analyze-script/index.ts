@@ -74,10 +74,18 @@ serve(async (req) => {
     console.log('=== STEP 4: Verifying user token ===');
     // Verify user token and get user info
     const token = authHeader.replace('Bearer ', '');
-    const { data: { user }, error: authError } = await supabase.auth.getUser(token);
+    // Decode JWT locally (Edge Functions verify JWT by default)
+    let userId: string | undefined;
+    try {
+      const base64Url = token.split('.')[1];
+      const payload = JSON.parse(atob(base64Url));
+      userId = payload?.sub as string | undefined;
+    } catch (_) {
+      userId = undefined;
+    }
     
-    if (authError || !user) {
-      console.error('=== ERROR: Auth error ===', authError);
+    if (!userId) {
+      console.error('=== ERROR: Invalid JWT ===');
       return new Response(JSON.stringify({ error: 'Invalid authentication' }), {
         status: 401,
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
@@ -85,14 +93,14 @@ serve(async (req) => {
     }
 
     console.log('=== STEP 5: User authenticated successfully ===');
-    console.log('User ID:', user.id);
+    console.log('User ID:', userId);
 
     console.log('=== STEP 6: Fetching user profile ===');
     // Get user profile to check credits
     const { data: profile, error: profileError } = await supabase
       .from('profiles')
       .select('credits')
-      .eq('user_id', user.id)
+      .eq('user_id', userId)
       .single();
 
     if (profileError || !profile) {
@@ -127,7 +135,7 @@ serve(async (req) => {
     const { error: updateError } = await supabase
       .from('profiles')
       .update({ credits: newCreditAmount })
-      .eq('user_id', user.id);
+      .eq('user_id', userId);
 
     if (updateError) {
       console.error('=== ERROR: Failed to deduct credits ===', updateError);
@@ -142,7 +150,7 @@ serve(async (req) => {
     const { error: transactionError } = await supabase
       .from('credit_transactions')
       .insert({
-        user_id: user.id,
+        user_id: userId,
         type: 'script_analysis',
         amount: -50, // Store as -50 to represent -0.5 credits (multiply by 100)
         description: 'Script analysis with AI feedback'
