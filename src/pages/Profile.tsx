@@ -381,7 +381,8 @@ const Profile = () => {
   }
   return (<>
       <SEO title="Profile & Settings | Prospector" description="Manage your account, credits, subscription, and call history." canonicalPath="/profile" />
-      <div className="px-3 sm:px-4 lg:px-8 py-4 sm:py-6">
+      <div className="min-h-screen bg-gradient-to-br from-primary/5 to-secondary/5">
+        <div className="px-3 sm:px-4 lg:px-8 py-4 sm:py-6">
         {/* Header */}
         <div className="flex flex-col sm:flex-row sm:items-center justify-between mb-6 space-y-3 sm:space-y-0">
           <div>
@@ -698,7 +699,6 @@ const Profile = () => {
                 </Button>
               </CardContent>
             </Card>
-    </>
             {/* Danger Zone */}
             <Card>
               <CardHeader className="p-3 sm:p-6 pb-2 sm:pb-6">
@@ -714,6 +714,7 @@ const Profile = () => {
           </TabsContent>
         </Tabs>
       </div>
-    </div>;
+    </div>
+  </>);
 };
 export default Profile;
