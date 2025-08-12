@@ -639,7 +639,7 @@ const Profile = () => {
                   <div>
                     <p className="font-medium">
                   </p>
-                    <p className="text-sm text-muted-foreground">Last updated: Unknown</p>
+                    
                   </div>
                   {!showPasswordForm ? <Button variant="outline" onClick={() => setShowPasswordForm(true)}>
                       Change Password
