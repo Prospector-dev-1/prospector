@@ -10,19 +10,7 @@ import { useToast } from '@/components/ui/use-toast';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Separator } from '@/components/ui/separator';
 import { Badge } from '@/components/ui/badge';
-import { 
-  User, 
-  Phone, 
-  CreditCard, 
-  History, 
-  Settings, 
-  LogOut,
-  Edit,
-  Save,
-  X,
-  Loader2
-} from 'lucide-react';
-
+import { User, Phone, CreditCard, History, Settings, LogOut, Edit, Save, X, Loader2 } from 'lucide-react';
 interface Profile {
   id: string;
   user_id: string;
@@ -36,7 +24,6 @@ interface Profile {
   created_at: string;
   updated_at: string;
 }
-
 interface CallHistory {
   id: string;
   difficulty_level: number;
@@ -45,12 +32,16 @@ interface CallHistory {
   successful_sale: boolean;
   created_at: string;
 }
-
 const Profile = () => {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
-  const { user, signOut } = useAuth();
-  const { toast } = useToast();
+  const {
+    user,
+    signOut
+  } = useAuth();
+  const {
+    toast
+  } = useToast();
   const [activeTab, setActiveTab] = useState(searchParams.get('tab') || 'profile');
   const [profile, setProfile] = useState<Profile | null>(null);
   const [callHistory, setCallHistory] = useState<CallHistory[]>([]);
@@ -73,7 +64,6 @@ const Profile = () => {
     password: ''
   });
   const [purchaseLoading, setPurchaseLoading] = useState<string | null>(null);
-
   useEffect(() => {
     if (!user) {
       navigate('/auth');
@@ -82,15 +72,12 @@ const Profile = () => {
     fetchProfile();
     fetchCallHistory();
   }, [user, navigate]);
-
   const fetchProfile = async () => {
     try {
-      const { data, error } = await supabase
-        .from('profiles')
-        .select('*')
-        .eq('user_id', user?.id)
-        .single();
-
+      const {
+        data,
+        error
+      } = await supabase.from('profiles').select('*').eq('user_id', user?.id).single();
       if (error) throw error;
       setProfile(data);
       setEditForm({
@@ -109,37 +96,31 @@ const Profile = () => {
       setLoading(false);
     }
   };
-
   const fetchCallHistory = async () => {
     try {
-      const { data, error } = await supabase
-        .from('calls')
-        .select('id, difficulty_level, duration_seconds, overall_score, successful_sale, created_at')
-        .eq('user_id', user?.id)
-        .order('created_at', { ascending: false })
-        .limit(10);
-
+      const {
+        data,
+        error
+      } = await supabase.from('calls').select('id, difficulty_level, duration_seconds, overall_score, successful_sale, created_at').eq('user_id', user?.id).order('created_at', {
+        ascending: false
+      }).limit(10);
       if (error) throw error;
       setCallHistory(data || []);
     } catch (error) {
       console.error('Error fetching call history:', error);
     }
   };
-
   const handleUpdateProfile = async () => {
     try {
-      const { error } = await supabase
-        .from('profiles')
-        .update({
-          first_name: editForm.first_name || null,
-          last_name: editForm.last_name || null,
-          phone_number: editForm.phone_number || null,
-          updated_at: new Date().toISOString()
-        })
-        .eq('user_id', user?.id);
-
+      const {
+        error
+      } = await supabase.from('profiles').update({
+        first_name: editForm.first_name || null,
+        last_name: editForm.last_name || null,
+        phone_number: editForm.phone_number || null,
+        updated_at: new Date().toISOString()
+      }).eq('user_id', user?.id);
       if (error) throw error;
-
       await fetchProfile();
       setIsEditing(false);
       toast({
@@ -155,7 +136,6 @@ const Profile = () => {
       });
     }
   };
-
   const handleLogout = async () => {
     try {
       await signOut();
@@ -164,7 +144,6 @@ const Profile = () => {
       console.error('Error logging out:', error);
     }
   };
-
   const handlePasswordChange = async () => {
     if (!passwordForm.currentPassword) {
       toast({
@@ -174,7 +153,6 @@ const Profile = () => {
       });
       return;
     }
-
     if (passwordForm.newPassword !== passwordForm.confirmPassword) {
       toast({
         title: "Error",
@@ -183,23 +161,22 @@ const Profile = () => {
       });
       return;
     }
-
     if (passwordForm.newPassword.length < 8) {
       toast({
-        title: "Error", 
+        title: "Error",
         description: "Password must be at least 8 characters long",
         variant: "destructive"
       });
       return;
     }
-
     try {
       // First verify current password by trying to sign in
-      const { error: signInError } = await supabase.auth.signInWithPassword({
+      const {
+        error: signInError
+      } = await supabase.auth.signInWithPassword({
         email: user?.email || '',
         password: passwordForm.currentPassword
       });
-
       if (signInError) {
         toast({
           title: "Error",
@@ -210,17 +187,16 @@ const Profile = () => {
       }
 
       // Update password if current password is correct
-      const { error } = await supabase.auth.updateUser({
+      const {
+        error
+      } = await supabase.auth.updateUser({
         password: passwordForm.newPassword
       });
-
       if (error) throw error;
-
       toast({
         title: "Success",
         description: "Password updated successfully"
       });
-
       setPasswordForm({
         currentPassword: '',
         newPassword: '',
@@ -236,7 +212,6 @@ const Profile = () => {
       });
     }
   };
-
   const handleEmailChange = async () => {
     if (!emailForm.newEmail) {
       toast({
@@ -246,19 +221,17 @@ const Profile = () => {
       });
       return;
     }
-
     try {
-      const { error } = await supabase.auth.updateUser({
+      const {
+        error
+      } = await supabase.auth.updateUser({
         email: emailForm.newEmail
       });
-
       if (error) throw error;
-
       toast({
         title: "Success",
-        description: "Confirmation email sent to your new email address. Please check your email to confirm the change.",
+        description: "Confirmation email sent to your new email address. Please check your email to confirm the change."
       });
-
       setEmailForm({
         newEmail: '',
         password: ''
@@ -273,15 +246,10 @@ const Profile = () => {
       });
     }
   };
-
   const handleDataExport = async () => {
     try {
       // Get user profile and call history
-      const [profileData, callsData] = await Promise.all([
-        supabase.from('profiles').select('*').eq('user_id', user?.id),
-        supabase.from('calls').select('*').eq('user_id', user?.id)
-      ]);
-
+      const [profileData, callsData] = await Promise.all([supabase.from('profiles').select('*').eq('user_id', user?.id), supabase.from('calls').select('*').eq('user_id', user?.id)]);
       const exportData = {
         profile: profileData.data?.[0] || {},
         calls: callsData.data || [],
@@ -290,7 +258,9 @@ const Profile = () => {
 
       // Create and download file
       const dataStr = JSON.stringify(exportData, null, 2);
-      const dataBlob = new Blob([dataStr], { type: 'application/json' });
+      const dataBlob = new Blob([dataStr], {
+        type: 'application/json'
+      });
       const url = URL.createObjectURL(dataBlob);
       const link = document.createElement('a');
       link.href = url;
@@ -299,7 +269,6 @@ const Profile = () => {
       link.click();
       document.body.removeChild(link);
       URL.revokeObjectURL(url);
-
       toast({
         title: "Success",
         description: "Your data has been downloaded successfully"
@@ -313,18 +282,19 @@ const Profile = () => {
       });
     }
   };
-
   const handlePurchase = async (type: 'credits' | 'premium') => {
     if (!user) return;
-    
     setPurchaseLoading(type);
     try {
-      const { data, error } = await supabase.functions.invoke('create-checkout', {
-        body: { priceType: type }
+      const {
+        data,
+        error
+      } = await supabase.functions.invoke('create-checkout', {
+        body: {
+          priceType: type
+        }
       });
-
       if (error) throw error;
-
       if (data?.url) {
         window.location.href = data.url;
       } else {
@@ -341,41 +311,28 @@ const Profile = () => {
       setPurchaseLoading(null);
     }
   };
-
   const handleDeleteAccount = async () => {
-    const confirmed = window.confirm(
-      "Are you sure you want to delete your account? This action cannot be undone and will permanently delete all your data including call history, profile information, and credits."
-    );
-
+    const confirmed = window.confirm("Are you sure you want to delete your account? This action cannot be undone and will permanently delete all your data including call history, profile information, and credits.");
     if (!confirmed) return;
-
-    const finalConfirm = window.confirm(
-      "This is your final warning. Type 'DELETE' in the next prompt to confirm account deletion."
-    );
-
+    const finalConfirm = window.confirm("This is your final warning. Type 'DELETE' in the next prompt to confirm account deletion.");
     if (!finalConfirm) return;
-
-    const deleteConfirmation = window.prompt(
-      "Please type 'DELETE' (all caps) to confirm account deletion:"
-    );
-
+    const deleteConfirmation = window.prompt("Please type 'DELETE' (all caps) to confirm account deletion:");
     if (deleteConfirmation !== 'DELETE') {
       toast({
         title: "Account deletion cancelled",
-        description: "Account deletion was cancelled because the confirmation text was incorrect.",
+        description: "Account deletion was cancelled because the confirmation text was incorrect."
       });
       return;
     }
-
     try {
       // Delete profile and calls (will cascade due to foreign key constraints)
       await supabase.from('profiles').delete().eq('user_id', user?.id);
-      
-      // Delete the user account
-      const { error } = await supabase.auth.admin.deleteUser(user?.id || '');
-      
-      if (error) throw error;
 
+      // Delete the user account
+      const {
+        error
+      } = await supabase.auth.admin.deleteUser(user?.id || '');
+      if (error) throw error;
       toast({
         title: "Account deleted",
         description: "Your account has been permanently deleted."
@@ -393,7 +350,6 @@ const Profile = () => {
       });
     }
   };
-
   const formatDate = (dateString: string) => {
     return new Date(dateString).toLocaleDateString('en-US', {
       year: 'numeric',
@@ -401,42 +357,32 @@ const Profile = () => {
       day: 'numeric'
     });
   };
-
   const formatDuration = (seconds: number | null) => {
     if (!seconds) return '0m 0s';
     const minutes = Math.floor(seconds / 60);
     const remainingSeconds = seconds % 60;
     return `${minutes}m ${remainingSeconds}s`;
   };
-
   const getDifficultyColor = (level: number) => {
     if (level <= 3) return 'bg-green-500';
     if (level <= 6) return 'bg-yellow-500';
     if (level <= 8) return 'bg-orange-500';
     return 'bg-red-500';
   };
-
   if (loading) {
-    return (
-      <div className="min-h-screen flex items-center justify-center">
+    return <div className="min-h-screen flex items-center justify-center">
         <div className="text-center">
           <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto"></div>
           <p className="mt-2">Loading profile...</p>
         </div>
-      </div>
-    );
+      </div>;
   }
-
   if (!profile) {
-    return (
-      <div className="min-h-screen flex items-center justify-center">
+    return <div className="min-h-screen flex items-center justify-center">
         <p>Profile not found</p>
-      </div>
-    );
+      </div>;
   }
-
-  return (
-    <div className="min-h-screen bg-gradient-to-br from-primary/5 to-secondary/5">
+  return <div className="min-h-screen bg-gradient-to-br from-primary/5 to-secondary/5">
       <div className="px-3 sm:px-4 lg:px-8 py-4 sm:py-6">
         {/* Header */}
         <div className="flex flex-col sm:flex-row sm:items-center justify-between mb-6 space-y-3 sm:space-y-0">
@@ -489,13 +435,10 @@ const Profile = () => {
                     <CardTitle>Personal Information</CardTitle>
                     <CardDescription>Manage your personal details and contact information</CardDescription>
                   </div>
-                  {!isEditing ? (
-                    <Button variant="outline" onClick={() => setIsEditing(true)}>
+                  {!isEditing ? <Button variant="outline" onClick={() => setIsEditing(true)}>
                       <Edit className="h-4 w-4 mr-2" />
                       Edit
-                    </Button>
-                  ) : (
-                    <div className="flex gap-2">
+                    </Button> : <div className="flex gap-2">
                       <Button variant="outline" onClick={() => setIsEditing(false)}>
                         <X className="h-4 w-4 mr-2" />
                         Cancel
@@ -504,54 +447,36 @@ const Profile = () => {
                         <Save className="h-4 w-4 mr-2" />
                         Save
                       </Button>
-                    </div>
-                  )}
+                    </div>}
                 </div>
               </CardHeader>
               <CardContent className="space-y-4">
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div>
                     <Label htmlFor="email">Email</Label>
-                    <Input 
-                      id="email" 
-                      value={profile.email} 
-                      disabled 
-                      className="bg-muted"
-                    />
-                    <p className="text-xs text-muted-foreground mt-1">Change email in Settings tab</p>
+                    <Input id="email" value={profile.email} disabled className="bg-muted" />
+                    <p className="text-xs text-muted-foreground mt-1">Change email or password in Settings tab</p>
                   </div>
                   <div>
                     <Label htmlFor="phone">Phone Number</Label>
-                    <Input
-                      id="phone"
-                      value={isEditing ? editForm.phone_number : (profile.phone_number || 'Not set')}
-                      onChange={(e) => setEditForm(prev => ({ ...prev, phone_number: e.target.value }))}
-                      disabled={!isEditing}
-                      placeholder="Enter phone number"
-                      className={!isEditing ? "bg-muted" : ""}
-                    />
+                    <Input id="phone" value={isEditing ? editForm.phone_number : profile.phone_number || 'Not set'} onChange={e => setEditForm(prev => ({
+                    ...prev,
+                    phone_number: e.target.value
+                  }))} disabled={!isEditing} placeholder="Enter phone number" className={!isEditing ? "bg-muted" : ""} />
                   </div>
                   <div>
                     <Label htmlFor="firstName">First Name</Label>
-                    <Input
-                      id="firstName"
-                      value={isEditing ? editForm.first_name : (profile.first_name || 'Not set')}
-                      onChange={(e) => setEditForm(prev => ({ ...prev, first_name: e.target.value }))}
-                      disabled={!isEditing}
-                      placeholder="Enter first name"
-                      className={!isEditing ? "bg-muted" : ""}
-                    />
+                    <Input id="firstName" value={isEditing ? editForm.first_name : profile.first_name || 'Not set'} onChange={e => setEditForm(prev => ({
+                    ...prev,
+                    first_name: e.target.value
+                  }))} disabled={!isEditing} placeholder="Enter first name" className={!isEditing ? "bg-muted" : ""} />
                   </div>
                   <div>
                     <Label htmlFor="lastName">Last Name</Label>
-                    <Input
-                      id="lastName"
-                      value={isEditing ? editForm.last_name : (profile.last_name || 'Not set')}
-                      onChange={(e) => setEditForm(prev => ({ ...prev, last_name: e.target.value }))}
-                      disabled={!isEditing}
-                      placeholder="Enter last name"
-                      className={!isEditing ? "bg-muted" : ""}
-                    />
+                    <Input id="lastName" value={isEditing ? editForm.last_name : profile.last_name || 'Not set'} onChange={e => setEditForm(prev => ({
+                    ...prev,
+                    last_name: e.target.value
+                  }))} disabled={!isEditing} placeholder="Enter last name" className={!isEditing ? "bg-muted" : ""} />
                   </div>
                 </div>
                 
@@ -579,22 +504,15 @@ const Profile = () => {
                 <CardDescription>Your last 10 practice sessions</CardDescription>
               </CardHeader>
               <CardContent>
-                {callHistory.length === 0 ? (
-                  <div className="text-center py-8">
+                {callHistory.length === 0 ? <div className="text-center py-8">
                     <p className="text-muted-foreground">No practice calls yet</p>
                     <Button className="mt-4" onClick={() => navigate('/call-simulation')}>
                       Start Your First Call
                     </Button>
-                  </div>
-                ) : (
-                  <div className="space-y-4">
-                    {callHistory.map((call) => (
-                      <div key={call.id} className="flex items-center justify-between p-4 border rounded-lg">
+                  </div> : <div className="space-y-4">
+                    {callHistory.map(call => <div key={call.id} className="flex items-center justify-between p-4 border rounded-lg">
                         <div className="flex items-center gap-4">
-                          <Badge 
-                            variant="outline" 
-                            className={`${getDifficultyColor(call.difficulty_level)} text-white`}
-                          >
+                          <Badge variant="outline" className={`${getDifficultyColor(call.difficulty_level)} text-white`}>
                             Level {call.difficulty_level}
                           </Badge>
                           <div>
@@ -614,10 +532,8 @@ const Profile = () => {
                             {call.successful_sale ? "Sale Made" : "No Sale"}
                           </Badge>
                         </div>
-                      </div>
-                    ))}
-                  </div>
-                )}
+                      </div>)}
+                  </div>}
               </CardContent>
             </Card>
           </TabsContent>
@@ -643,39 +559,24 @@ const Profile = () => {
                   </div>
                 </div>
                 
-                {profile.subscription_end && (
-                  <div className="space-y-2">
+                {profile.subscription_end && <div className="space-y-2">
                     <Label>Subscription Ends</Label>
                     <p className="text-sm text-muted-foreground">{formatDate(profile.subscription_end)}</p>
-                  </div>
-                )}
+                  </div>}
                 
                 <Separator />
                 
                 <div className="space-y-4">
                   <h4 className="font-medium">Actions</h4>
                   <div className="flex flex-col sm:flex-row gap-3">
-                    <Button 
-                      variant="outline" 
-                      className="w-full sm:w-auto"
-                      onClick={() => navigate('/buy-credits')}
-                    >
+                    <Button variant="outline" className="w-full sm:w-auto" onClick={() => navigate('/buy-credits')}>
                       Buy Credits
                     </Button>
-                    <Button 
-                      variant="outline" 
-                      className="w-full sm:w-auto"
-                      onClick={() => handlePurchase('premium')}
-                      disabled={!!purchaseLoading}
-                    >
-                      {purchaseLoading === 'premium' ? (
-                        <>
+                    <Button variant="outline" className="w-full sm:w-auto" onClick={() => handlePurchase('premium')} disabled={!!purchaseLoading}>
+                      {purchaseLoading === 'premium' ? <>
                           <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                           Processing...
-                        </>
-                      ) : (
-                        'Upgrade to Premium - $19.99/month'
-                      )}
+                        </> : 'Upgrade to Premium - $19.99/month'}
                     </Button>
                   </div>
                 </div>
@@ -697,39 +598,33 @@ const Profile = () => {
                     <p className="font-medium">Current Email</p>
                     <p className="text-sm text-muted-foreground">{profile.email}</p>
                   </div>
-                  {!showEmailForm ? (
-                    <Button variant="outline" onClick={() => setShowEmailForm(true)}>
+                  {!showEmailForm ? <Button variant="outline" onClick={() => setShowEmailForm(true)}>
                       Change Email
-                    </Button>
-                  ) : (
-                    <div className="flex flex-col sm:flex-row gap-2 w-full sm:w-auto">
+                    </Button> : <div className="flex flex-col sm:flex-row gap-2 w-full sm:w-auto">
                       <Button variant="outline" className="w-full sm:w-auto" onClick={() => {
-                        setShowEmailForm(false);
-                        setEmailForm({ newEmail: '', password: '' });
-                      }}>
+                    setShowEmailForm(false);
+                    setEmailForm({
+                      newEmail: '',
+                      password: ''
+                    });
+                  }}>
                         Cancel
                       </Button>
                       <Button className="w-full sm:w-auto" onClick={handleEmailChange}>
                         Update Email
                       </Button>
-                    </div>
-                  )}
+                    </div>}
                 </div>
                 
-                {showEmailForm && (
-                  <div className="space-y-4 pt-4 border-t">
+                {showEmailForm && <div className="space-y-4 pt-4 border-t">
                     <div>
                       <Label htmlFor="newEmail">New Email Address</Label>
-                      <Input
-                        id="newEmail"
-                        type="email"
-                        value={emailForm.newEmail}
-                        onChange={(e) => setEmailForm(prev => ({ ...prev, newEmail: e.target.value }))}
-                        placeholder="Enter new email address"
-                      />
+                      <Input id="newEmail" type="email" value={emailForm.newEmail} onChange={e => setEmailForm(prev => ({
+                    ...prev,
+                    newEmail: e.target.value
+                  }))} placeholder="Enter new email address" />
                     </div>
-                  </div>
-                )}
+                  </div>}
               </CardContent>
             </Card>
 
@@ -745,59 +640,48 @@ const Profile = () => {
                     <p className="font-medium">Password</p>
                     <p className="text-sm text-muted-foreground">Last updated: Unknown</p>
                   </div>
-                  {!showPasswordForm ? (
-                    <Button variant="outline" onClick={() => setShowPasswordForm(true)}>
+                  {!showPasswordForm ? <Button variant="outline" onClick={() => setShowPasswordForm(true)}>
                       Change Password
-                    </Button>
-                  ) : (
-                    <div className="flex gap-2">
+                    </Button> : <div className="flex gap-2">
                       <Button variant="outline" onClick={() => {
-                        setShowPasswordForm(false);
-                        setPasswordForm({ currentPassword: '', newPassword: '', confirmPassword: '' });
-                      }}>
+                    setShowPasswordForm(false);
+                    setPasswordForm({
+                      currentPassword: '',
+                      newPassword: '',
+                      confirmPassword: ''
+                    });
+                  }}>
                         Cancel
                       </Button>
                       <Button onClick={handlePasswordChange}>
                         Update Password
                       </Button>
-                    </div>
-                  )}
+                    </div>}
                 </div>
                 
-                {showPasswordForm && (
-                  <div className="space-y-4 pt-4 border-t">
+                {showPasswordForm && <div className="space-y-4 pt-4 border-t">
                     <div>
                       <Label htmlFor="currentPassword">Current Password</Label>
-                      <Input
-                        id="currentPassword"
-                        type="password"
-                        value={passwordForm.currentPassword}
-                        onChange={(e) => setPasswordForm(prev => ({ ...prev, currentPassword: e.target.value }))}
-                        placeholder="Enter current password"
-                      />
+                      <Input id="currentPassword" type="password" value={passwordForm.currentPassword} onChange={e => setPasswordForm(prev => ({
+                    ...prev,
+                    currentPassword: e.target.value
+                  }))} placeholder="Enter current password" />
                     </div>
                     <div>
                       <Label htmlFor="newPassword">New Password</Label>
-                      <Input
-                        id="newPassword"
-                        type="password"
-                        value={passwordForm.newPassword}
-                        onChange={(e) => setPasswordForm(prev => ({ ...prev, newPassword: e.target.value }))}
-                        placeholder="Enter new password (min 8 characters)"
-                      />
+                      <Input id="newPassword" type="password" value={passwordForm.newPassword} onChange={e => setPasswordForm(prev => ({
+                    ...prev,
+                    newPassword: e.target.value
+                  }))} placeholder="Enter new password (min 8 characters)" />
                     </div>
                     <div>
                       <Label htmlFor="confirmPassword">Confirm New Password</Label>
-                      <Input
-                        id="confirmPassword"
-                        type="password"
-                        value={passwordForm.confirmPassword}
-                        onChange={(e) => setPasswordForm(prev => ({ ...prev, confirmPassword: e.target.value }))}
-                        placeholder="Confirm new password"
-                      />
+                      <Input id="confirmPassword" type="password" value={passwordForm.confirmPassword} onChange={e => setPasswordForm(prev => ({
+                    ...prev,
+                    confirmPassword: e.target.value
+                  }))} placeholder="Confirm new password" />
                     </div>
-                  </div>
-                )}
+                  </div>}
               </CardContent>
             </Card>
             
@@ -831,8 +715,6 @@ const Profile = () => {
           </TabsContent>
         </Tabs>
       </div>
-    </div>
-  );
+    </div>;
 };
-
 export default Profile;
