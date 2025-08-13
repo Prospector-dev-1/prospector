@@ -549,7 +549,7 @@ const Profile = () => {
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                   <div className="space-y-2">
                     <Label>Current Plan</Label>
-                    <Badge variant={profile.subscription_type === 'premium' ? 'default' : 'secondary'}>
+                    <Badge variant={profile.subscription_type === 'premium' ? 'default' : 'secondary'} className="px-[10px] mx-[10px] py-0 my-px">
                       {profile.subscription_type?.toUpperCase() || 'FREE'}
                     </Badge>
                   </div>
