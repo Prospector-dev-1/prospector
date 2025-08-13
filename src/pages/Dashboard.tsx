@@ -94,10 +94,8 @@ const Dashboard = () => {
         return 'Free';
     }
   };
-
   const getSubscriptionBadge = () => {
     const planName = getPlanDisplayName(profile?.subscription_type || 'free');
-    
     if (profile?.subscription_type === 'premium') {
       return <Badge className="bg-primary text-primary-foreground">{planName}</Badge>;
     } else if (profile?.subscription_type === 'beginner') {
@@ -109,7 +107,7 @@ const Dashboard = () => {
   return <div className="min-h-screen bg-background">
       {/* Header */}
       <div className="border-b border-border bg-card">
-        <div className="px-3 sm:px-4 lg:px-8">
+        <div className="sm:px-4 lg:px-8 px-[12px] my-[35px]">
           <div className="flex justify-between items-center py-3">
             <div className="flex items-center space-x-2">
               <h1 className="text-lg sm:text-xl font-bold text-primary">Prospector</h1>
