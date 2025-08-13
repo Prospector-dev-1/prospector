@@ -326,16 +326,17 @@ const Profile = () => {
       return;
     }
     try {
-      const { data, error } = await supabase.functions.invoke('delete-account');
+      const {
+        data,
+        error
+      } = await supabase.functions.invoke('delete-account');
       if (error || data?.error) {
         throw new Error(error?.message || data?.error || 'Failed to delete');
       }
-
       toast({
         title: "Account deleted",
         description: "Your account has been permanently deleted."
       });
-
       await signOut();
       navigate('/auth');
     } catch (error) {
@@ -379,7 +380,7 @@ const Profile = () => {
         <p>Profile not found</p>
       </div>;
   }
-  return (<>
+  return <>
       <SEO title="Profile & Settings | Prospector" description="Manage your account, credits, subscription, and call history." canonicalPath="/profile" />
       <div className="min-h-screen bg-gradient-to-br from-primary/5 to-secondary/5">
         <div className="px-3 sm:px-4 lg:px-8 py-4 sm:py-6">
@@ -459,23 +460,23 @@ const Profile = () => {
                   <div>
                     <Label htmlFor="phone">Phone Number</Label>
                     <Input id="phone" value={isEditing ? editForm.phone_number : profile.phone_number || 'Not set'} onChange={e => setEditForm(prev => ({
-                    ...prev,
-                    phone_number: e.target.value
-                  }))} disabled={!isEditing} placeholder="Enter phone number" className={!isEditing ? "bg-muted" : ""} />
+                      ...prev,
+                      phone_number: e.target.value
+                    }))} disabled={!isEditing} placeholder="Enter phone number" className={!isEditing ? "bg-muted" : ""} />
                   </div>
                   <div>
                     <Label htmlFor="firstName">First Name</Label>
                     <Input id="firstName" value={isEditing ? editForm.first_name : profile.first_name || 'Not set'} onChange={e => setEditForm(prev => ({
-                    ...prev,
-                    first_name: e.target.value
-                  }))} disabled={!isEditing} placeholder="Enter first name" className={!isEditing ? "bg-muted" : ""} />
+                      ...prev,
+                      first_name: e.target.value
+                    }))} disabled={!isEditing} placeholder="Enter first name" className={!isEditing ? "bg-muted" : ""} />
                   </div>
                   <div>
                     <Label htmlFor="lastName">Last Name</Label>
                     <Input id="lastName" value={isEditing ? editForm.last_name : profile.last_name || 'Not set'} onChange={e => setEditForm(prev => ({
-                    ...prev,
-                    last_name: e.target.value
-                  }))} disabled={!isEditing} placeholder="Enter last name" className={!isEditing ? "bg-muted" : ""} />
+                      ...prev,
+                      last_name: e.target.value
+                    }))} disabled={!isEditing} placeholder="Enter last name" className={!isEditing ? "bg-muted" : ""} />
                   </div>
                 </div>
                 
@@ -571,9 +572,7 @@ const Profile = () => {
                     <Button variant="outline" className="w-full sm:w-auto" onClick={() => navigate('/buy-credits')}>
                       Buy Credits
                     </Button>
-                    <Button variant="outline" className="w-full sm:w-auto" onClick={() => navigate('/plans')}>
-                      See Plans
-                    </Button>
+                    <Button variant="outline" className="w-full sm:w-auto" onClick={() => navigate('/plans')}>See Subscriptions</Button>
                   </div>
                 </div>
               </CardContent>
@@ -598,12 +597,12 @@ const Profile = () => {
                       Change Email
                     </Button> : <div className="flex flex-col sm:flex-row gap-2 w-full sm:w-auto">
                       <Button variant="outline" className="w-full sm:w-auto" onClick={() => {
-                    setShowEmailForm(false);
-                    setEmailForm({
-                      newEmail: '',
-                      password: ''
-                    });
-                  }}>
+                      setShowEmailForm(false);
+                      setEmailForm({
+                        newEmail: '',
+                        password: ''
+                      });
+                    }}>
                         Cancel
                       </Button>
                       <Button className="w-full sm:w-auto" onClick={handleEmailChange}>
@@ -616,9 +615,9 @@ const Profile = () => {
                     <div>
                       <Label htmlFor="newEmail">New Email Address</Label>
                       <Input id="newEmail" type="email" value={emailForm.newEmail} onChange={e => setEmailForm(prev => ({
-                    ...prev,
-                    newEmail: e.target.value
-                  }))} placeholder="Enter new email address" />
+                      ...prev,
+                      newEmail: e.target.value
+                    }))} placeholder="Enter new email address" />
                     </div>
                   </div>}
               </CardContent>
@@ -641,13 +640,13 @@ const Profile = () => {
                       Change Password
                     </Button> : <div className="flex gap-2">
                       <Button variant="outline" onClick={() => {
-                    setShowPasswordForm(false);
-                    setPasswordForm({
-                      currentPassword: '',
-                      newPassword: '',
-                      confirmPassword: ''
-                    });
-                  }}>
+                      setShowPasswordForm(false);
+                      setPasswordForm({
+                        currentPassword: '',
+                        newPassword: '',
+                        confirmPassword: ''
+                      });
+                    }}>
                         Cancel
                       </Button>
                       <Button onClick={handlePasswordChange}>
@@ -660,23 +659,23 @@ const Profile = () => {
                     <div>
                       <Label htmlFor="currentPassword">Current Password</Label>
                       <Input id="currentPassword" type="password" value={passwordForm.currentPassword} onChange={e => setPasswordForm(prev => ({
-                    ...prev,
-                    currentPassword: e.target.value
-                  }))} placeholder="Enter current password" />
+                      ...prev,
+                      currentPassword: e.target.value
+                    }))} placeholder="Enter current password" />
                     </div>
                     <div>
                       <Label htmlFor="newPassword">New Password</Label>
                       <Input id="newPassword" type="password" value={passwordForm.newPassword} onChange={e => setPasswordForm(prev => ({
-                    ...prev,
-                    newPassword: e.target.value
-                  }))} placeholder="Enter new password (min 8 characters)" />
+                      ...prev,
+                      newPassword: e.target.value
+                    }))} placeholder="Enter new password (min 8 characters)" />
                     </div>
                     <div>
                       <Label htmlFor="confirmPassword">Confirm New Password</Label>
                       <Input id="confirmPassword" type="password" value={passwordForm.confirmPassword} onChange={e => setPasswordForm(prev => ({
-                    ...prev,
-                    confirmPassword: e.target.value
-                  }))} placeholder="Confirm new password" />
+                      ...prev,
+                      confirmPassword: e.target.value
+                    }))} placeholder="Confirm new password" />
                     </div>
                   </div>}
               </CardContent>
@@ -712,6 +711,6 @@ const Profile = () => {
         </Tabs>
       </div>
     </div>
-  </>);
+  </>;
 };
 export default Profile;
