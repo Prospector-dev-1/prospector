@@ -83,11 +83,27 @@ const Dashboard = () => {
       setLoading(false);
     }
   };
-  const getSubscriptionBadge = () => {
-    if (profile?.subscription_type === 'premium') {
-      return <Badge className="bg-primary text-primary-foreground">Premium</Badge>;
+  const getPlanDisplayName = (planType: string) => {
+    switch (planType) {
+      case 'beginner':
+        return 'Beginner Bundle';
+      case 'premium':
+        return 'Premium';
+      case 'free':
+      default:
+        return 'Free';
     }
-    return <Badge variant="secondary" className="cursor-pointer hover:bg-secondary/80" onClick={() => navigate('/plans')}>Free</Badge>;
+  };
+
+  const getSubscriptionBadge = () => {
+    const planName = getPlanDisplayName(profile?.subscription_type || 'free');
+    
+    if (profile?.subscription_type === 'premium') {
+      return <Badge className="bg-primary text-primary-foreground">{planName}</Badge>;
+    } else if (profile?.subscription_type === 'beginner') {
+      return <Badge className="bg-secondary text-secondary-foreground">{planName}</Badge>;
+    }
+    return <Badge variant="secondary" className="cursor-pointer hover:bg-secondary/80" onClick={() => navigate('/plans')}>{planName}</Badge>;
   };
   const averageScore = recentCalls.length > 0 ? (recentCalls.reduce((sum, call) => sum + (call.overall_score || 0), 0) / recentCalls.length).toFixed(1) : 'N/A';
   return <div className="min-h-screen bg-background">
