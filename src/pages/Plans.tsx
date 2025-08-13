@@ -50,11 +50,11 @@ const Plans = () => {
   const plans = [{
     id: 'beginner',
     name: 'Beginner Bundle',
-    price: '$9.99',
+    price: '$14.99',
     period: '/month',
     description: 'Perfect for getting started with sales training',
     popular: true,
-    savings: '80%', // 50 credits would cost $49.90 individually, saving $39.91
+    savings: '70%', // 50 credits would cost $49.90 individually, saving $34.91
     features: ['50 credits per month', 'Credits expire at month end', 'Unlimited Objection Coaching', '1 free Custom Script per month', 'Basic analytics dashboard', 'Email support'],
     buttonText: 'Start Beginner Bundle',
     buttonVariant: 'default' as const
