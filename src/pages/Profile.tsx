@@ -571,11 +571,8 @@ const Profile = () => {
                     <Button variant="outline" className="w-full sm:w-auto" onClick={() => navigate('/buy-credits')}>
                       Buy Credits
                     </Button>
-                    <Button variant="outline" className="w-full sm:w-auto" onClick={() => handlePurchase('premium')} disabled={!!purchaseLoading}>
-                      {purchaseLoading === 'premium' ? <>
-                          <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                          Processing...
-                        </> : 'Upgrade to Premium - $19.99/month'}
+                    <Button variant="outline" className="w-full sm:w-auto" onClick={() => navigate('/plans')}>
+                      See Plans
                     </Button>
                   </div>
                 </div>

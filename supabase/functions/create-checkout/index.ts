@@ -56,12 +56,20 @@ serve(async (req) => {
         quantity: 1,
       }];
     } else {
-      // Premium subscription
+      // Subscription plans
+      const subscriptionPlans = {
+        beginner: { name: "Beginner Bundle", price: 999 }, // $9.99
+        premium: { name: "Premium Subscription", price: 1999 } // $19.99
+      };
+      
+      const selectedPlan = subscriptionPlans[packageId as keyof typeof subscriptionPlans];
+      if (!selectedPlan) throw new Error("Invalid subscription plan selected");
+      
       lineItems = [{
         price_data: {
           currency: "usd",
-          product_data: { name: "Premium Subscription" },
-          unit_amount: 1999, // $19.99
+          product_data: { name: selectedPlan.name },
+          unit_amount: selectedPlan.price,
           recurring: { interval: "month" },
         },
         quantity: 1,

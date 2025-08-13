@@ -106,12 +106,18 @@ export type Database = {
       }
       profiles: {
         Row: {
+          billing_cycle_start: string | null
           created_at: string
           credits: number
           email: string
           first_name: string | null
           id: string
           last_name: string | null
+          monthly_coaching_unlimited: boolean | null
+          monthly_credits_limit: number | null
+          monthly_credits_used: number | null
+          monthly_custom_scripts_limit: number | null
+          monthly_custom_scripts_used: number | null
           phone_number: string | null
           subscription_end: string | null
           subscription_type: string | null
@@ -119,12 +125,18 @@ export type Database = {
           user_id: string
         }
         Insert: {
+          billing_cycle_start?: string | null
           created_at?: string
           credits?: number
           email: string
           first_name?: string | null
           id?: string
           last_name?: string | null
+          monthly_coaching_unlimited?: boolean | null
+          monthly_credits_limit?: number | null
+          monthly_credits_used?: number | null
+          monthly_custom_scripts_limit?: number | null
+          monthly_custom_scripts_used?: number | null
           phone_number?: string | null
           subscription_end?: string | null
           subscription_type?: string | null
@@ -132,12 +144,18 @@ export type Database = {
           user_id: string
         }
         Update: {
+          billing_cycle_start?: string | null
           created_at?: string
           credits?: number
           email?: string
           first_name?: string | null
           id?: string
           last_name?: string | null
+          monthly_coaching_unlimited?: boolean | null
+          monthly_credits_limit?: number | null
+          monthly_credits_used?: number | null
+          monthly_custom_scripts_limit?: number | null
+          monthly_custom_scripts_used?: number | null
           phone_number?: string | null
           subscription_end?: string | null
           subscription_type?: string | null
@@ -190,6 +208,10 @@ export type Database = {
       check_email_exists: {
         Args: { email_to_check: string }
         Returns: boolean
+      }
+      reset_monthly_limits: {
+        Args: Record<PropertyKey, never>
+        Returns: undefined
       }
     }
     Enums: {
