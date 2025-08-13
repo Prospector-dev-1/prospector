@@ -184,15 +184,8 @@ const BuyCredits = () => {
           ))}
         </div>
 
-        {/* Additional Info */}
-        <div className="text-center text-sm text-muted-foreground space-y-2">
-          <p>All purchases are secured by Stripe. Credits never expire.</p>
-          <p>Credits are non refundable.</p>
-          <p>Need help? Contact our support team.</p>
-        </div>
-
         {/* View Plans Button */}
-        <div className="text-center mt-8">
+        <div className="text-center mb-8">
           <Button
             variant="outline"
             onClick={() => navigate('/plans')}
@@ -200,6 +193,13 @@ const BuyCredits = () => {
           >
             View Subscription Plans
           </Button>
+        </div>
+
+        {/* Additional Info */}
+        <div className="text-center text-sm text-muted-foreground space-y-2">
+          <p>All purchases are secured by Stripe. Credits never expire.</p>
+          <p>Credits are non refundable.</p>
+          <p>Need help? Contact our support team.</p>
         </div>
       </div>
     </div>
