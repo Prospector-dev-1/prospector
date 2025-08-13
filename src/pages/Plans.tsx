@@ -5,7 +5,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { Loader2, Check, Star } from 'lucide-react';
+import { Loader2, Check, Star, ArrowLeft } from 'lucide-react';
 import { toast } from 'sonner';
 import SEO from '@/components/SEO';
 const Plans = () => {
@@ -75,6 +75,14 @@ const Plans = () => {
       <SEO title="Subscription Plans - Choose Your Sales Training Plan" description="Choose from our Beginner Bundle or Premium Plan. Get unlimited access to AI-powered sales training, objection coaching, and custom scripts." />
       
       <div className="container mx-auto px-4 py-12">
+        <Button
+          variant="ghost"
+          onClick={() => navigate('/')}
+          className="mb-8"
+        >
+          <ArrowLeft className="mr-2 h-4 w-4" />
+          Back
+        </Button>
         <div className="text-center mb-12">
           <h1 className="text-4xl font-bold mb-4">Choose Your Plan</h1>
           <p className="text-xl text-muted-foreground max-w-2xl mx-auto">
