@@ -161,20 +161,21 @@ Return ONLY valid JSON with this exact shape:
   "coaching": [
     {
       "assistant_said": "verbatim or close paraphrase of the prospect's objection or question",
-      "your_response": "verbatim or close paraphrase of the user's reply",
-      "issue": "what went wrong in the user's reply (1-2 sentences)",
-      "better_response": "a concise, high-quality response the user should say next time (2-4 sentences, natural phrasing)",
+      "your_response": "verbatim or close paraphrase of your reply",
+      "issue": "what went wrong in your reply (1-2 sentences, address the person as 'You')",
+      "better_response": "a concise, high-quality response you should say next time (2-4 sentences, natural phrasing)",
       "why_better": "brief reasoning why this works (1-2 sentences)",
       "category": "one of: pricing, timing, authority, fit, competition, clarity, trust, other"
     }
   ],
-  "summary": "overall guidance in 2-3 sentences",
-  "tips": ["3 short bullet tips the user should remember"]
+  "summary": "overall guidance in 2-3 sentences (address the person as 'You')",
+  "tips": ["3 short bullet tips you should remember"]
 }
 
 Guidelines:
-- Focus on the user's weaknesses and how to respond better next time.
+- Focus on your weaknesses and how to respond better next time.
 - Use plain language; avoid jargon.
+- Address the person directly as "You" throughout all feedback.
 - If no clear objection exists, still identify weak spots and propose better phrasing.
 - Keep responses human and natural, not robotic.`;
 
