@@ -44,6 +44,9 @@ const Plans = () => {
       setPurchaseLoading(null);
     }
   };
+  // Base pricing: 5 credits = $4.99, so 1 credit = $0.998
+  const baseCreditPrice = 4.99 / 5; // $0.998 per credit
+  
   const plans = [{
     id: 'beginner',
     name: 'Beginner Bundle',
@@ -51,6 +54,7 @@ const Plans = () => {
     period: '/month',
     description: 'Perfect for getting started with sales training',
     popular: true,
+    savings: '80%', // 50 credits would cost $49.90 individually, saving $39.91
     features: ['50 credits per month', 'Credits expire at month end', 'Unlimited Objection Coaching', '1 free Custom Script per month', 'Basic analytics dashboard', 'Email support'],
     buttonText: 'Start Beginner Bundle',
     buttonVariant: 'default' as const
@@ -61,6 +65,7 @@ const Plans = () => {
     period: '/month',
     description: 'Full access to all features and unlimited usage',
     popular: false,
+    savings: 'Best Value', // Unlimited credits for fixed price
     features: ['Unlimited practice calls', 'Unlimited objection coaching', 'Unlimited custom scripts', 'Advanced analytics & insights', 'Call recording & playback', 'Priority support', 'Early access to new features'],
     buttonText: 'Upgrade to Premium',
     buttonVariant: 'outline' as const
@@ -94,6 +99,13 @@ const Plans = () => {
                   <span className="text-4xl font-bold">{plan.price}</span>
                   <span className="text-muted-foreground ml-1">{plan.period}</span>
                 </div>
+                {plan.savings && (
+                  <div className="mt-2">
+                    <Badge variant="secondary" className="bg-green-100 text-green-700 border-green-200">
+                      Save {plan.savings}
+                    </Badge>
+                  </div>
+                )}
               </CardHeader>
               
               <CardContent className="space-y-6">
