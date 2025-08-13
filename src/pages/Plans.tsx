@@ -1,19 +1,42 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
+import { Label } from '@/components/ui/label';
 import { Loader2, Check, Star, ArrowLeft } from 'lucide-react';
 import { toast } from 'sonner';
 import SEO from '@/components/SEO';
 const Plans = () => {
   const [purchaseLoading, setPurchaseLoading] = useState<string | null>(null);
+  const [currentPlan, setCurrentPlan] = useState<string>('free');
   const navigate = useNavigate();
   const {
     user
   } = useAuth();
+
+  useEffect(() => {
+    if (user) {
+      fetchCurrentPlan();
+    }
+  }, [user]);
+
+  const fetchCurrentPlan = async () => {
+    try {
+      const { data, error } = await supabase
+        .from('profiles')
+        .select('subscription_type')
+        .eq('user_id', user?.id)
+        .single();
+      
+      if (error) throw error;
+      setCurrentPlan(data?.subscription_type || 'free');
+    } catch (error) {
+      console.error('Error fetching current plan:', error);
+    }
+  };
   const handlePurchase = async (planType: string) => {
     if (!user) {
       toast.error("Please sign in to purchase a subscription");
@@ -89,6 +112,17 @@ const Plans = () => {
             Unlock your sales potential with our AI-powered training platform. 
             Choose the plan that fits your learning style and budget.
           </p>
+          
+          {user && (
+            <div className="mt-6 inline-block">
+              <div className="space-y-2">
+                <Label>Current Plan</Label>
+                <Badge variant={currentPlan === 'premium' ? 'default' : 'secondary'} className="px-[10px] mx-[10px] py-0 my-px">
+                  {currentPlan?.toUpperCase() || 'FREE'}
+                </Badge>
+              </div>
+            </div>
+          )}
         </div>
 
         <div className="grid md:grid-cols-2 gap-8 max-w-4xl mx-auto">

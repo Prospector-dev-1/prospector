@@ -546,17 +546,9 @@ const Profile = () => {
                 <CardDescription>Manage your subscription and credit balance</CardDescription>
               </CardHeader>
               <CardContent className="space-y-4">
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                  <div className="space-y-2">
-                    <Label>Current Plan</Label>
-                    <Badge variant={profile.subscription_type === 'premium' ? 'default' : 'secondary'} className="px-[10px] mx-[10px] py-0 my-px">
-                      {profile.subscription_type?.toUpperCase() || 'FREE'}
-                    </Badge>
-                  </div>
-                  <div className="space-y-2">
-                    <Label>Available Credits</Label>
-                    <p className="text-2xl font-bold text-primary">{profile.credits}</p>
-                  </div>
+                <div className="space-y-2">
+                  <Label>Available Credits</Label>
+                  <p className="text-2xl font-bold text-primary">{profile.credits}</p>
                 </div>
                 
                 {profile.subscription_end && <div className="space-y-2">
