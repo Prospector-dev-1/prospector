@@ -37,6 +37,18 @@ const Plans = () => {
       console.error('Error fetching current plan:', error);
     }
   };
+
+  const getPlanDisplayName = (planType: string) => {
+    switch (planType) {
+      case 'beginner':
+        return 'Beginner Bundle';
+      case 'premium':
+        return 'Premium';
+      case 'free':
+      default:
+        return 'Free';
+    }
+  };
   const handlePurchase = async (planType: string) => {
     if (!user) {
       toast.error("Please sign in to purchase a subscription");
@@ -57,6 +69,10 @@ const Plans = () => {
       if (error) throw error;
       if (data?.url) {
         window.open(data.url, '_blank');
+        // Refresh current plan after opening checkout (user might complete purchase)
+        setTimeout(() => {
+          fetchCurrentPlan();
+        }, 2000);
       } else {
         toast.error("Failed to create checkout session");
       }
@@ -118,7 +134,7 @@ const Plans = () => {
               <div className="space-y-2">
                 <Label>Current Plan</Label>
                 <Badge variant={currentPlan === 'premium' ? 'default' : 'secondary'} className="px-[10px] mx-[10px] py-0 my-px">
-                  {currentPlan?.toUpperCase() || 'FREE'}
+                  {getPlanDisplayName(currentPlan)}
                 </Badge>
               </div>
             </div>
