@@ -8,6 +8,7 @@ import Index from "./pages/Index";
 import Auth from "./pages/Auth";
 import CallSimulation from "./pages/CallSimulation";
 import CallResults from "./pages/CallResults";
+import CallCoaching from "./pages/CallCoaching";
 import Profile from "./pages/Profile";
 import BuyCredits from "./pages/BuyCredits";
 import ScriptAnalysis from "./pages/ScriptAnalysis";
@@ -30,6 +31,7 @@ const App = () => (
             <Route path="/auth" element={<Auth />} />
               <Route path="/call-simulation" element={<ProtectedRoute><CallSimulation /></ProtectedRoute>} />
               <Route path="/call-results/:callId" element={<ProtectedRoute><CallResults /></ProtectedRoute>} />
+              <Route path="/call-coaching/:callId" element={<ProtectedRoute><CallCoaching /></ProtectedRoute>} />
               <Route path="/profile" element={<ProtectedRoute><Profile /></ProtectedRoute>} />
               <Route path="/buy-credits" element={<ProtectedRoute><BuyCredits /></ProtectedRoute>} />
               <Route path="/script-analysis" element={<ProtectedRoute><ScriptAnalysis /></ProtectedRoute>} />

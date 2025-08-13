@@ -51,8 +51,6 @@ const CallResults = () => {
   const { toast } = useToast();
   const [callRecord, setCallRecord] = useState<CallRecord | null>(null);
   const [loading, setLoading] = useState(true);
-  const [coachingLoading, setCoachingLoading] = useState(false);
-  const [coachingData, setCoachingData] = useState<CoachingResponse | null>(null);
 
   useEffect(() => {
     if (callId && user) {
@@ -126,28 +124,8 @@ const CallResults = () => {
     }, 1000); // Poll every second
   };
 
-  const handleCoaching = async () => {
-    if (!callId) return;
-    setCoachingLoading(true);
-    setCoachingData(null);
-    try {
-      const { data, error } = await supabase.functions.invoke('analyze-call-coaching', {
-        body: { callId },
-      });
-      if (error) {
-        console.error('Coaching error:', error, data);
-        toast({ title: 'Coaching failed', description: (data as any)?.error || error.message });
-        return;
-      }
-      const payload = data as CoachingResponse;
-      setCoachingData(payload);
-      toast({ title: 'Coaching ready', description: 'We analyzed your transcript and prepared suggestions.' });
-    } catch (e: any) {
-      console.error('Coaching exception:', e);
-      toast({ title: 'Error', description: 'Something went wrong. Please try again.' });
-    } finally {
-      setCoachingLoading(false);
-    }
+  const handleCoaching = () => {
+    navigate(`/call-coaching/${callId}`);
   };
 
   const formatDuration = (seconds: number) => {
@@ -357,65 +335,9 @@ const CallResults = () => {
             </CardDescription>
           </CardHeader>
           <CardContent>
-            <div className="flex flex-col gap-4">
-              <Button onClick={handleCoaching} disabled={coachingLoading}>
-                {coachingLoading ? 'Generating coaching…' : 'Get objection coaching (0.5 credit)'}
-              </Button>
-
-              {coachingData && (
-                <div className="space-y-6">
-                  {coachingData.summary && (
-                    <div className="rounded-md bg-muted p-3 text-sm">
-                      {coachingData.summary}
-                    </div>
-                  )}
-
-                  {Array.isArray(coachingData.coaching) && coachingData.coaching.length > 0 && (
-                    <div className="space-y-4">
-                      {coachingData.coaching.map((item, idx) => (
-                        <div key={idx} className="rounded-lg border border-border p-4">
-                          <div className="flex items-center justify-between mb-2">
-                            <span className="text-sm font-medium">Coaching #{idx + 1}</span>
-                            {item.category && <Badge variant="secondary">{item.category}</Badge>}
-                          </div>
-                          <div className="space-y-2 text-sm">
-                            {item.assistant_said && (
-                              <p><span className="font-medium">Assistant said:</span> <em className="text-muted-foreground">{item.assistant_said}</em></p>
-                            )}
-                            {item.your_response && (
-                              <p><span className="font-medium">Your reply:</span> <span className="text-muted-foreground">{item.your_response}</span></p>
-                            )}
-                            {item.issue && (
-                              <p><span className="font-medium">Issue:</span> {item.issue}</p>
-                            )}
-                            {item.better_response && (
-                              <div>
-                                <p className="font-medium">What to say next time:</p>
-                                <p className="whitespace-pre-wrap mt-1">{item.better_response}</p>
-                              </div>
-                            )}
-                            {item.why_better && (
-                              <p className="text-muted-foreground">Why this works: {item.why_better}</p>
-                            )}
-                          </div>
-                        </div>
-                      ))}
-                    </div>
-                  )}
-
-                  {Array.isArray(coachingData.tips) && coachingData.tips.length > 0 && (
-                    <div className="text-sm">
-                      <p className="font-medium mb-1">Quick tips:</p>
-                      <ul className="list-disc pl-5 space-y-1">
-                        {coachingData.tips.map((t, i) => (
-                          <li key={i} className="text-muted-foreground">{t}</li>
-                        ))}
-                      </ul>
-                    </div>
-                  )}
-                </div>
-              )}
-            </div>
+            <Button onClick={handleCoaching}>
+              Get objection coaching (0.5 credit)
+            </Button>
           </CardContent>
         </Card>
 
