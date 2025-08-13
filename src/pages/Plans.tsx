@@ -8,29 +8,29 @@ import { Badge } from '@/components/ui/badge';
 import { Loader2, Check, Star } from 'lucide-react';
 import { toast } from 'sonner';
 import SEO from '@/components/SEO';
-
 const Plans = () => {
   const [purchaseLoading, setPurchaseLoading] = useState<string | null>(null);
   const navigate = useNavigate();
-  const { user } = useAuth();
-
+  const {
+    user
+  } = useAuth();
   const handlePurchase = async (planType: string) => {
     if (!user) {
       toast.error("Please sign in to purchase a subscription");
       navigate('/auth');
       return;
     }
-
     setPurchaseLoading(planType);
-    
     try {
-      const { data, error } = await supabase.functions.invoke('create-checkout', {
+      const {
+        data,
+        error
+      } = await supabase.functions.invoke('create-checkout', {
         body: {
           priceType: 'subscription',
           packageId: planType
         }
       });
-
       if (error) throw error;
       if (data?.url) {
         window.open(data.url, '_blank');
@@ -44,53 +44,29 @@ const Plans = () => {
       setPurchaseLoading(null);
     }
   };
-
-  const plans = [
-    {
-      id: 'beginner',
-      name: 'Beginner Bundle',
-      price: '$9.99',
-      period: '/month',
-      description: 'Perfect for getting started with sales training',
-      popular: true,
-      features: [
-        '50 credits per month',
-        'Credits expire at month end',
-        'Unlimited Objection Coaching',
-        '1 free Custom Script per month',
-        'Basic analytics dashboard',
-        'Email support'
-      ],
-      buttonText: 'Start Beginner Bundle',
-      buttonVariant: 'default' as const
-    },
-    {
-      id: 'premium',
-      name: 'Premium Plan',
-      price: '$19.99',
-      period: '/month',
-      description: 'Full access to all features and unlimited usage',
-      popular: false,
-      features: [
-        'Unlimited practice calls',
-        'Unlimited objection coaching',
-        'Unlimited custom scripts',
-        'Advanced analytics & insights',
-        'Call recording & playback',
-        'Priority support',
-        'Early access to new features'
-      ],
-      buttonText: 'Upgrade to Premium',
-      buttonVariant: 'outline' as const
-    }
-  ];
-
-  return (
-    <div className="min-h-screen bg-background">
-      <SEO 
-        title="Subscription Plans - Choose Your Sales Training Plan"
-        description="Choose from our Beginner Bundle or Premium Plan. Get unlimited access to AI-powered sales training, objection coaching, and custom scripts."
-      />
+  const plans = [{
+    id: 'beginner',
+    name: 'Beginner Bundle',
+    price: '$9.99',
+    period: '/month',
+    description: 'Perfect for getting started with sales training',
+    popular: true,
+    features: ['50 credits per month', 'Credits expire at month end', 'Unlimited Objection Coaching', '1 free Custom Script per month', 'Basic analytics dashboard', 'Email support'],
+    buttonText: 'Start Beginner Bundle',
+    buttonVariant: 'default' as const
+  }, {
+    id: 'premium',
+    name: 'Premium Plan',
+    price: '$19.99',
+    period: '/month',
+    description: 'Full access to all features and unlimited usage',
+    popular: false,
+    features: ['Unlimited practice calls', 'Unlimited objection coaching', 'Unlimited custom scripts', 'Advanced analytics & insights', 'Call recording & playback', 'Priority support', 'Early access to new features'],
+    buttonText: 'Upgrade to Premium',
+    buttonVariant: 'outline' as const
+  }];
+  return <div className="min-h-screen bg-background">
+      <SEO title="Subscription Plans - Choose Your Sales Training Plan" description="Choose from our Beginner Bundle or Premium Plan. Get unlimited access to AI-powered sales training, objection coaching, and custom scripts." />
       
       <div className="container mx-auto px-4 py-12">
         <div className="text-center mb-12">
@@ -102,16 +78,13 @@ const Plans = () => {
         </div>
 
         <div className="grid md:grid-cols-2 gap-8 max-w-4xl mx-auto">
-          {plans.map((plan) => (
-            <Card key={plan.id} className={`relative ${plan.popular ? 'border-primary shadow-lg' : ''}`}>
-              {plan.popular && (
-                <div className="absolute -top-4 left-1/2 transform -translate-x-1/2">
+          {plans.map(plan => <Card key={plan.id} className={`relative ${plan.popular ? 'border-primary shadow-lg' : ''}`}>
+              {plan.popular && <div className="absolute -top-4 left-1/2 transform -translate-x-1/2">
                   <Badge className="bg-primary text-primary-foreground px-4 py-1">
                     <Star className="w-4 h-4 mr-1" />
                     Most Popular
                   </Badge>
-                </div>
-              )}
+                </div>}
               
               <CardHeader className="text-center pb-4">
                 <CardTitle className="text-2xl">{plan.name}</CardTitle>
@@ -124,32 +97,20 @@ const Plans = () => {
               
               <CardContent className="space-y-6">
                 <ul className="space-y-3">
-                  {plan.features.map((feature, index) => (
-                    <li key={index} className="flex items-center gap-3">
+                  {plan.features.map((feature, index) => <li key={index} className="flex items-center gap-3">
                       <Check className="w-5 h-5 text-primary flex-shrink-0" />
                       <span className="text-sm">{feature}</span>
-                    </li>
-                  ))}
+                    </li>)}
                 </ul>
                 
-                <Button
-                  className="w-full"
-                  variant={plan.buttonVariant}
-                  onClick={() => handlePurchase(plan.id)}
-                  disabled={purchaseLoading === plan.id}
-                >
-                  {purchaseLoading === plan.id ? (
-                    <>
+                <Button className="w-full" variant={plan.buttonVariant} onClick={() => handlePurchase(plan.id)} disabled={purchaseLoading === plan.id}>
+                  {purchaseLoading === plan.id ? <>
                       <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                       Processing...
-                    </>
-                  ) : (
-                    plan.buttonText
-                  )}
+                    </> : plan.buttonText}
                 </Button>
               </CardContent>
-            </Card>
-          ))}
+            </Card>)}
         </div>
 
         <div className="mt-12 text-center">
@@ -166,9 +127,7 @@ const Plans = () => {
           <div className="grid md:grid-cols-2 gap-6">
             <div>
               <h3 className="font-semibold mb-2">What happens to unused credits?</h3>
-              <p className="text-sm text-muted-foreground">
-                Beginner Bundle credits expire at the end of each month. Premium plan includes unlimited usage.
-              </p>
+              <p className="text-sm text-muted-foreground">Beginner Bundle credits expire at the end of each month. Premium plan includes non expireable credits.</p>
             </div>
             <div>
               <h3 className="font-semibold mb-2">Can I change plans anytime?</h3>
@@ -191,8 +150,6 @@ const Plans = () => {
           </div>
         </div>
       </div>
-    </div>
-  );
+    </div>;
 };
-
 export default Plans;
