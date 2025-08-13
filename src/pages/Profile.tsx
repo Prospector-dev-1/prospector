@@ -542,7 +542,7 @@ const Profile = () => {
           <TabsContent value="subscription" className="space-y-6">
             <Card>
               <CardHeader>
-                <CardTitle>Subscription & Credits</CardTitle>
+                <CardTitle>Subscriptions & Credits</CardTitle>
                 <CardDescription>Manage your subscription and credit balance</CardDescription>
               </CardHeader>
               <CardContent className="space-y-4">
