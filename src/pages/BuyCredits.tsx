@@ -190,6 +190,17 @@ const BuyCredits = () => {
           <p>Credits are non refundable.</p>
           <p>Need help? Contact our support team.</p>
         </div>
+
+        {/* View Plans Button */}
+        <div className="text-center mt-8">
+          <Button
+            variant="outline"
+            onClick={() => navigate('/plans')}
+            className="px-8"
+          >
+            View Subscription Plans
+          </Button>
+        </div>
       </div>
     </div>
     </>
