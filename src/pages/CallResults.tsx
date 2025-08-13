@@ -181,13 +181,13 @@ const CallResults = () => {
   }
 
   const scoreCategories = [
-    { name: '❓ Objection Handling', description: 'Did they turn around the objection or ignore it?', score: callRecord.objection_handling_score, icon: HelpCircle },
-    { name: '🧠 Confidence', description: 'Was their tone assertive or hesitant?', score: callRecord.confidence_score, icon: Brain },
-    { name: '🎯 Clarity', description: 'Was their message focused?', score: callRecord.clarity_score, icon: Target },
-    { name: '💡 Persuasion', description: 'Did they appeal emotionally or logically?', score: callRecord.persuasiveness_score, icon: Lightbulb },
-    { name: '👂 Listening & Response', description: 'Did they tailor answers or script-dump?', score: callRecord.tone_score, icon: Ear },
-    { name: '📋 Overall Pitch / Script', description: 'How well structured and delivered was their overall pitch?', score: callRecord.overall_pitch_score, icon: FileText },
-    { name: 'Closing Ability', description: 'How effectively did they close or advance the sale?', score: callRecord.closing_score, icon: DollarSign },
+    { name: '❓ Objection Handling', description: 'Did you turn around the objection or ignore it?', score: callRecord.objection_handling_score, icon: HelpCircle },
+    { name: '🧠 Confidence', description: 'Was your tone assertive or hesitant?', score: callRecord.confidence_score, icon: Brain },
+    { name: '🎯 Clarity', description: 'Was your message focused?', score: callRecord.clarity_score, icon: Target },
+    { name: '💡 Persuasion', description: 'Did you appeal emotionally or logically?', score: callRecord.persuasiveness_score, icon: Lightbulb },
+    { name: '👂 Listening & Response', description: 'Did you tailor answers or script-dump?', score: callRecord.tone_score, icon: Ear },
+    { name: '📋 Overall Pitch / Script', description: 'How well structured and delivered was your overall pitch?', score: callRecord.overall_pitch_score, icon: FileText },
+    { name: 'Closing Ability', description: 'How effectively did you close or advance the sale?', score: callRecord.closing_score, icon: DollarSign },
   ];
 
   return (<>
