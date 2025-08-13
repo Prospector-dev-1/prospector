@@ -65,7 +65,8 @@ const Plans = () => {
     buttonText: 'Upgrade to Premium',
     buttonVariant: 'outline' as const
   }];
-  return <div className="min-h-screen bg-background">
+  return (
+    <div className="min-h-screen bg-background">
       <SEO title="Subscription Plans - Choose Your Sales Training Plan" description="Choose from our Beginner Bundle or Premium Plan. Get unlimited access to AI-powered sales training, objection coaching, and custom scripts." />
       
       <div className="container mx-auto px-4 py-12">
@@ -150,6 +151,7 @@ const Plans = () => {
           </div>
         </div>
       </div>
-    </div>;
+    </div>
+  );
 };
 export default Plans;
