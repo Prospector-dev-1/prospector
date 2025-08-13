@@ -87,7 +87,7 @@ const Dashboard = () => {
     if (profile?.subscription_type === 'premium') {
       return <Badge className="bg-primary text-primary-foreground">Premium</Badge>;
     }
-    return <Badge variant="secondary" className="cursor-pointer hover:bg-secondary/80" onClick={() => navigate('/profile?tab=subscription')}>Free</Badge>;
+    return <Badge variant="secondary" className="cursor-pointer hover:bg-secondary/80" onClick={() => navigate('/plans')}>Free</Badge>;
   };
   const averageScore = recentCalls.length > 0 ? (recentCalls.reduce((sum, call) => sum + (call.overall_score || 0), 0) / recentCalls.length).toFixed(1) : 'N/A';
   return <div className="min-h-screen bg-background">
