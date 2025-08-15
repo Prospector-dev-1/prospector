@@ -10,7 +10,7 @@ import { useToast } from '@/hooks/use-toast';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Separator } from '@/components/ui/separator';
 import { Badge } from '@/components/ui/badge';
-import { User, Phone, CreditCard, History, Settings, LogOut, Edit, Save, X, Loader2 } from 'lucide-react';
+import { User, Phone, CreditCard, History, Settings, LogOut, Edit, Save, X, Loader2, Shield } from 'lucide-react';
 import SEO from '@/components/SEO';
 interface Profile {
   id: string;
@@ -675,6 +675,20 @@ const Profile = () => {
             
             <Separator />
             
+            {/* Privacy Section */}
+            <Card>
+              <CardHeader className="p-3 sm:p-6 pb-2 sm:pb-6">
+                <CardTitle className="text-base sm:text-lg">Privacy</CardTitle>
+                <CardDescription className="text-sm">View our privacy policy and how we handle your data</CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-3 p-3 sm:p-6 sm:space-y-4">
+                <Button variant="outline" onClick={() => navigate('/privacy')}>
+                  <Shield className="h-4 w-4 mr-2" />
+                  View Privacy Policy
+                </Button>
+              </CardContent>
+            </Card>
+
             {/* Data Export Section */}
             <Card>
               <CardHeader className="p-3 sm:p-6 pb-2 sm:pb-6">
