@@ -124,9 +124,6 @@ const Dashboard = () => {
               <Button variant="ghost" size="icon" onClick={() => navigate('/help')} aria-label="Help and Support">
                 <HelpCircle className="h-4 w-4" />
               </Button>
-              <Button variant="ghost" size="icon" onClick={() => navigate('/privacy')} aria-label="Privacy Policy">
-                <Settings className="h-4 w-4" />
-              </Button>
               <Button variant="ghost" size="icon" onClick={() => navigate('/profile')} aria-label="Profile">
                 <User className="h-4 w-4" />
               </Button>

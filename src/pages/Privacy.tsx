@@ -2,20 +2,27 @@ import React from 'react';
 import { Card } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import SEO from '@/components/SEO';
+
 const Privacy = () => {
-  return <>
-      <SEO title="Prospector — Privacy Policy" description="Prospector Privacy Policy: what we collect, how we use data, and your rights." canonicalPath="/privacy" structuredData={{
-      "@context": "https://schema.org",
-      "@type": "WebPage",
-      "name": "Privacy Policy",
-      "description": "Prospector Privacy Policy: what we collect, how we use data, and your rights.",
-      "url": `${window.location.origin}/privacy`,
-      "isPartOf": {
-        "@type": "WebSite",
-        "name": "Prospector",
-        "url": window.location.origin
-      }
-    }} />
+  return (
+    <>
+      <SEO 
+        title="Prospector — Privacy Policy"
+        description="Prospector Privacy Policy: what we collect, how we use data, and your rights."
+        canonicalPath="/privacy"
+        structuredData={{
+          "@context": "https://schema.org",
+          "@type": "WebPage",
+          "name": "Privacy Policy",
+          "description": "Prospector Privacy Policy: what we collect, how we use data, and your rights.",
+          "url": `${window.location.origin}/privacy`,
+          "isPartOf": {
+            "@type": "WebSite",
+            "name": "Prospector",
+            "url": window.location.origin
+          }
+        }}
+      />
       <div className="min-h-screen bg-background px-4 py-8 md:py-16">
         <div className="max-w-4xl mx-auto">
           <Card className="p-6 md:p-8 bg-card border-border">
@@ -192,11 +199,19 @@ const Privacy = () => {
             </main>
 
             <footer className="mt-8 pt-4 border-t border-border/30">
-              
+              <p className="text-muted-foreground text-sm">
+                Tip: If you host this page at{' '}
+                <code className="bg-muted px-2 py-1 rounded text-xs">
+                  https://prospector.webnixo.net/privacy
+                </code>
+                , you can paste that link into App Store Connect and Google Play Console.
+              </p>
             </footer>
           </Card>
         </div>
       </div>
-    </>;
+    </>
+  );
 };
+
 export default Privacy;
