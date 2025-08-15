@@ -1,8 +1,13 @@
 import React from 'react';
+import { useNavigate } from 'react-router-dom';
 import { Card } from '@/components/ui/card';
+import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
+import { ArrowLeft } from 'lucide-react';
 import SEO from '@/components/SEO';
 const Privacy = () => {
+  const navigate = useNavigate();
+
   return <>
       <SEO title="Prospector — Privacy Policy" description="Prospector Privacy Policy: what we collect, how we use data, and your rights." canonicalPath="/privacy" structuredData={{
       "@context": "https://schema.org",
@@ -18,6 +23,16 @@ const Privacy = () => {
     }} />
       <div className="min-h-screen bg-background px-4 py-8 md:py-16">
         <div className="max-w-4xl mx-auto">
+          <div className="mb-6">
+            <Button 
+              variant="outline" 
+              onClick={() => navigate(-1)}
+              className="flex items-center gap-2"
+            >
+              <ArrowLeft className="h-4 w-4" />
+              Back
+            </Button>
+          </div>
           <Card className="p-6 md:p-8 bg-card border-border">
             <header className="mb-6">
               <h1 className="text-3xl md:text-4xl font-bold text-foreground mb-2">
