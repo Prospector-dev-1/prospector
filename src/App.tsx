@@ -16,6 +16,7 @@ import ScriptAnalysis from "./pages/ScriptAnalysis";
 import CustomScriptGenerator from "./pages/CustomScriptGenerator";
 import NotFound from "./pages/NotFound";
 import Help from "./pages/Help";
+import Privacy from "./pages/Privacy";
 import ProtectedRoute from "@/components/ProtectedRoute";
 
 const queryClient = new QueryClient();
@@ -39,6 +40,7 @@ const App = () => (
               <Route path="/script-analysis" element={<ProtectedRoute><ScriptAnalysis /></ProtectedRoute>} />
               <Route path="/custom-script" element={<ProtectedRoute><CustomScriptGenerator /></ProtectedRoute>} />
             <Route path="/help" element={<Help />} />
+            <Route path="/privacy" element={<Privacy />} />
             {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
             <Route path="*" element={<NotFound />} />
           </Routes>
