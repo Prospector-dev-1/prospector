@@ -11,7 +11,7 @@ All colors MUST be HSL.
     --background: 220 13% 9%;
     --foreground: 220 9% 95%;
 
-    --card: 220 13% 9%;
+    --card: 220 13% 11%;
     --card-foreground: 220 9% 95%;
 
     --popover: 220 13% 9%;
@@ -19,6 +19,7 @@ All colors MUST be HSL.
 
     --primary: 142 76% 36%;
     --primary-foreground: 220 9% 95%;
+    --primary-glow: 142 76% 45%;
 
     --secondary: 220 13% 18%;
     --secondary-foreground: 220 9% 95%;
@@ -40,7 +41,31 @@ All colors MUST be HSL.
     --warning: 38 92% 50%;
     --info: 221 83% 53%;
 
-    --radius: 0.5rem;
+    /* Feature colors for mobile app */
+    --upload-primary: 271 81% 56%;
+    --upload-secondary: 271 81% 66%;
+    --progress-primary: 221 83% 53%;
+    --progress-secondary: 221 83% 63%;
+    --challenges-primary: 38 92% 50%;
+    --challenges-secondary: 38 92% 60%;
+
+    /* Gradients */
+    --gradient-primary: linear-gradient(135deg, hsl(var(--primary)), hsl(var(--primary-glow)));
+    --gradient-upload: linear-gradient(135deg, hsl(var(--upload-primary)), hsl(var(--upload-secondary)));
+    --gradient-progress: linear-gradient(135deg, hsl(var(--progress-primary)), hsl(var(--progress-secondary)));
+    --gradient-challenges: linear-gradient(135deg, hsl(var(--challenges-primary)), hsl(var(--challenges-secondary)));
+    --gradient-card: linear-gradient(135deg, hsl(var(--card)), hsl(220 13% 13%));
+
+    /* Glass effect */
+    --glass-background: hsla(220, 13%, 11%, 0.8);
+    --glass-border: hsla(220, 9%, 95%, 0.1);
+
+    /* Shadows */
+    --shadow-glass: 0 8px 32px 0 rgba(31, 38, 135, 0.37);
+    --shadow-elevated: 0 10px 30px -10px hsl(var(--primary) / 0.3);
+    --shadow-glow: 0 0 40px hsl(var(--primary-glow) / 0.4);
+
+    --radius: 1rem;
 
     --sidebar-background: 0 0% 98%;
 
@@ -63,7 +88,7 @@ All colors MUST be HSL.
     --background: 220 13% 9%;
     --foreground: 220 9% 95%;
 
-    --card: 220 13% 9%;
+    --card: 220 13% 11%;
     --card-foreground: 220 9% 95%;
 
     --popover: 220 13% 9%;
@@ -71,6 +96,7 @@ All colors MUST be HSL.
 
     --primary: 142 76% 36%;
     --primary-foreground: 220 9% 95%;
+    --primary-glow: 142 76% 45%;
 
     --secondary: 220 13% 18%;
     --secondary-foreground: 220 9% 95%;
@@ -91,6 +117,30 @@ All colors MUST be HSL.
     --success: 120 100% 40%;
     --warning: 38 92% 50%;
     --info: 221 83% 53%;
+
+    /* Feature colors for mobile app */
+    --upload-primary: 271 81% 56%;
+    --upload-secondary: 271 81% 66%;
+    --progress-primary: 221 83% 53%;
+    --progress-secondary: 221 83% 63%;
+    --challenges-primary: 38 92% 50%;
+    --challenges-secondary: 38 92% 60%;
+
+    /* Gradients */
+    --gradient-primary: linear-gradient(135deg, hsl(var(--primary)), hsl(var(--primary-glow)));
+    --gradient-upload: linear-gradient(135deg, hsl(var(--upload-primary)), hsl(var(--upload-secondary)));
+    --gradient-progress: linear-gradient(135deg, hsl(var(--progress-primary)), hsl(var(--progress-secondary)));
+    --gradient-challenges: linear-gradient(135deg, hsl(var(--challenges-primary)), hsl(var(--challenges-secondary)));
+    --gradient-card: linear-gradient(135deg, hsl(var(--card)), hsl(220 13% 13%));
+
+    /* Glass effect */
+    --glass-background: hsla(220, 13%, 11%, 0.8);
+    --glass-border: hsla(220, 9%, 95%, 0.1);
+
+    /* Shadows */
+    --shadow-glass: 0 8px 32px 0 rgba(31, 38, 135, 0.37);
+    --shadow-elevated: 0 10px 30px -10px hsl(var(--primary) / 0.3);
+    --shadow-glow: 0 0 40px hsl(var(--primary-glow) / 0.4);
     --sidebar-background: 240 5.9% 10%;
     --sidebar-foreground: 240 4.8% 95.9%;
     --sidebar-primary: 224.3 76.3% 48%;
@@ -114,18 +164,44 @@ All colors MUST be HSL.
   /* Mobile-first responsive improvements */
   @media (max-width: 768px) {
     .container {
-      @apply px-3;
+      @apply px-4;
     }
+    
+    /* Mobile typography scale */
+    h1 { @apply text-2xl; }
+    h2 { @apply text-xl; }
+    h3 { @apply text-lg; }
   }
 
   /* Ensure touch targets are large enough on mobile */
   button, [role="button"] {
-    min-height: 44px;
-    min-width: 44px;
+    min-height: 48px;
+    min-width: 48px;
   }
 
   /* Better text scaling on mobile */
   html {
     -webkit-text-size-adjust: 100%;
+  }
+
+  /* Glass card styles */
+  .glass-card {
+    background: var(--glass-background);
+    backdrop-filter: blur(16px);
+    -webkit-backdrop-filter: blur(16px);
+    border: 1px solid var(--glass-border);
+    box-shadow: var(--shadow-glass);
+  }
+
+  /* Gradient backgrounds */
+  .gradient-primary { background: var(--gradient-primary); }
+  .gradient-upload { background: var(--gradient-upload); }
+  .gradient-progress { background: var(--gradient-progress); }
+  .gradient-challenges { background: var(--gradient-challenges); }
+  .gradient-card { background: var(--gradient-card); }
+
+  /* Mobile navigation safe area */
+  .mobile-safe-bottom {
+    padding-bottom: env(safe-area-inset-bottom, 0px);
   }
 }

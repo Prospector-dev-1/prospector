@@ -3,9 +3,13 @@ import { useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
+import { HeroCard } from '@/components/ui/hero-card';
+import { FeatureCard } from '@/components/ui/feature-card';
+import { StatsCard } from '@/components/ui/stats-card';
+import MobileLayout from '@/components/MobileLayout';
 import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/integrations/supabase/client';
-import { Phone, TrendingUp, User, Settings, LogOut, CreditCard, FileText, Sparkles, HelpCircle, Upload, Trophy } from 'lucide-react';
+import { Phone, TrendingUp, User, Target, FileText, Sparkles, Upload, Trophy, Activity, Clock } from 'lucide-react';
 interface CallRecord {
   id: string;
   difficulty_level: number;
@@ -104,222 +108,147 @@ const Dashboard = () => {
     return <Badge variant="secondary" className="cursor-pointer hover:bg-secondary/80" onClick={() => navigate('/plans')}>{planName}</Badge>;
   };
   const averageScore = recentCalls.length > 0 ? (recentCalls.reduce((sum, call) => sum + (call.overall_score || 0), 0) / recentCalls.length).toFixed(1) : 'N/A';
-  return <div className="min-h-screen bg-background">
-      {/* Header */}
-      <div className="border-b border-border bg-card">
-        <div className="sm:px-4 lg:px-8 px-[12px] my-[35px]">
-          <div className="flex justify-between items-center py-3">
-            <div className="flex items-center space-x-2">
-              <h1 className="text-lg sm:text-xl font-bold text-primary">Prospector</h1>
-              {getSubscriptionBadge()}
-            </div>
-            <div className="flex items-center space-x-2 sm:space-x-3">
-              <div className="text-right hidden sm:block">
-                <p className="text-xs text-muted-foreground">Credits</p>
-                <p className="text-sm font-bold text-primary">{profile?.credits || 0}</p>
-              </div>
-              <div className="text-right sm:hidden">
-                <p className="text-xs font-bold text-primary cursor-pointer hover:underline" onClick={() => navigate('/profile?tab=subscription')}>{profile?.credits || 0} Credits Remaining</p>
-              </div>
-              <Button variant="ghost" size="icon" onClick={() => navigate('/help')} aria-label="Help and Support">
-                <HelpCircle className="h-4 w-4" />
-              </Button>
-              <Button variant="ghost" size="icon" onClick={() => navigate('/profile')} aria-label="Profile">
-                <User className="h-4 w-4" />
-              </Button>
-              
-            </div>
+  
+  return (
+    <MobileLayout>
+      <div className="p-4 space-y-6">
+        {/* Hero Card */}
+        <HeroCard
+          title="Prospector"
+          subtitle="Ready to master your cold calling skills? Start a new practice session or review your progress."
+          userName={profile?.first_name || 'Prospector'}
+          credits={profile?.credits || 0}
+          subscriptionType={profile?.subscription_type}
+          onCreditsClick={() => navigate('/profile?tab=subscription')}
+        />
+
+        {/* Quick Stats */}
+        <div className="grid grid-cols-3 gap-3">
+          <StatsCard
+            label="Total Calls"
+            value={totalCallsCount}
+            icon={Phone}
+            variant="default"
+          />
+          <StatsCard
+            label="Avg Score"
+            value={averageScore}
+            icon={Target}
+            variant="success"
+          />
+          <StatsCard
+            label="This Week"
+            value={thisWeekCallsCount}
+            icon={Clock}
+            variant="info"
+          />
+        </div>
+
+        {/* Main Features */}
+        <div className="space-y-4">
+          <h3 className="text-lg font-bold text-foreground mb-3">Quick Actions</h3>
+          
+          <div className="grid grid-cols-1 gap-4">
+            <FeatureCard
+              icon={Phone}
+              title="Start Practice Call"
+              description="Begin a new AI-powered cold calling session with personalized scenarios"
+              buttonText="Start New Call"
+              variant="default"
+              onAction={() => navigate('/call-simulation')}
+            />
+
+            <FeatureCard
+              icon={Upload}
+              title="Upload Call Recording"
+              description="Get detailed AI analysis and coaching for your real calls"
+              buttonText="Upload & Analyze"
+              variant="upload"
+              onAction={() => navigate('/call-upload')}
+            />
+
+            <FeatureCard
+              icon={FileText}
+              title="Script Analysis"
+              description="Get AI feedback on your sales scripts and improve your approach"
+              buttonText="Analyze Script"
+              variant="progress"
+              onAction={() => navigate('/script-analysis')}
+            />
+
+            <FeatureCard
+              icon={Sparkles}
+              title="Custom Script Generator"
+              description="Generate personalized sales scripts tailored to your industry"
+              buttonText="Generate Script"
+              variant="challenges"
+              onAction={() => navigate('/custom-script')}
+            />
           </div>
         </div>
-      </div>
 
-      <div className="px-3 sm:px-4 lg:px-8 py-4 sm:py-6">
-        {/* Welcome Section */}
-        <div className="mb-6">
-          <h2 className="text-xl sm:text-2xl lg:text-3xl font-bold mb-2">
-            Welcome back, {profile?.first_name || 'Prospector'}!
-          </h2>
-          <p className="text-sm sm:text-base text-muted-foreground">
-            Ready to improve your cold calling skills? Start a new practice session or review your progress.
-          </p>
-        </div>
-
-        {/* Action Cards */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-6 gap-4 mb-6">
-          <Card className="hover:shadow-lg transition-shadow cursor-pointer flex flex-col" onClick={() => navigate('/call-simulation')}>
-            <CardHeader className="text-center pb-3 flex-1">
-              <Phone className="h-8 w-8 sm:h-10 sm:w-10 text-primary mx-auto mb-2" />
-              <CardTitle className="text-base sm:text-lg">Start Practice Call</CardTitle>
-              <CardDescription className="text-sm">
-                Begin a new AI-powered cold calling session
-              </CardDescription>
-            </CardHeader>
-            <CardContent className="pt-0">
-              <Button className="w-full h-12" size="lg">
-                Start New Call
-              </Button>
-            </CardContent>
-          </Card>
-
-          <Card className="hover:shadow-lg transition-shadow cursor-pointer flex flex-col" onClick={() => navigate('/script-analysis')}>
-            <CardHeader className="text-center pb-3 flex-1">
-              <FileText className="h-8 w-8 sm:h-10 sm:w-10 text-secondary mx-auto mb-2" />
-              <CardTitle className="text-base sm:text-lg">Script Analysis</CardTitle>
-              <CardDescription className="text-sm">
-                Get AI feedback on your sales script
-              </CardDescription>
-            </CardHeader>
-            <CardContent className="pt-0">
-              <Button className="w-full h-12" size="lg">
-                Analyze Script
-              </Button>
-            </CardContent>
-          </Card>
-
-          <Card className="hover:shadow-lg transition-shadow cursor-pointer flex flex-col" onClick={() => navigate('/call-upload')}>
-            <CardHeader className="text-center pb-3 flex-1">
-              <Upload className="h-8 w-8 sm:h-10 sm:w-10 text-accent mx-auto mb-2" />
-              <CardTitle className="text-base sm:text-lg">Upload Call</CardTitle>
-              <CardDescription className="text-sm">
-                Get AI review of your recorded calls
-              </CardDescription>
-            </CardHeader>
-            <CardContent className="pt-0">
-              <Button className="w-full h-12" size="lg" variant="outline">
-                Upload & Analyze
-              </Button>
-            </CardContent>
-          </Card>
-
-          <Card className="hover:shadow-lg transition-shadow cursor-pointer flex flex-col" onClick={() => navigate('/progress')}>
-            <CardHeader className="text-center pb-3 flex-1">
-              <TrendingUp className="h-8 w-8 sm:h-10 sm:w-10 text-info mx-auto mb-2" />
-              <CardTitle className="text-base sm:text-lg">My Progress</CardTitle>
-              <CardDescription className="text-sm">
-                Track your improvement over time
-              </CardDescription>
-            </CardHeader>
-            <CardContent className="pt-0">
-              <Button className="w-full h-12" size="lg" variant="outline">
-                View Analytics
-              </Button>
-            </CardContent>
-          </Card>
-
-          <Card className="hover:shadow-lg transition-shadow cursor-pointer flex flex-col" onClick={() => navigate('/challenges')}>
-            <CardHeader className="text-center pb-3 flex-1">
-              <Trophy className="h-8 w-8 sm:h-10 sm:w-10 text-warning mx-auto mb-2" />
-              <CardTitle className="text-base sm:text-lg">Challenges</CardTitle>
-              <CardDescription className="text-sm">
-                Complete weekly goals for rewards
-              </CardDescription>
-            </CardHeader>
-            <CardContent className="pt-0">
-              <Button className="w-full h-12" size="lg" variant="outline">
-                View Challenges
-              </Button>
-            </CardContent>
-          </Card>
-
-          <Card className="hover:shadow-lg transition-shadow cursor-pointer flex flex-col" onClick={() => navigate('/custom-script')}>
-            <CardHeader className="text-center pb-3 flex-1">
-              <Sparkles className="h-8 w-8 sm:h-10 sm:w-10 text-accent mx-auto mb-2" />
-              <CardTitle className="text-base sm:text-lg">Custom Script</CardTitle>
-              <CardDescription className="text-sm">
-                Generate a personalized sales script
-              </CardDescription>
-            </CardHeader>
-            <CardContent className="pt-0">
-              <Button className="w-full h-12" size="lg">
-                Generate Script
-              </Button>
-            </CardContent>
-          </Card>
-
-          <Card className="hover:shadow-lg transition-shadow flex flex-col">
-            <CardHeader className="text-center pb-3 flex-1">
-              <CreditCard className="h-8 w-8 sm:h-10 sm:w-10 text-info mx-auto mb-2" />
-              <CardTitle className="text-base sm:text-lg">Credits</CardTitle>
-              <CardDescription className="text-sm">
-                {profile?.credits || 0} calls remaining
-              </CardDescription>
-            </CardHeader>
-            <CardContent className="pt-0">
-              <Button className="w-full h-12" onClick={() => navigate('/profile?tab=subscription')}>
-                Buy More Credits
-              </Button>
-            </CardContent>
-          </Card>
-
-          <Card className="hover:shadow-lg transition-shadow flex flex-col">
-            <CardHeader className="text-center pb-3 flex-1">
-              <TrendingUp className="h-8 w-8 sm:h-10 sm:w-10 text-accent mx-auto mb-2" />
-              <CardTitle className="text-base sm:text-lg">Performance</CardTitle>
-              <CardDescription className="text-sm">
-                Average Score: {averageScore}/10
-              </CardDescription>
-            </CardHeader>
-            <CardContent className="pt-0">
-              <div className="space-y-1 mb-4">
-                <p className="text-xs sm:text-sm text-muted-foreground">
-                  Total Calls: {totalCallsCount}
-                </p>
-                <p className="text-xs sm:text-sm text-muted-foreground">
-                  This Week: {thisWeekCallsCount}
-                </p>
-              </div>
-            </CardContent>
-          </Card>
-        </div>
-
-        {/* Recent Calls */}
-        <Card>
-          <CardHeader className="pb-3">
-            <CardTitle className="text-base sm:text-lg">Recent Practice Sessions</CardTitle>
-            <CardDescription className="text-sm">
-              Your latest cold calling practice sessions
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            {loading ? <div className="text-center py-6">
-                <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-primary mx-auto"></div>
-                <p className="mt-3 text-sm text-muted-foreground">Loading calls...</p>
-              </div> : recentCalls.length === 0 ? <div className="text-center py-6">
-                <Phone className="h-8 w-8 text-muted-foreground mx-auto mb-3" />
-                <p className="text-sm text-muted-foreground">No practice sessions yet</p>
-                <p className="text-xs text-muted-foreground mt-1">
-                  Start your first call to see your progress here
-                </p>
-              </div> : <div className="space-y-3">
-                {recentCalls.map(call => <div key={call.id} className="flex flex-col sm:flex-row sm:items-center sm:justify-between p-3 border border-border rounded-lg space-y-2 sm:space-y-0">
-                    <div className="flex items-center space-x-3">
-                      <div className="flex-shrink-0">
-                        <Badge variant={call.difficulty_level <= 3 ? "secondary" : call.difficulty_level <= 7 ? "default" : "destructive"} className="text-xs">
-                          Level {call.difficulty_level}
-                        </Badge>
+        {/* Recent Activity */}
+        <div className="space-y-4">
+          <h3 className="text-lg font-bold text-foreground">Recent Practice Sessions</h3>
+          
+          <Card className="glass-card">
+            <CardContent className="p-4">
+              {loading ? (
+                <div className="text-center py-8">
+                  <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto"></div>
+                  <p className="mt-4 text-sm text-muted-foreground">Loading sessions...</p>
+                </div>
+              ) : recentCalls.length === 0 ? (
+                <div className="text-center py-8">
+                  <div className="w-16 h-16 mx-auto mb-4 rounded-full bg-muted/20 flex items-center justify-center">
+                    <Phone className="h-8 w-8 text-muted-foreground" />
+                  </div>
+                  <p className="text-sm text-muted-foreground mb-2">No practice sessions yet</p>
+                  <p className="text-xs text-muted-foreground">
+                    Start your first call to see your progress here
+                  </p>
+                </div>
+              ) : (
+                <div className="space-y-3">
+                  {recentCalls.map(call => (
+                    <div 
+                      key={call.id} 
+                      className="flex items-center justify-between p-3 bg-muted/20 rounded-lg hover:bg-muted/30 transition-colors cursor-pointer"
+                      onClick={() => navigate(`/call-results/${call.id}`)}
+                    >
+                      <div className="flex items-center space-x-3">
+                        <div className="w-10 h-10 rounded-full gradient-primary p-0.5">
+                          <div className="w-full h-full bg-card rounded-full flex items-center justify-center">
+                            <Activity className="h-5 w-5 text-foreground" />
+                          </div>
+                        </div>
+                        <div>
+                          <div className="flex items-center space-x-2">
+                            <Badge 
+                              variant={call.difficulty_level <= 3 ? "secondary" : call.difficulty_level <= 7 ? "default" : "destructive"} 
+                              className="text-xs"
+                            >
+                              Level {call.difficulty_level}
+                            </Badge>
+                            <span className="text-sm font-medium">Score: {call.overall_score}/10</span>
+                          </div>
+                          <p className="text-xs text-muted-foreground">
+                            {Math.floor((call.duration_seconds || 0) / 60)}m {(call.duration_seconds || 0) % 60}s • {new Date(call.created_at).toLocaleDateString()}
+                          </p>
+                        </div>
                       </div>
-                      <div>
-                        <p className="text-sm font-medium">
-                          Score: {call.overall_score}/10
-                        </p>
-                        <p className="text-xs text-muted-foreground">
-                          {Math.floor((call.duration_seconds || 0) / 60)}m {(call.duration_seconds || 0) % 60}s
-                        </p>
-                      </div>
-                    </div>
-                    <div className="flex items-center justify-between sm:flex-col sm:items-end space-x-2 sm:space-x-0">
-                      <p className="text-xs text-muted-foreground">
-                        {new Date(call.created_at).toLocaleDateString()}
-                      </p>
-                      <Button variant="ghost" size="sm" className="h-8 text-xs" onClick={() => navigate(`/call-results/${call.id}`)}>
-                        View Details
+                      <Button variant="ghost" size="sm" className="h-8">
+                        View
                       </Button>
                     </div>
-                  </div>)}
-              </div>}
-          </CardContent>
-        </Card>
+                  ))}
+                </div>
+              )}
+            </CardContent>
+          </Card>
+        </div>
       </div>
-    </div>;
+    </MobileLayout>
+  );
 };
 export default Dashboard;
