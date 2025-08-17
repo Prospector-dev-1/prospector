@@ -117,36 +117,9 @@ serve(async (req) => {
       });
     }
 
-    // Deduct 0.5 credits
-    const currentCredits = Number(profile.credits);
-    const newCreditAmount = Number((currentCredits - 0.5).toFixed(2));
+    // Deduct credits after successful AI analysis to avoid charging on failures
+    // (moved deduction and transaction logging below, just before returning success)
 
-    const { error: updateError } = await supabase
-      .from('profiles')
-      .update({ credits: newCreditAmount })
-      .eq('user_id', userId);
-
-    if (updateError) {
-      console.error('Failed to deduct credits', updateError);
-      return new Response(JSON.stringify({ error: 'Failed to deduct credits' }), {
-        status: 500,
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-      });
-    }
-
-    // Record transaction (store in hundredths: -50 = -0.5 credits)
-    const { error: txnError } = await supabase
-      .from('credit_transactions')
-      .insert({
-        user_id: userId,
-        type: 'objection_coaching',
-        amount: -50,
-        description: `Objection coaching for call ${callId}`,
-      });
-
-    if (txnError) {
-      console.warn('Transaction insert failed', txnError);
-    }
 
     // Build OpenAI prompt
     const prompt = `You are a world-class sales coach. Analyze the following call transcript and extract concrete objection-coaching advice.
@@ -199,8 +172,15 @@ Guidelines:
     if (!aiRes.ok) {
       const errText = await aiRes.text();
       console.error('OpenAI error', errText);
-      return new Response(JSON.stringify({ error: 'AI analysis failed' }), {
-        status: 500,
+      // Handle OpenAI rate limit gracefully
+      if (aiRes.status === 429 || errText.includes('rate_limit_exceeded') || errText.includes('Rate limit')) {
+        return new Response(JSON.stringify({ error: 'Rate limited by AI provider. Please try again shortly. No credits were deducted.' }), {
+          status: 429,
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        });
+      }
+      return new Response(JSON.stringify({ error: 'AI analysis failed. No credits were deducted.' }), {
+        status: 502,
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       });
     }
@@ -228,6 +208,37 @@ Guidelines:
           'End with a crisp next step'
         ]
       };
+    }
+
+    // After successful AI analysis, deduct 0.5 credits and record transaction
+    const currentCredits = Number(profile.credits);
+    const newCreditAmount = Number((currentCredits - 0.5).toFixed(2));
+
+    const { error: updateError } = await supabase
+      .from('profiles')
+      .update({ credits: newCreditAmount })
+      .eq('user_id', userId);
+
+    if (updateError) {
+      console.error('Failed to deduct credits after analysis', updateError);
+      return new Response(JSON.stringify({ error: 'Analysis succeeded but credit deduction failed' }), {
+        status: 500,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
+    }
+
+    // Record transaction with allowed type 'deduction' (amount in hundredths)
+    const { error: txnError } = await supabase
+      .from('credit_transactions')
+      .insert({
+        user_id: userId,
+        type: 'deduction',
+        amount: -50,
+        description: `Objection coaching for call ${callId}`,
+      });
+
+    if (txnError) {
+      console.warn('Transaction insert failed', txnError);
     }
 
     return new Response(JSON.stringify({ success: true, ...coaching, credits_remaining: newCreditAmount }), {
