@@ -150,6 +150,105 @@ function generateManualCoachingAnalysis(transcript: string): any {
   };
 }
 
+// Circuit breaker states and helper functions
+const CIRCUIT_BREAKER_THRESHOLD = 5;
+const CIRCUIT_BREAKER_TIMEOUT = 300000; // 5 minutes
+const CACHE_DURATION = 1800000; // 30 minutes
+
+async function checkCircuitBreaker(supabase: any, provider: string): Promise<boolean> {
+  const { data: health } = await supabase
+    .from('provider_health')
+    .select('*')
+    .eq('provider', provider)
+    .single();
+
+  if (!health) {
+    // Initialize provider health
+    await supabase
+      .from('provider_health')
+      .insert({ provider });
+    return true; // Default to closed (working)
+  }
+
+  if (health.state === 'open' && health.open_until && new Date() < new Date(health.open_until)) {
+    return false; // Circuit is open, don't call
+  }
+
+  return true; // Circuit is closed or half-open
+}
+
+async function recordFailure(supabase: any, provider: string, error: string): Promise<void> {
+  const { data: health } = await supabase
+    .from('provider_health')
+    .select('*')
+    .eq('provider', provider)
+    .single();
+
+  const failureCount = (health?.failure_count || 0) + 1;
+  const updateData: any = {
+    failure_count: failureCount,
+    success_count: 0,
+    last_error: error
+  };
+
+  if (failureCount >= CIRCUIT_BREAKER_THRESHOLD) {
+    updateData.state = 'open';
+    updateData.open_until = new Date(Date.now() + CIRCUIT_BREAKER_TIMEOUT).toISOString();
+  }
+
+  await supabase
+    .from('provider_health')
+    .upsert({ provider, ...updateData }, { onConflict: 'provider' });
+}
+
+async function recordSuccess(supabase: any, provider: string): Promise<void> {
+  await supabase
+    .from('provider_health')
+    .upsert({
+      provider,
+      state: 'closed',
+      failure_count: 0,
+      success_count: 1,
+      open_until: null,
+      last_error: null
+    }, { onConflict: 'provider' });
+}
+
+function generateCacheHash(transcript: string, model: string): string {
+  // Simple hash function for caching
+  let hash = 0;
+  const str = transcript + model;
+  for (let i = 0; i < str.length; i++) {
+    const char = str.charCodeAt(i);
+    hash = ((hash << 5) - hash) + char;
+    hash = hash & hash; // Convert to 32-bit integer
+  }
+  return Math.abs(hash).toString(36);
+}
+
+async function getCachedAnalysis(supabase: any, hash: string): Promise<any | null> {
+  const { data } = await supabase
+    .from('ai_analysis_cache')
+    .select('response')
+    .eq('hash', hash)
+    .gt('expires_at', new Date().toISOString())
+    .single();
+  
+  return data?.response || null;
+}
+
+async function setCachedAnalysis(supabase: any, hash: string, model: string, response: any): Promise<void> {
+  const expiresAt = new Date(Date.now() + CACHE_DURATION).toISOString();
+  await supabase
+    .from('ai_analysis_cache')
+    .upsert({
+      hash,
+      model,
+      response,
+      expires_at: expiresAt
+    });
+}
+
 serve(async (req) => {
   console.log('=== ANALYZE CALL COACHING START ===');
 
@@ -320,110 +419,136 @@ Instructions:
 - Keep responses human and natural, not robotic.
 - Do NOT include markdown fences or any text outside of the JSON.`;
 
-    // Robust analysis with multiple fallbacks
-    const attemptOpenAIAnalysis = async (): Promise<any | null> => {
-      const attempts = [
-        { model: 'gpt-5-2025-08-07', useNewParams: true, max: 700 },
-        { model: 'o4-mini-2025-04-16', useNewParams: true, max: 650 },
-        { model: 'gpt-5-mini-2025-08-07', useNewParams: true, max: 650 },
-        { model: 'gpt-5-nano-2025-08-07', useNewParams: true, max: 600 },
-        { model: 'gpt-4.1-2025-04-14', useNewParams: true, max: 650 },
-        { model: 'gpt-4o-mini', useNewParams: false, max: 600 },
-      ];
-
-      const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
+    // Check cache first
+    const cacheHash = generateCacheHash(safeTranscript, 'coaching');
+    let coaching = await getCachedAnalysis(supabase, cacheHash);
+    
+    if (coaching) {
+      console.log('Found cached analysis, skipping AI calls');
+    } else {
+      // Check circuit breaker for OpenAI
+      const canCallOpenAI = await checkCircuitBreaker(supabase, 'openai');
       
-      for (const attempt of attempts) {
-        console.log(`Attempting model: ${attempt.model}`);
+      if (!canCallOpenAI) {
+        console.log('OpenAI circuit breaker is open, using manual analysis');
+        coaching = generateManualCoachingAnalysis(safeTranscript);
+      } else {
+        // Robust analysis with multiple fallbacks and circuit breaker
+        const attemptOpenAIAnalysis = async (): Promise<any | null> => {
+          const attempts = [
+            { model: 'gpt-5-2025-08-07', useNewParams: true, max: 700 },
+            { model: 'o4-mini-2025-04-16', useNewParams: true, max: 650 },
+            { model: 'gpt-5-mini-2025-08-07', useNewParams: true, max: 650 },
+            { model: 'gpt-5-nano-2025-08-07', useNewParams: true, max: 600 },
+            { model: 'gpt-4.1-2025-04-14', useNewParams: true, max: 650 },
+            { model: 'gpt-4o-mini', useNewParams: false, max: 600 },
+          ];
 
-        const bodyBase: any = {
-          model: attempt.model,
-          messages: [
-            { role: 'system', content: 'You are a concise, practical sales coach. Always return strict JSON.' },
-            { role: 'user', content: prompt },
-          ],
-        };
+          const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
+          
+          for (const attempt of attempts) {
+            console.log(`Attempting model: ${attempt.model}`);
 
-        const maxTries = 3;
-        for (let i = 0; i < maxTries; i++) {
-          try {
-            const body = { ...bodyBase } as any;
-            if (attempt.useNewParams) {
-              body.max_completion_tokens = attempt.max;
-            } else {
-              body.max_tokens = attempt.max;
-              body.temperature = 0.6;
-            }
+            const bodyBase: any = {
+              model: attempt.model,
+              messages: [
+                { role: 'system', content: 'You are a concise, practical sales coach. Always return strict JSON.' },
+                { role: 'user', content: prompt },
+              ],
+            };
 
-            const resp = await fetch('https://api.openai.com/v1/chat/completions', {
-              method: 'POST',
-              headers: {
-                'Authorization': `Bearer ${openAIApiKey}`,
-                'Content-Type': 'application/json',
-              },
-              body: JSON.stringify(body),
-            });
+            const maxTries = 3;
+            for (let i = 0; i < maxTries; i++) {
+              try {
+                const body = { ...bodyBase } as any;
+                if (attempt.useNewParams) {
+                  body.max_completion_tokens = attempt.max;
+                } else {
+                  body.max_tokens = attempt.max;
+                  body.temperature = 0.6;
+                }
 
-            if (resp.ok) {
-              const aiData = await resp.json();
-              return aiData;
-            }
+                const resp = await fetch('https://api.openai.com/v1/chat/completions', {
+                  method: 'POST',
+                  headers: {
+                    'Authorization': `Bearer ${openAIApiKey}`,
+                    'Content-Type': 'application/json',
+                  },
+                  body: JSON.stringify(body),
+                });
 
-            const errorText = await resp.text();
-            console.error(`OpenAI error for ${attempt.model} (try ${i + 1}/${maxTries})`, {
-              status: resp.status,
-              error: errorText
-            });
+                if (resp.ok) {
+                  const aiData = await resp.json();
+                  // Record success and cache result
+                  await recordSuccess(supabase, 'openai');
+                  return aiData;
+                }
 
-            const isRateLimit = resp.status === 429 || errorText.includes('rate_limit_exceeded') || errorText.includes('Rate limit');
-            const isQuotaExceeded = errorText.includes('insufficient_quota') || errorText.includes('quota');
-            
-            if (!isRateLimit && !isQuotaExceeded) {
-              // For other errors, break this model attempt and try next model
-              break;
-            }
+                const errorText = await resp.text();
+                const errorObj = { status: resp.status, error: errorText };
+                console.error(`OpenAI error for ${attempt.model} (try ${i + 1}/${maxTries})`, errorObj);
 
-            // For rate limits, wait and retry the same model
-            if (isRateLimit && i < maxTries - 1) {
-              await sleep(1000 * (i + 1));
-              continue;
-            }
-          } catch (fetchError) {
-            console.error(`Network error for ${attempt.model} (try ${i + 1}/${maxTries}):`, fetchError);
-            if (i < maxTries - 1) {
-              await sleep(500);
-              continue;
+                // Record failure for circuit breaker
+                await recordFailure(supabase, 'openai', JSON.stringify(errorObj));
+
+                const isRateLimit = resp.status === 429 || errorText.includes('rate_limit_exceeded') || errorText.includes('Rate limit');
+                const isQuotaExceeded = errorText.includes('insufficient_quota') || errorText.includes('quota');
+                
+                // For severe errors (quota exceeded), stop all attempts
+                if (isQuotaExceeded) {
+                  console.log('Quota exceeded, stopping all OpenAI attempts');
+                  return null;
+                }
+
+                if (!isRateLimit) {
+                  // For other errors, break this model attempt and try next model
+                  break;
+                }
+
+                // For rate limits, wait and retry the same model
+                if (isRateLimit && i < maxTries - 1) {
+                  await sleep(1000 * (i + 1));
+                  continue;
+                }
+              } catch (fetchError) {
+                console.error(`Network error for ${attempt.model} (try ${i + 1}/${maxTries}):`, fetchError);
+                await recordFailure(supabase, 'openai', fetchError.toString());
+                
+                if (i < maxTries - 1) {
+                  await sleep(500);
+                  continue;
+                }
+              }
             }
           }
+
+          return null;
+        };
+
+        console.log('Making OpenAI request...');
+        const aiData = await attemptOpenAIAnalysis();
+
+        if (!aiData) {
+          console.log('All OpenAI models failed, generating manual analysis...');
+          coaching = generateManualCoachingAnalysis(safeTranscript);
+        } else {
+          let content: string = aiData.choices?.[0]?.message?.content ?? '';
+
+          // Strip markdown fences if present
+          content = content.trim();
+          if (content.startsWith('```')) {
+            content = content.replace(/^```json\s*/i, '').replace(/^```\s*/i, '').replace(/\s*```$/i, '');
+          }
+
+          try {
+            coaching = JSON.parse(content);
+            // Cache successful AI analysis
+            await setCachedAnalysis(supabase, cacheHash, 'openai', coaching);
+          } catch (e) {
+            console.warn('JSON parse failed, using manual analysis');
+            coaching = generateManualCoachingAnalysis(safeTranscript);
+          }
         }
-      }
-
-      return null;
-    };
-
-    console.log('Making OpenAI request...');
-    const aiData = await attemptOpenAIAnalysis();
-
-    let coaching;
-    if (!aiData) {
-      console.log('All OpenAI models failed, generating manual analysis...');
-      
-      // Generate robust local fallback analysis
-      coaching = generateManualCoachingAnalysis(safeTranscript);
-    } else {
-      let content: string = aiData.choices?.[0]?.message?.content ?? '';
-
-      // Strip markdown fences if present
-      content = content.trim();
-      if (content.startsWith('```')) {
-        content = content.replace(/^```json\s*/i, '').replace(/^```\s*/i, '').replace(/\s*```$/i, '');
-      }
-
-      try {
-        coaching = JSON.parse(content);
-      } catch (e) {
-        console.warn('JSON parse failed, using manual analysis');
-        coaching = generateManualCoachingAnalysis(safeTranscript);
       }
     }
 

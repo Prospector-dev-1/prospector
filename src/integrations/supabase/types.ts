@@ -14,6 +14,33 @@ export type Database = {
   }
   public: {
     Tables: {
+      ai_analysis_cache: {
+        Row: {
+          created_at: string
+          expires_at: string
+          hash: string
+          id: string
+          model: string | null
+          response: Json
+        }
+        Insert: {
+          created_at?: string
+          expires_at: string
+          hash: string
+          id?: string
+          model?: string | null
+          response: Json
+        }
+        Update: {
+          created_at?: string
+          expires_at?: string
+          hash?: string
+          id?: string
+          model?: string | null
+          response?: Json
+        }
+        Relationships: []
+      }
       ai_replays: {
         Row: {
           created_at: string
@@ -298,6 +325,42 @@ export type Database = {
           subscription_type?: string | null
           updated_at?: string
           user_id?: string
+        }
+        Relationships: []
+      }
+      provider_health: {
+        Row: {
+          created_at: string
+          failure_count: number
+          id: string
+          last_error: string | null
+          open_until: string | null
+          provider: string
+          state: string
+          success_count: number
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          failure_count?: number
+          id?: string
+          last_error?: string | null
+          open_until?: string | null
+          provider: string
+          state?: string
+          success_count?: number
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          failure_count?: number
+          id?: string
+          last_error?: string | null
+          open_until?: string | null
+          provider?: string
+          state?: string
+          success_count?: number
+          updated_at?: string
         }
         Relationships: []
       }
