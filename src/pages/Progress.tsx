@@ -4,19 +4,26 @@ import { useNavigate } from 'react-router-dom';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { ArrowLeft, TrendingUp, Calendar, Target, Award } from 'lucide-react';
+import { ArrowLeft, TrendingUp, Calendar, Target, Award, Zap, BarChart3, Trophy } from 'lucide-react';
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, BarChart, Bar } from 'recharts';
 import { toast } from 'sonner';
 import { supabase } from '@/integrations/supabase/client';
 import SEO from '@/components/SEO';
 
 interface ProgressData {
-  confidence_trend: Array<{ date: string; score: number }>;
-  objection_trends: Array<{ date: string; price: number; timing: number; trust: number; competitor: number }>;
+  confidence_trend: Array<{ date: string; score: number; source: 'upload' | 'live' }>;
+  objection_trends: Array<{ date: string; price: number; timing: number; trust: number; competitor: number; source: 'upload' | 'live' }>;
+  success_rate_trend: Array<{ date: string; successRate: number; totalCalls: number }>;
+  difficulty_progression: Array<{ difficulty: number; avgScore: number; callCount: number }>;
+  comprehensive_scores: Array<{ date: string; clarity: number; persuasiveness: number; tone: number; closing: number; overall: number }>;
   weekly_summary: {
     improvement: number;
     total_calls: number;
+    live_calls: number;
+    uploaded_calls: number;
     avg_confidence: number;
+    success_rate: number;
+    avg_difficulty: number;
     insight: string;
   };
 }
@@ -34,75 +41,195 @@ const Progress = () => {
 
   const fetchProgressData = async () => {
     try {
-      // Get call uploads for the user
-      const { data: uploads, error } = await supabase
-        .from('call_uploads')
-        .select('*')
-        .eq('user_id', user?.id)
-        .eq('status', 'completed')
-        .order('created_at', { ascending: true });
+      // Get both call uploads and live calls for comprehensive data
+      const [uploadsResult, callsResult] = await Promise.all([
+        supabase
+          .from('call_uploads')
+          .select('*')
+          .eq('user_id', user?.id)
+          .eq('status', 'completed')
+          .order('created_at', { ascending: true }),
+        supabase
+          .from('calls')
+          .select('*')
+          .eq('user_id', user?.id)
+          .eq('call_status', 'completed')
+          .order('created_at', { ascending: true })
+      ]);
 
-      if (error) throw error;
+      if (uploadsResult.error) throw uploadsResult.error;
+      if (callsResult.error) throw callsResult.error;
 
-      if (!uploads || uploads.length === 0) {
+      const uploads = uploadsResult.data || [];
+      const liveCalls = callsResult.data || [];
+
+      if (uploads.length === 0 && liveCalls.length === 0) {
         setProgressData({
           confidence_trend: [],
           objection_trends: [],
+          success_rate_trend: [],
+          difficulty_progression: [],
+          comprehensive_scores: [],
           weekly_summary: {
             improvement: 0,
             total_calls: 0,
+            live_calls: 0,
+            uploaded_calls: 0,
             avg_confidence: 0,
-            insight: "Upload your first call to start tracking progress!"
+            success_rate: 0,
+            avg_difficulty: 0,
+            insight: "Start practicing with live calls or upload recordings to track your progress!"
           }
         });
         return;
       }
 
-      // Process data for charts
-      const confidenceTrend = uploads.map(upload => ({
+      // Process confidence trend data from both sources
+      const uploadConfidenceTrend = uploads.map(upload => ({
         date: new Date(upload.created_at).toLocaleDateString(),
-        score: upload.confidence_score || 0
+        score: upload.confidence_score || 0,
+        source: 'upload' as const
       }));
 
-      const objectionTrends = uploads.map(upload => {
+      const liveCallConfidenceTrend = liveCalls.map(call => ({
+        date: new Date(call.created_at).toLocaleDateString(),
+        score: call.confidence_score || 0,
+        source: 'live' as const
+      }));
+
+      const confidenceTrend = [...uploadConfidenceTrend, ...liveCallConfidenceTrend]
+        .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
+
+      // Process objection handling trends
+      const uploadObjectionTrends = uploads.map(upload => {
         const scores = upload.objection_handling_scores as any || {};
         return {
           date: new Date(upload.created_at).toLocaleDateString(),
           price: scores.price || 0,
           timing: scores.timing || 0,
           trust: scores.trust || 0,
-          competitor: scores.competitor || 0
+          competitor: scores.competitor || 0,
+          source: 'upload' as const
         };
       });
 
-      // Calculate weekly summary
-      const avgConfidence = uploads.reduce((sum, upload) => sum + (upload.confidence_score || 0), 0) / uploads.length;
-      const lastWeekUploads = uploads.filter(upload => {
-        const uploadDate = new Date(upload.created_at);
-        const weekAgo = new Date();
-        weekAgo.setDate(weekAgo.getDate() - 7);
-        return uploadDate >= weekAgo;
+      const liveCallObjectionTrends = liveCalls.map(call => {
+        const score = call.objection_handling_score || 0;
+        return {
+          date: new Date(call.created_at).toLocaleDateString(),
+          price: score,
+          timing: score,
+          trust: score,
+          competitor: score,
+          source: 'live' as const
+        };
       });
 
-      const improvement = lastWeekUploads.length > 1 
-        ? lastWeekUploads[lastWeekUploads.length - 1].confidence_score - lastWeekUploads[0].confidence_score
+      const objectionTrends = [...uploadObjectionTrends, ...liveCallObjectionTrends]
+        .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
+
+      // Calculate success rate trend from live calls
+      const successRateByDate = liveCalls.reduce((acc, call) => {
+        const date = new Date(call.created_at).toLocaleDateString();
+        if (!acc[date]) {
+          acc[date] = { total: 0, successful: 0 };
+        }
+        acc[date].total++;
+        if (call.successful_sale) {
+          acc[date].successful++;
+        }
+        return acc;
+      }, {} as Record<string, { total: number; successful: number }>);
+
+      const successRateTrend = Object.entries(successRateByDate).map(([date, data]) => ({
+        date,
+        successRate: Math.round((data.successful / data.total) * 100),
+        totalCalls: data.total
+      }));
+
+      // Calculate difficulty progression
+      const difficultyGroups = liveCalls.reduce((acc, call) => {
+        const difficulty = call.difficulty_level;
+        if (!acc[difficulty]) {
+          acc[difficulty] = { scores: [], count: 0 };
+        }
+        acc[difficulty].scores.push(call.overall_score || 0);
+        acc[difficulty].count++;
+        return acc;
+      }, {} as Record<number, { scores: number[]; count: number }>);
+
+      const difficultyProgression = Object.entries(difficultyGroups).map(([difficulty, data]) => ({
+        difficulty: parseInt(difficulty),
+        avgScore: Math.round(data.scores.reduce((sum, score) => sum + score, 0) / data.scores.length),
+        callCount: data.count
+      })).sort((a, b) => a.difficulty - b.difficulty);
+
+      // Process comprehensive scores from live calls
+      const comprehensiveScores = liveCalls.map(call => ({
+        date: new Date(call.created_at).toLocaleDateString(),
+        clarity: call.clarity_score || 0,
+        persuasiveness: call.persuasiveness_score || 0,
+        tone: call.tone_score || 0,
+        closing: call.closing_score || 0,
+        overall: call.overall_score || 0
+      }));
+
+      // Calculate weekly summary
+      const weekAgo = new Date();
+      weekAgo.setDate(weekAgo.getDate() - 7);
+
+      const recentUploads = uploads.filter(upload => new Date(upload.created_at) >= weekAgo);
+      const recentLiveCalls = liveCalls.filter(call => new Date(call.created_at) >= weekAgo);
+
+      const allConfidenceScores = confidenceTrend.map(item => item.score).filter(score => score > 0);
+      const avgConfidence = allConfidenceScores.length > 0 
+        ? Math.round(allConfidenceScores.reduce((sum, score) => sum + score, 0) / allConfidenceScores.length)
         : 0;
 
+      const successfulCalls = liveCalls.filter(call => call.successful_sale).length;
+      const successRate = liveCalls.length > 0 ? Math.round((successfulCalls / liveCalls.length) * 100) : 0;
+
+      const avgDifficulty = liveCalls.length > 0 
+        ? Math.round(liveCalls.reduce((sum, call) => sum + call.difficulty_level, 0) / liveCalls.length)
+        : 0;
+
+      // Calculate improvement based on recent vs older confidence scores
+      const recentConfidenceScores = confidenceTrend.slice(-7).map(item => item.score).filter(score => score > 0);
+      const olderConfidenceScores = confidenceTrend.slice(0, -7).map(item => item.score).filter(score => score > 0);
+      
+      const recentAvg = recentConfidenceScores.length > 0 
+        ? recentConfidenceScores.reduce((sum, score) => sum + score, 0) / recentConfidenceScores.length
+        : 0;
+      const olderAvg = olderConfidenceScores.length > 0 
+        ? olderConfidenceScores.reduce((sum, score) => sum + score, 0) / olderConfidenceScores.length
+        : recentAvg;
+
+      const improvement = Math.round(recentAvg - olderAvg);
+
       const insights = [
-        "You're showing great consistency in your call quality!",
-        "Your objection handling has improved significantly this week.",
-        "Keep up the momentum - you're building strong sales skills!",
-        "Your confidence scores are trending upward!",
-        "You used fewer filler words this week - excellent progress!"
+        `You've completed ${liveCalls.length + uploads.length} practice sessions - excellent dedication!`,
+        `Your success rate is ${successRate}% - keep building on this momentum!`,
+        `You're practicing at difficulty level ${avgDifficulty} - challenge yourself to grow!`,
+        "Your confidence scores are trending upward across both live and uploaded calls!",
+        "Great mix of live practice and call analysis - this balanced approach accelerates learning!",
+        "Your objection handling has improved significantly across all categories!",
+        "You're building strong sales skills with consistent practice!"
       ];
 
       setProgressData({
         confidence_trend: confidenceTrend,
         objection_trends: objectionTrends,
+        success_rate_trend: successRateTrend,
+        difficulty_progression: difficultyProgression,
+        comprehensive_scores: comprehensiveScores,
         weekly_summary: {
-          improvement: Math.round(improvement || 0),
-          total_calls: uploads.length,
-          avg_confidence: Math.round(avgConfidence),
+          improvement,
+          total_calls: uploads.length + liveCalls.length,
+          live_calls: liveCalls.length,
+          uploaded_calls: uploads.length,
+          avg_confidence: avgConfidence,
+          success_rate: successRate,
+          avg_difficulty: avgDifficulty,
           insight: insights[Math.floor(Math.random() * insights.length)]
         }
       });
@@ -172,7 +299,7 @@ const Progress = () => {
               </CardTitle>
             </CardHeader>
             <CardContent>
-              <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
+              <div className="grid grid-cols-2 md:grid-cols-6 gap-4">
                 <div className="text-center">
                   <div className="text-2xl font-bold text-primary mb-1">
                     {progressData?.weekly_summary.improvement > 0 ? '+' : ''}
@@ -185,7 +312,7 @@ const Progress = () => {
                   <div className="text-2xl font-bold text-foreground mb-1">
                     {progressData?.weekly_summary.total_calls}
                   </div>
-                  <p className="text-sm text-muted-foreground">Total Calls Analyzed</p>
+                  <p className="text-sm text-muted-foreground">Total Practice Sessions</p>
                 </div>
                 
                 <div className="text-center">
@@ -196,10 +323,24 @@ const Progress = () => {
                 </div>
                 
                 <div className="text-center">
-                  <Badge variant="outline" className="text-xs">
-                    <TrendingUp className="h-3 w-3 mr-1" />
-                    Trending Up
-                  </Badge>
+                  <div className="text-2xl font-bold text-green-600 mb-1">
+                    {progressData?.weekly_summary.success_rate}%
+                  </div>
+                  <p className="text-sm text-muted-foreground">Success Rate</p>
+                </div>
+                
+                <div className="text-center">
+                  <div className="text-2xl font-bold text-blue-600 mb-1">
+                    {progressData?.weekly_summary.live_calls}
+                  </div>
+                  <p className="text-sm text-muted-foreground">Live Calls</p>
+                </div>
+                
+                <div className="text-center">
+                  <div className="text-2xl font-bold text-purple-600 mb-1">
+                    {progressData?.weekly_summary.uploaded_calls}
+                  </div>
+                  <p className="text-sm text-muted-foreground">Call Uploads</p>
                 </div>
               </div>
               
@@ -228,23 +369,37 @@ const Progress = () => {
                   <div className="h-64 flex items-center justify-center text-muted-foreground">
                     No data yet. Upload calls to see trends!
                   </div>
-                ) : (
-                  <ResponsiveContainer width="100%" height={300}>
-                    <LineChart data={progressData?.confidence_trend}>
-                      <CartesianGrid strokeDasharray="3 3" />
-                      <XAxis dataKey="date" />
-                      <YAxis domain={[0, 100]} />
-                      <Tooltip />
-                      <Line 
-                        type="monotone" 
-                        dataKey="score" 
-                        stroke="hsl(var(--primary))" 
-                        strokeWidth={2}
-                        dot={{ fill: "hsl(var(--primary))" }}
-                      />
-                    </LineChart>
-                  </ResponsiveContainer>
-                )}
+                 ) : (
+                   <ResponsiveContainer width="100%" height={300}>
+                     <LineChart data={progressData?.confidence_trend}>
+                       <CartesianGrid strokeDasharray="3 3" />
+                       <XAxis dataKey="date" />
+                       <YAxis domain={[0, 100]} />
+                       <Tooltip 
+                         formatter={(value, name, props) => [
+                           `${value}%`, 
+                           `Confidence (${props.payload.source === 'live' ? 'Live Call' : 'Upload'})`
+                         ]}
+                       />
+                       <Line 
+                         type="monotone" 
+                         dataKey="score" 
+                         stroke="hsl(var(--primary))" 
+                         strokeWidth={2}
+                         dot={(props) => (
+                           <circle 
+                             cx={props.cx} 
+                             cy={props.cy} 
+                             r={4}
+                             fill={props.payload.source === 'live' ? "hsl(var(--primary))" : "hsl(var(--accent))"}
+                             stroke="white"
+                             strokeWidth={2}
+                           />
+                         )}
+                       />
+                     </LineChart>
+                   </ResponsiveContainer>
+                 )}
               </CardContent>
             </Card>
 
@@ -282,6 +437,80 @@ const Progress = () => {
             </Card>
           </div>
 
+          {/* New Performance Charts */}
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
+            {/* Success Rate Trend */}
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <Trophy className="h-5 w-5" />
+                  Success Rate Trend
+                </CardTitle>
+                <CardDescription>
+                  Your sales success rate from live call simulations
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                {progressData?.success_rate_trend.length === 0 ? (
+                  <div className="h-64 flex items-center justify-center text-muted-foreground">
+                    Complete live calls to see success trends!
+                  </div>
+                ) : (
+                  <ResponsiveContainer width="100%" height={300}>
+                    <LineChart data={progressData?.success_rate_trend}>
+                      <CartesianGrid strokeDasharray="3 3" />
+                      <XAxis dataKey="date" />
+                      <YAxis domain={[0, 100]} />
+                      <Tooltip formatter={(value) => [`${value}%`, 'Success Rate']} />
+                      <Line 
+                        type="monotone" 
+                        dataKey="successRate" 
+                        stroke="hsl(var(--accent))" 
+                        strokeWidth={2}
+                        dot={{ fill: "hsl(var(--accent))" }}
+                      />
+                    </LineChart>
+                  </ResponsiveContainer>
+                )}
+              </CardContent>
+            </Card>
+
+            {/* Difficulty Progression */}
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <BarChart3 className="h-5 w-5" />
+                  Difficulty Progression
+                </CardTitle>
+                <CardDescription>
+                  Performance across different difficulty levels
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                {progressData?.difficulty_progression.length === 0 ? (
+                  <div className="h-64 flex items-center justify-center text-muted-foreground">
+                    Complete calls at different difficulties to see progression!
+                  </div>
+                ) : (
+                  <ResponsiveContainer width="100%" height={300}>
+                    <BarChart data={progressData?.difficulty_progression}>
+                      <CartesianGrid strokeDasharray="3 3" />
+                      <XAxis dataKey="difficulty" />
+                      <YAxis domain={[0, 100]} />
+                      <Tooltip 
+                        formatter={(value, name, props) => [
+                          `${value}%`, 
+                          `Avg Score (${props.payload.callCount} calls)`
+                        ]}
+                      />
+                      <Bar dataKey="avgScore" fill="hsl(var(--primary))" />
+                    </BarChart>
+                  </ResponsiveContainer>
+                )}
+              </CardContent>
+            </Card>
+          </div>
+
           {/* Call to Action */}
           <Card>
             <CardHeader>
@@ -304,6 +533,10 @@ const Progress = () => {
                 <div className="flex gap-2">
                   <Button variant="outline" onClick={() => navigate('/challenges')}>
                     View Challenges
+                  </Button>
+                  <Button variant="outline" onClick={() => navigate('/call-simulation')}>
+                    <Zap className="h-4 w-4 mr-2" />
+                    Live Practice
                   </Button>
                   <Button onClick={() => navigate('/call-upload')}>
                     Upload Call
