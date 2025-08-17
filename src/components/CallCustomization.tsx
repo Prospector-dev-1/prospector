@@ -3,10 +3,12 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Textarea } from '@/components/ui/textarea';
+import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
+import { Slider } from '@/components/ui/slider';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
-import { Building2, Target, User2, FileText } from 'lucide-react';
+import { Building2, Target, User2, FileText, Timer } from 'lucide-react';
 
 interface BusinessType {
   id: string;
@@ -30,8 +32,12 @@ interface CallCustomizationProps {
   setProspectRole: (value: string) => void;
   callObjective: string;
   setCallObjective: (value: string) => void;
+  customObjective: string;
+  setCustomObjective: (value: string) => void;
   customInstructions: string;
   setCustomInstructions: (value: string) => void;
+  difficultyLevel: number[];
+  setDifficultyLevel: (value: number[]) => void;
 }
 
 const CallCustomization: React.FC<CallCustomizationProps> = ({
@@ -41,59 +47,30 @@ const CallCustomization: React.FC<CallCustomizationProps> = ({
   setProspectRole,
   callObjective,
   setCallObjective,
+  customObjective,
+  setCustomObjective,
   customInstructions,
   setCustomInstructions,
+  difficultyLevel,
+  setDifficultyLevel,
 }) => {
-  const [businessTypes, setBusinessTypes] = useState<BusinessType[]>([]);
   const [callObjectives, setCallObjectives] = useState<CallObjective[]>([]);
-  const [availableRoles, setAvailableRoles] = useState<string[]>([]);
-  const [selectedBusinessData, setSelectedBusinessData] = useState<BusinessType | null>(null);
   const [selectedObjectiveData, setSelectedObjectiveData] = useState<CallObjective | null>(null);
   const { toast } = useToast();
 
   useEffect(() => {
-    fetchBusinessTypes();
     fetchCallObjectives();
   }, []);
 
   useEffect(() => {
-    if (businessType) {
-      const businessData = businessTypes.find(bt => bt.name === businessType);
-      setSelectedBusinessData(businessData || null);
-      setAvailableRoles(businessData?.typical_roles || []);
-      
-      // Reset prospect role if it's not available for the new business type
-      if (businessData && !businessData.typical_roles.includes(prospectRole)) {
-        setProspectRole('');
-      }
-    }
-  }, [businessType, businessTypes, prospectRole, setProspectRole]);
-
-  useEffect(() => {
-    if (callObjective) {
+    if (callObjective === 'Custom') {
+      setSelectedObjectiveData(null);
+    } else if (callObjective) {
       const objectiveData = callObjectives.find(co => co.name === callObjective);
       setSelectedObjectiveData(objectiveData || null);
     }
   }, [callObjective, callObjectives]);
 
-  const fetchBusinessTypes = async () => {
-    try {
-      const { data, error } = await supabase
-        .from('business_types')
-        .select('*')
-        .order('category, name');
-
-      if (error) throw error;
-      setBusinessTypes(data || []);
-    } catch (error) {
-      console.error('Error fetching business types:', error);
-      toast({
-        title: "Error",
-        description: "Failed to load business types",
-        variant: "destructive",
-      });
-    }
-  };
 
   const fetchCallObjectives = async () => {
     try {
@@ -114,13 +91,21 @@ const CallCustomization: React.FC<CallCustomizationProps> = ({
     }
   };
 
-  const groupedBusinessTypes = businessTypes.reduce((acc, bt) => {
-    if (!acc[bt.category]) {
-      acc[bt.category] = [];
-    }
-    acc[bt.category].push(bt);
-    return acc;
-  }, {} as Record<string, BusinessType[]>);
+  const getDifficultyLabel = (level: number) => {
+    if (level <= 2) return "Very Easy";
+    if (level <= 4) return "Easy";
+    if (level <= 6) return "Medium";
+    if (level <= 8) return "Hard";
+    return "Expert";
+  };
+
+  const getDifficultyColor = (level: number) => {
+    if (level <= 2) return "bg-green-500";
+    if (level <= 4) return "bg-yellow-500";
+    if (level <= 6) return "bg-orange-500";
+    if (level <= 8) return "bg-red-500";
+    return "bg-purple-500";
+  };
 
   return (
     <div className="space-y-6">
@@ -132,42 +117,20 @@ const CallCustomization: React.FC<CallCustomizationProps> = ({
             <span>Business Type</span>
           </CardTitle>
         </CardHeader>
-        <CardContent className="space-y-4">
+        <CardContent>
           <div>
             <Label htmlFor="business-type">What type of business is your prospect?</Label>
-            <Select value={businessType} onValueChange={setBusinessType}>
-              <SelectTrigger>
-                <SelectValue placeholder="Select business type..." />
-              </SelectTrigger>
-              <SelectContent>
-                {Object.entries(groupedBusinessTypes).map(([category, types]) => (
-                  <div key={category}>
-                    <div className="px-2 py-1 text-sm font-medium text-muted-foreground">
-                      {category}
-                    </div>
-                    {types.map((type) => (
-                      <SelectItem key={type.id} value={type.name}>
-                        {type.name}
-                      </SelectItem>
-                    ))}
-                  </div>
-                ))}
-              </SelectContent>
-            </Select>
+            <Input
+              id="business-type"
+              placeholder="e.g., Plumber, Restaurant Owner, Tech Startup, Healthcare Clinic..."
+              value={businessType}
+              onChange={(e) => setBusinessType(e.target.value)}
+              className="mt-2"
+            />
+            <p className="text-xs text-muted-foreground mt-2">
+              Be specific about the industry or business type to get realistic scenarios.
+            </p>
           </div>
-
-          {selectedBusinessData && (
-            <div className="bg-muted p-3 rounded-lg">
-              <h4 className="text-sm font-medium mb-2">Common Pain Points:</h4>
-              <div className="flex flex-wrap gap-1">
-                {selectedBusinessData.common_pain_points.map((point, index) => (
-                  <Badge key={index} variant="secondary" className="text-xs">
-                    {point}
-                  </Badge>
-                ))}
-              </div>
-            </div>
-          )}
         </CardContent>
       </Card>
 
@@ -182,18 +145,16 @@ const CallCustomization: React.FC<CallCustomizationProps> = ({
         <CardContent>
           <div>
             <Label htmlFor="prospect-role">Who will you be speaking with?</Label>
-            <Select value={prospectRole} onValueChange={setProspectRole} disabled={!businessType}>
-              <SelectTrigger>
-                <SelectValue placeholder={businessType ? "Select role..." : "Select business type first"} />
-              </SelectTrigger>
-              <SelectContent>
-                {availableRoles.map((role) => (
-                  <SelectItem key={role} value={role}>
-                    {role}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+            <Input
+              id="prospect-role"
+              placeholder="e.g., Owner, Manager, Director, CEO, Operations Manager..."
+              value={prospectRole}
+              onChange={(e) => setProspectRole(e.target.value)}
+              className="mt-2"
+            />
+            <p className="text-xs text-muted-foreground mt-2">
+              Specify the decision-maker's role or title you'll be calling.
+            </p>
           </div>
         </CardContent>
       </Card>
@@ -222,9 +183,28 @@ const CallCustomization: React.FC<CallCustomizationProps> = ({
                     </div>
                   </SelectItem>
                 ))}
+                <SelectItem value="Custom">
+                  <div>
+                    <div className="font-medium">Custom</div>
+                    <div className="text-xs text-muted-foreground">Define your own call objective</div>
+                  </div>
+                </SelectItem>
               </SelectContent>
             </Select>
           </div>
+
+          {callObjective === 'Custom' && (
+            <div>
+              <Label htmlFor="custom-objective">Custom Objective</Label>
+              <Input
+                id="custom-objective"
+                placeholder="e.g., Schedule a product demo, Get budget information, Qualify lead..."
+                value={customObjective}
+                onChange={(e) => setCustomObjective(e.target.value)}
+                className="mt-2"
+              />
+            </div>
+          )}
 
           {selectedObjectiveData && (
             <div className="bg-muted p-3 rounded-lg">
@@ -239,6 +219,55 @@ const CallCustomization: React.FC<CallCustomizationProps> = ({
               </div>
             </div>
           )}
+        </CardContent>
+      </Card>
+
+      {/* Difficulty Level */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center space-x-2">
+            <Timer className="h-5 w-5" />
+            <span>Difficulty Level</span>
+          </CardTitle>
+          <p className="text-muted-foreground">
+            Select how challenging you want your prospect to be
+          </p>
+        </CardHeader>
+        <CardContent className="space-y-6">
+          <div className="space-y-4">
+            <div className="flex items-center justify-between">
+              <span className="text-sm font-medium">Difficulty: {difficultyLevel[0]}/10</span>
+              <Badge className={getDifficultyColor(difficultyLevel[0])}>
+                {getDifficultyLabel(difficultyLevel[0])}
+              </Badge>
+            </div>
+            <Slider
+              value={difficultyLevel}
+              onValueChange={setDifficultyLevel}
+              max={10}
+              min={1}
+              step={1}
+              className="w-full"
+            />
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs sm:text-sm text-muted-foreground">
+              <div>
+                <p className="font-medium">Level 1-3: Beginner</p>
+                <p>Friendly prospects, minimal objections</p>
+              </div>
+              <div>
+                <p className="font-medium">Level 4-6: Intermediate</p>
+                <p>Standard objections, moderate resistance</p>
+              </div>
+              <div>
+                <p className="font-medium">Level 7-8: Advanced</p>
+                <p>Skeptical prospects, strong objections</p>
+              </div>
+              <div>
+                <p className="font-medium">Level 9-10: Expert</p>
+                <p>Hostile prospects, maximum difficulty</p>
+              </div>
+            </div>
+          </div>
         </CardContent>
       </Card>
 

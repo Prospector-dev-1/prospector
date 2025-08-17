@@ -7,8 +7,7 @@ import { Slider } from '@/components/ui/slider';
 import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
-import { Phone, PhoneOff, Timer, Mic, MicOff, ArrowLeft, User, Settings2 } from 'lucide-react';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Phone, PhoneOff, Timer, Mic, MicOff, ArrowLeft, User } from 'lucide-react';
 import Vapi from '@vapi-ai/web';
 import SEO from '@/components/SEO';
 import CallCustomization from '@/components/CallCustomization';
@@ -28,6 +27,7 @@ const CallSimulation = () => {
   const [businessType, setBusinessType] = useState('');
   const [prospectRole, setProspectRole] = useState('');
   const [callObjective, setCallObjective] = useState('');
+  const [customObjective, setCustomObjective] = useState('');
   const [customInstructions, setCustomInstructions] = useState('');
   
   // Call state tracking
@@ -230,7 +230,7 @@ const CallSimulation = () => {
           difficulty_level: difficultyLevel[0],
           business_type: businessType,
           prospect_role: prospectRole,
-          call_objective: callObjective,
+          call_objective: callObjective === 'Custom' ? customObjective : callObjective,
           custom_instructions: customInstructions
         }
       });
@@ -374,80 +374,22 @@ const CallSimulation = () => {
 
       <div className="px-3 sm:px-4 lg:px-8 py-4 sm:py-6">
         {!callStarted ? (
-          // Call Setup with Tabs
+          // Call Setup - Combined View
           <div className="space-y-6">
-            <Tabs defaultValue="customize" className="w-full">
-              <TabsList className="grid w-full grid-cols-2">
-                <TabsTrigger value="customize" className="flex items-center space-x-2">
-                  <Settings2 className="h-4 w-4" />
-                  <span>Customize Call</span>
-                </TabsTrigger>
-                <TabsTrigger value="difficulty" className="flex items-center space-x-2">
-                  <Timer className="h-4 w-4" />
-                  <span>Difficulty</span>
-                </TabsTrigger>
-              </TabsList>
-
-              <TabsContent value="customize" className="space-y-4">
-                <CallCustomization
-                  businessType={businessType}
-                  setBusinessType={setBusinessType}
-                  prospectRole={prospectRole}
-                  setProspectRole={setProspectRole}
-                  callObjective={callObjective}
-                  setCallObjective={setCallObjective}
-                  customInstructions={customInstructions}
-                  setCustomInstructions={setCustomInstructions}
-                />
-              </TabsContent>
-
-              <TabsContent value="difficulty" className="space-y-4">
-                <Card>
-                  <CardHeader>
-                    <CardTitle>Choose Difficulty Level</CardTitle>
-                    <p className="text-muted-foreground">
-                      Select how challenging you want your prospect to be
-                    </p>
-                  </CardHeader>
-                  <CardContent className="space-y-6">
-                    <div className="space-y-4">
-                      <div className="flex items-center justify-between">
-                        <span className="text-sm font-medium">Difficulty: {difficultyLevel[0]}/10</span>
-                        <Badge className={getDifficultyColor(difficultyLevel[0])}>
-                          {getDifficultyLabel(difficultyLevel[0])}
-                        </Badge>
-                      </div>
-                      <Slider
-                        value={difficultyLevel}
-                        onValueChange={setDifficultyLevel}
-                        max={10}
-                        min={1}
-                        step={1}
-                        className="w-full"
-                      />
-                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs sm:text-sm text-muted-foreground">
-                        <div>
-                          <p className="font-medium">Level 1-3: Beginner</p>
-                          <p>Friendly prospects, minimal objections</p>
-                        </div>
-                        <div>
-                          <p className="font-medium">Level 4-6: Intermediate</p>
-                          <p>Standard objections, moderate resistance</p>
-                        </div>
-                        <div>
-                          <p className="font-medium">Level 7-8: Advanced</p>
-                          <p>Skeptical prospects, strong objections</p>
-                        </div>
-                        <div>
-                          <p className="font-medium">Level 9-10: Expert</p>
-                          <p>Hostile prospects, maximum difficulty</p>
-                        </div>
-                      </div>
-                    </div>
-                  </CardContent>
-                </Card>
-              </TabsContent>
-            </Tabs>
+            <CallCustomization
+              businessType={businessType}
+              setBusinessType={setBusinessType}
+              prospectRole={prospectRole}
+              setProspectRole={setProspectRole}
+              callObjective={callObjective}
+              setCallObjective={setCallObjective}
+              customObjective={customObjective}
+              setCustomObjective={setCustomObjective}
+              customInstructions={customInstructions}
+              setCustomInstructions={setCustomInstructions}
+              difficultyLevel={difficultyLevel}
+              setDifficultyLevel={setDifficultyLevel}
+            />
 
             {/* Scenario Preview */}
             {(businessType || prospectRole || callObjective) && (
