@@ -66,11 +66,11 @@ const Leaderboard = () => {
   const getRankIcon = (rank: number) => {
     switch (rank) {
       case 1:
-        return <Trophy className="h-6 w-6 text-yellow-500" />;
+        return <Trophy className="h-4 w-4 text-yellow-500" />;
       case 2:
-        return <Medal className="h-6 w-6 text-gray-400" />;
+        return <Medal className="h-4 w-4 text-gray-400" />;
       case 3:
-        return <Award className="h-6 w-6 text-amber-600" />;
+        return <Award className="h-4 w-4 text-amber-600" />;
       default:
         return <span className="text-lg font-bold text-muted-foreground">#{rank}</span>;
     }
@@ -157,16 +157,23 @@ const Leaderboard = () => {
                     }`}
                   >
                     <div className="flex items-center space-x-3">
-                      <div className="flex items-center justify-center w-10 h-10">
-                        {entry.rank <= 3 ? (
-                          getRankIcon(entry.rank)
+                      <div className="flex items-center justify-center w-10 h-10 relative">
+                        {entry.profile.avatar_url ? (
+                          <div className="relative">
+                            <Avatar className="h-10 w-10 border-2 border-primary/20">
+                              <AvatarImage src={entry.profile.avatar_url} alt="Profile" />
+                              <AvatarFallback className="bg-muted text-muted-foreground text-sm font-medium">
+                                {entry.profile.first_name?.[0]}{entry.profile.last_initial}
+                              </AvatarFallback>
+                            </Avatar>
+                            {entry.rank <= 3 && (
+                              <div className="absolute -bottom-1 -right-1 bg-background rounded-full p-1">
+                                {getRankIcon(entry.rank)}
+                              </div>
+                            )}
+                          </div>
                         ) : (
-                          <Avatar className="h-10 w-10 border border-primary/20">
-                            <AvatarImage src={entry.profile.avatar_url || undefined} alt="Profile" />
-                            <AvatarFallback className="bg-muted text-muted-foreground text-sm font-medium">
-                              {entry.profile.first_name?.[0]}{entry.profile.last_initial}
-                            </AvatarFallback>
-                          </Avatar>
+                          getRankIcon(entry.rank)
                         )}
                       </div>
                       <div>
@@ -179,7 +186,7 @@ const Leaderboard = () => {
                           )}
                         </div>
                         <p className="text-xs text-muted-foreground">
-                          {entry.rank <= 3 ? `Rank #${entry.rank}` : `#${entry.rank}`}
+                          Rank #{entry.rank}
                         </p>
                       </div>
                     </div>
