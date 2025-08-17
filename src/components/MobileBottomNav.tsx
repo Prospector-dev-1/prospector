@@ -83,7 +83,7 @@ const MobileBottomNav = () => {
                       variant="destructive" 
                       className={cn(
                         "absolute -top-2 -right-2 h-5 w-5 p-0 flex items-center justify-center text-xs",
-                        item.id === 'challenges' && item.badge > 0 && "animate-pulse"
+                        item.id === 'challenges' && "animate-pulse"
                       )}
                     >
                       {item.badge > 99 ? '99+' : item.badge}
