@@ -384,6 +384,10 @@ export type Database = {
         Args: { email_to_check: string }
         Returns: boolean
       }
+      deduct_credits: {
+        Args: { amount_param: number; user_id_param: string }
+        Returns: undefined
+      }
       reset_monthly_limits: {
         Args: Record<PropertyKey, never>
         Returns: undefined
