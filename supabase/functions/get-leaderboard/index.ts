@@ -31,7 +31,7 @@ serve(async (req) => {
     // Get all users with only non-sensitive data needed for leaderboard
     const { data: allUsers, error: usersError } = await supabaseService
       .from('profiles')
-      .select('user_id, first_name, last_name');
+      .select('user_id, first_name, last_name, avatar_url');
 
     if (usersError) {
       console.error('Error fetching users:', usersError);
@@ -109,7 +109,8 @@ serve(async (req) => {
         profile: {
           // Only expose first name and last initial for privacy
           first_name: userProfile.first_name,
-          last_initial: userProfile.last_name ? userProfile.last_name.charAt(0) : ''
+          last_initial: userProfile.last_name ? userProfile.last_name.charAt(0) : '',
+          avatar_url: userProfile.avatar_url
         }
       };
     }));

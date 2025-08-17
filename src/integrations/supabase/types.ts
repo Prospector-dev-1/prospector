@@ -240,6 +240,7 @@ export type Database = {
       }
       profiles: {
         Row: {
+          avatar_url: string | null
           billing_cycle_start: string | null
           created_at: string
           credits: number
@@ -259,6 +260,7 @@ export type Database = {
           user_id: string
         }
         Insert: {
+          avatar_url?: string | null
           billing_cycle_start?: string | null
           created_at?: string
           credits?: number
@@ -278,6 +280,7 @@ export type Database = {
           user_id: string
         }
         Update: {
+          avatar_url?: string | null
           billing_cycle_start?: string | null
           created_at?: string
           credits?: number

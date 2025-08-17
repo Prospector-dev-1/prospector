@@ -10,7 +10,8 @@ import { useToast } from '@/hooks/use-toast';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Separator } from '@/components/ui/separator';
 import { Badge } from '@/components/ui/badge';
-import { Avatar, AvatarFallback } from '@/components/ui/avatar';
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
+import AvatarUpload from '@/components/AvatarUpload';
 import { Progress } from '@/components/ui/progress';
 import { StatsCard } from '@/components/ui/stats-card';
 import MobileLayout from '@/components/MobileLayout';
@@ -26,6 +27,7 @@ interface Profile {
   credits: number;
   subscription_type: string | null;
   subscription_end: string | null;
+  avatar_url: string | null;
   created_at: string;
   updated_at: string;
 }
@@ -187,6 +189,10 @@ const Profile = () => {
         variant: "destructive"
       });
     }
+  };
+
+  const handleAvatarUpdate = (newAvatarUrl: string) => {
+    setProfile(prev => prev ? { ...prev, avatar_url: newAvatarUrl } : null);
   };
   const handleLogout = async () => {
     try {
@@ -494,11 +500,13 @@ const Profile = () => {
           {/* Enhanced Header with Avatar and Quick Stats */}
           <div className="glass-card p-6 rounded-lg">
             <div className="flex flex-col sm:flex-row items-start sm:items-center gap-4 mb-6">
-              <Avatar className="h-16 w-16 border-2 border-primary/20">
-                <AvatarFallback className="bg-primary text-primary-foreground text-lg font-bold">
-                  {initials}
-                </AvatarFallback>
-              </Avatar>
+              <AvatarUpload
+                currentAvatarUrl={profile.avatar_url}
+                userInitials={initials}
+                userId={user?.id || ''}
+                onAvatarUpdate={handleAvatarUpdate}
+                size="lg"
+              />
               
               <div className="flex-1">
                 <h1 className="text-2xl font-bold">{fullName}</h1>

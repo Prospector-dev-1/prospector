@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import MobileLayout from '@/components/MobileLayout';
 import SEO from '@/components/SEO';
 import { useAuth } from '@/contexts/AuthContext';
@@ -16,6 +17,7 @@ interface LeaderboardEntry {
   profile: {
     first_name: string;
     last_initial: string;
+    avatar_url?: string;
   };
 }
 
@@ -156,7 +158,16 @@ const Leaderboard = () => {
                   >
                     <div className="flex items-center space-x-3">
                       <div className="flex items-center justify-center w-10 h-10">
-                        {getRankIcon(entry.rank)}
+                        {entry.rank <= 3 ? (
+                          getRankIcon(entry.rank)
+                        ) : (
+                          <Avatar className="h-10 w-10 border border-primary/20">
+                            <AvatarImage src={entry.profile.avatar_url || undefined} alt="Profile" />
+                            <AvatarFallback className="bg-muted text-muted-foreground text-sm font-medium">
+                              {entry.profile.first_name?.[0]}{entry.profile.last_initial}
+                            </AvatarFallback>
+                          </Avatar>
+                        )}
                       </div>
                       <div>
                         <div className="flex items-center space-x-2">
@@ -168,7 +179,7 @@ const Leaderboard = () => {
                           )}
                         </div>
                         <p className="text-xs text-muted-foreground">
-                          Rank #{entry.rank}
+                          {entry.rank <= 3 ? `Rank #${entry.rank}` : `#${entry.rank}`}
                         </p>
                       </div>
                     </div>
