@@ -373,8 +373,21 @@ const Profile = () => {
   };
   // Calculate profile completion
   const getProfileCompletion = () => {
-    const fields = [profile?.first_name, profile?.last_name, profile?.phone_number];
-    const completed = fields.filter(field => field && field.trim() !== '').length;
+    if (!profile) return 0;
+    
+    const fields = [
+      profile.first_name,
+      profile.last_name, 
+      profile.phone_number
+    ];
+    
+    const completed = fields.filter(field => 
+      field !== null && 
+      field !== undefined && 
+      field.toString().trim() !== ''
+    ).length;
+    
+    console.log('Profile completion fields:', { fields, completed, total: fields.length });
     return Math.round((completed / fields.length) * 100);
   };
 
