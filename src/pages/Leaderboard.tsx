@@ -39,13 +39,20 @@ const Leaderboard = () => {
         return;
       }
 
-      // Handle both wrapped and unwrapped response formats
-      const leaderboardData = data?.leaderboard || data || [];
-      const normalizedData = Array.isArray(leaderboardData) ? leaderboardData : [];
-      setLeaderboard(normalizedData);
+      console.log('Leaderboard data received:', data);
+      
+      // Extract the leaderboard array from the response
+      let leaderboardData = [];
+      if (data && data.leaderboard && Array.isArray(data.leaderboard)) {
+        leaderboardData = data.leaderboard;
+      } else if (Array.isArray(data)) {
+        leaderboardData = data;
+      }
+      
+      setLeaderboard(leaderboardData);
       
       // Find current user's rank
-      const currentUserEntry = normalizedData.find((entry: LeaderboardEntry) => entry.user_id === user?.id);
+      const currentUserEntry = leaderboardData.find((entry: LeaderboardEntry) => entry.user_id === user?.id);
       setUserRank(currentUserEntry?.rank || null);
     } catch (error) {
       console.error('Error fetching leaderboard:', error);

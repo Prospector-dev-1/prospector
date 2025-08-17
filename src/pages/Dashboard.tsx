@@ -86,10 +86,17 @@ const Dashboard = () => {
 
       // Fetch leaderboard data
       const { data: leaderboardData } = await supabase.functions.invoke('get-leaderboard');
+      console.log('Dashboard leaderboard data:', leaderboardData);
+      
       if (leaderboardData) {
-        // Handle both wrapped and unwrapped response formats
-        const normalizedData = leaderboardData?.leaderboard || leaderboardData || [];
-        const arrayData = Array.isArray(normalizedData) ? normalizedData : [];
+        // Extract the leaderboard array from the response
+        let arrayData = [];
+        if (leaderboardData.leaderboard && Array.isArray(leaderboardData.leaderboard)) {
+          arrayData = leaderboardData.leaderboard;
+        } else if (Array.isArray(leaderboardData)) {
+          arrayData = leaderboardData;
+        }
+        
         setTopUsers(arrayData.slice(0, 3));
         const currentUserEntry = arrayData.find((entry: any) => entry.user_id === user?.id);
         setUserRank(currentUserEntry?.rank || null);
