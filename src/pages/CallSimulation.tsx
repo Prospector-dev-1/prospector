@@ -82,9 +82,9 @@ const CallSimulation = () => {
           console.log('Vapi message received:', message);
           
           // Capture various types of transcript data
-          // Ignore raw message.transcript to avoid duplication; rely on conversation updates
           if (message.transcript) {
-            console.log('Ignoring message.transcript to prevent duplicates:', message.transcript);
+            transcriptRef.current += message.transcript + ' ';
+            console.log('Transcript added from message.transcript:', message.transcript);
           }
           
           // Also capture conversation transcript if available
@@ -106,12 +106,14 @@ const CallSimulation = () => {
           
           // Capture user speech
           if (message.type === 'speech-update' && message.role === 'user') {
-            console.log('User speech event (not appending to transcript):', message.transcript || message.text);
+            transcriptRef.current += `User: ${message.transcript || message.text || ''} `;
+            console.log('User speech captured:', message.transcript || message.text);
           }
           
           // Capture assistant speech
           if (message.type === 'speech-update' && message.role === 'assistant') {
-            console.log('Assistant speech event (not appending to transcript):', message.transcript || message.text);
+            transcriptRef.current += `Assistant: ${message.transcript || message.text || ''} `;
+            console.log('Assistant speech captured:', message.transcript || message.text);
           }
           
           console.log('Current transcript length:', transcriptRef.current.length);
