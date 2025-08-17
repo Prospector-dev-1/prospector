@@ -175,41 +175,44 @@ const CallCoaching = () => {
           </div>
         </div>
 
-        <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        <div className="max-w-4xl mx-auto px-3 sm:px-6 lg:px-8 py-4 sm:py-8">
           <Tabs defaultValue="overview" className="w-full">
-            <TabsList className="grid w-full grid-cols-3">
-              <TabsTrigger value="overview" className="flex items-center gap-2">
+            <TabsList className="grid w-full grid-cols-1 sm:grid-cols-3 h-auto sm:h-10 gap-1 sm:gap-0 p-1">
+              <TabsTrigger value="overview" className="flex items-center gap-2 min-h-[48px] sm:min-h-[40px] text-sm">
                 <TrendingUp className="h-4 w-4" />
-                Overview
+                <span className="hidden xs:inline">Overview</span>
+                <span className="xs:hidden">Summary</span>
               </TabsTrigger>
-              <TabsTrigger value="coaching" className="flex items-center gap-2">
+              <TabsTrigger value="coaching" className="flex items-center gap-2 min-h-[48px] sm:min-h-[40px] text-sm">
                 <MessageSquare className="h-4 w-4" />
-                Detailed Coaching
+                <span className="hidden xs:inline">Detailed Coaching</span>
+                <span className="xs:hidden">Coaching</span>
               </TabsTrigger>
-              <TabsTrigger value="tips" className="flex items-center gap-2">
+              <TabsTrigger value="tips" className="flex items-center gap-2 min-h-[48px] sm:min-h-[40px] text-sm">
                 <Lightbulb className="h-4 w-4" />
-                Quick Tips
+                <span className="hidden xs:inline">Quick Tips</span>
+                <span className="xs:hidden">Tips</span>
               </TabsTrigger>
             </TabsList>
 
             {/* Overview Tab */}
-            <TabsContent value="overview" className="mt-6">
+            <TabsContent value="overview" className="mt-4 sm:mt-6">
               {coachingData.summary && (
-                <Card className="mb-6">
-                  <CardHeader>
-                    <CardTitle className="flex items-center gap-2">
+                <Card className="mb-4 sm:mb-6">
+                  <CardHeader className="pb-3 sm:pb-6">
+                    <CardTitle className="flex items-center gap-2 text-lg sm:text-xl">
                       <TrendingUp className="h-5 w-5 text-primary" />
                       Performance Summary
                     </CardTitle>
-                    <CardDescription>
+                    <CardDescription className="text-sm">
                       Your overall performance analysis and key insights
                     </CardDescription>
                   </CardHeader>
-                  <CardContent>
+                  <CardContent className="pt-0">
                     <Alert>
                       <Sparkles className="h-4 w-4" />
-                      <AlertTitle>AI Coach Analysis</AlertTitle>
-                      <AlertDescription className="text-base leading-relaxed mt-2">
+                      <AlertTitle className="text-base sm:text-lg">AI Coach Analysis</AlertTitle>
+                      <AlertDescription className="text-sm sm:text-base leading-relaxed mt-2">
                         {coachingData.summary}
                       </AlertDescription>
                     </Alert>
@@ -219,28 +222,28 @@ const CallCoaching = () => {
 
               {Array.isArray(coachingData.coaching) && coachingData.coaching.length > 0 && (
                 <Card>
-                  <CardHeader>
-                    <CardTitle>Coaching Overview</CardTitle>
-                    <CardDescription>
-                      {coachingData.coaching.length} improvement areas identified
+                  <CardHeader className="pb-3 sm:pb-6">
+                    <CardTitle className="text-lg sm:text-xl">Coaching Overview</CardTitle>
+                    <CardDescription className="text-sm">
+                      {coachingData.coaching.length} improvement area{coachingData.coaching.length !== 1 ? 's' : ''} identified
                     </CardDescription>
                   </CardHeader>
-                  <CardContent>
-                    <div className="grid gap-4">
+                  <CardContent className="pt-0">
+                    <div className="grid gap-3 sm:gap-4">
                       {coachingData.coaching.map((item, idx) => {
                         const CategoryIcon = getCategoryIcon(item.category);
                         const severityVariant = getSeverityColor(item.issue);
                         
                         return (
-                          <div key={idx} className="flex items-center justify-between p-4 border border-border rounded-lg hover:bg-muted/50 transition-colors">
-                            <div className="flex items-center gap-3">
-                              <CategoryIcon className="h-5 w-5 text-primary" />
-                              <div>
-                                <p className="font-medium">Coaching #{idx + 1}</p>
-                                <p className="text-sm text-muted-foreground">{item.category}</p>
+                          <div key={idx} className="flex items-center justify-between p-3 sm:p-4 border border-border rounded-lg hover:bg-muted/50 transition-colors">
+                            <div className="flex items-center gap-3 min-w-0 flex-1">
+                              <CategoryIcon className="h-5 w-5 text-primary flex-shrink-0" />
+                              <div className="min-w-0 flex-1">
+                                <p className="font-medium text-sm sm:text-base">Coaching #{idx + 1}</p>
+                                <p className="text-xs sm:text-sm text-muted-foreground truncate">{item.category}</p>
                               </div>
                             </div>
-                            <Badge variant={severityVariant}>
+                            <Badge variant={severityVariant} className="text-xs ml-2 flex-shrink-0">
                               {severityVariant === 'destructive' ? 'Critical' : 
                                severityVariant === 'secondary' ? 'Minor' : 'Moderate'}
                             </Badge>
@@ -254,53 +257,55 @@ const CallCoaching = () => {
             </TabsContent>
 
             {/* Detailed Coaching Tab */}
-            <TabsContent value="coaching" className="mt-6">
+            <TabsContent value="coaching" className="mt-4 sm:mt-6">
               {Array.isArray(coachingData.coaching) && coachingData.coaching.length > 0 ? (
-                <Accordion type="single" collapsible className="w-full">
+                <Accordion type="single" collapsible className="w-full space-y-2 sm:space-y-0">
                   {coachingData.coaching.map((item, idx) => {
                     const CategoryIcon = getCategoryIcon(item.category);
                     const severityVariant = getSeverityColor(item.issue);
                     const isReviewed = reviewedItems.has(idx);
                     
                     return (
-                      <AccordionItem key={idx} value={`item-${idx}`}>
-                        <AccordionTrigger className="hover:no-underline">
-                          <div className="flex items-center gap-3 w-full">
+                      <AccordionItem key={idx} value={`item-${idx}`} className="border border-border rounded-lg overflow-hidden">
+                        <AccordionTrigger className="hover:no-underline px-3 sm:px-6 py-4 sm:py-4">
+                          <div className="flex items-center gap-3 w-full min-w-0">
                             <CategoryIcon className="h-5 w-5 text-primary flex-shrink-0" />
-                            <div className="flex-1 text-left">
-                              <div className="flex items-center gap-2">
-                                <span className="font-medium">Coaching #{idx + 1}</span>
-                                <Badge variant={severityVariant} className="text-xs">
-                                  {item.category}
-                                </Badge>
-                                {isReviewed && (
-                                  <CheckCircle className="h-4 w-4 text-success" />
-                                )}
+                            <div className="flex-1 text-left min-w-0">
+                              <div className="flex flex-col sm:flex-row sm:items-center gap-1 sm:gap-2">
+                                <span className="font-medium text-sm sm:text-base">Coaching #{idx + 1}</span>
+                                <div className="flex items-center gap-2">
+                                  <Badge variant={severityVariant} className="text-xs">
+                                    {item.category}
+                                  </Badge>
+                                  {isReviewed && (
+                                    <CheckCircle className="h-4 w-4 text-success flex-shrink-0" />
+                                  )}
+                                </div>
                               </div>
-                              <p className="text-sm text-muted-foreground mt-1 truncate">
+                              <p className="text-xs sm:text-sm text-muted-foreground mt-1 truncate">
                                 {item.issue}
                               </p>
                             </div>
                           </div>
                         </AccordionTrigger>
-                        <AccordionContent>
-                          <div className="pl-8 space-y-6">
+                        <AccordionContent className="px-3 sm:px-6 pb-4">
+                          <div className="space-y-4 sm:space-y-6">
                             {/* Conversation Context */}
-                            <div className="space-y-4">
+                            <div className="space-y-3 sm:space-y-4">
                               {item.assistant_said && (
                                 <div>
-                                  <p className="font-medium text-sm mb-2 text-muted-foreground">Prospect said:</p>
-                                  <div className="bg-muted/30 border-l-4 border-muted p-4 rounded-r-md">
-                                    <p className="italic">"{item.assistant_said}"</p>
+                                  <p className="font-medium text-xs sm:text-sm mb-2 text-muted-foreground">Prospect said:</p>
+                                  <div className="bg-muted/30 border-l-4 border-muted p-3 sm:p-4 rounded-r-md">
+                                    <p className="italic text-sm sm:text-base">"{item.assistant_said}"</p>
                                   </div>
                                 </div>
                               )}
                               
                               {item.your_response && (
                                 <div>
-                                  <p className="font-medium text-sm mb-2 text-muted-foreground">Your response:</p>
-                                  <div className="bg-warning/10 border-l-4 border-warning p-4 rounded-r-md">
-                                    <p>"{item.your_response}"</p>
+                                  <p className="font-medium text-xs sm:text-sm mb-2 text-muted-foreground">Your response:</p>
+                                  <div className="bg-warning/10 border-l-4 border-warning p-3 sm:p-4 rounded-r-md">
+                                    <p className="text-sm sm:text-base">"{item.your_response}"</p>
                                   </div>
                                 </div>
                               )}
@@ -312,8 +317,8 @@ const CallCoaching = () => {
                             {item.issue && (
                               <Alert variant={severityVariant === 'destructive' ? 'destructive' : 'default'}>
                                 <AlertTriangle className="h-4 w-4" />
-                                <AlertTitle>What went wrong</AlertTitle>
-                                <AlertDescription className="mt-2">
+                                <AlertTitle className="text-sm sm:text-base">What went wrong</AlertTitle>
+                                <AlertDescription className="mt-2 text-sm sm:text-base">
                                   {item.issue}
                                 </AlertDescription>
                               </Alert>
@@ -322,20 +327,20 @@ const CallCoaching = () => {
                             {/* Better Response */}
                             {item.better_response && (
                               <div>
-                                <div className="flex items-center justify-between mb-3">
-                                  <p className="font-medium text-sm">Suggested response:</p>
+                                <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 sm:gap-0 mb-3">
+                                  <p className="font-medium text-xs sm:text-sm">Suggested response:</p>
                                   <Button
                                     variant="outline"
                                     size="sm"
                                     onClick={() => copyToClipboard(item.better_response)}
-                                    className="flex items-center gap-2"
+                                    className="flex items-center gap-2 self-start sm:self-auto min-h-[40px]"
                                   >
                                     <Copy className="h-3 w-3" />
                                     Copy
                                   </Button>
                                 </div>
-                                <div className="bg-success/10 border-l-4 border-success p-4 rounded-r-md">
-                                  <p className="whitespace-pre-wrap font-medium">"{item.better_response}"</p>
+                                <div className="bg-success/10 border-l-4 border-success p-3 sm:p-4 rounded-r-md">
+                                  <p className="whitespace-pre-wrap font-medium text-sm sm:text-base">"{item.better_response}"</p>
                                 </div>
                               </div>
                             )}
@@ -343,8 +348,8 @@ const CallCoaching = () => {
                             {/* Explanation */}
                             {item.why_better && (
                               <div>
-                                <p className="font-medium text-sm mb-2 text-muted-foreground">Why this works better:</p>
-                                <p className="text-sm leading-relaxed">{item.why_better}</p>
+                                <p className="font-medium text-xs sm:text-sm mb-2 text-muted-foreground">Why this works better:</p>
+                                <p className="text-sm sm:text-base leading-relaxed">{item.why_better}</p>
                               </div>
                             )}
 
@@ -354,7 +359,7 @@ const CallCoaching = () => {
                                 variant={isReviewed ? "default" : "outline"}
                                 size="sm"
                                 onClick={() => toggleReviewed(idx)}
-                                className="flex items-center gap-2"
+                                className="flex items-center gap-2 min-h-[40px]"
                               >
                                 <CheckCircle className="h-3 w-3" />
                                 {isReviewed ? 'Reviewed' : 'Mark as Reviewed'}
@@ -368,33 +373,33 @@ const CallCoaching = () => {
                 </Accordion>
               ) : (
                 <Card>
-                  <CardContent className="text-center py-8">
-                    <MessageSquare className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
-                    <p className="text-muted-foreground">No detailed coaching available</p>
+                  <CardContent className="text-center py-6 sm:py-8">
+                    <MessageSquare className="h-10 w-10 sm:h-12 sm:w-12 text-muted-foreground mx-auto mb-3 sm:mb-4" />
+                    <p className="text-muted-foreground text-sm sm:text-base">No detailed coaching available</p>
                   </CardContent>
                 </Card>
               )}
             </TabsContent>
 
             {/* Quick Tips Tab */}
-            <TabsContent value="tips" className="mt-6">
+            <TabsContent value="tips" className="mt-4 sm:mt-6">
               {Array.isArray(coachingData.tips) && coachingData.tips.length > 0 ? (
                 <Card>
-                  <CardHeader>
-                    <CardTitle className="flex items-center gap-2">
+                  <CardHeader className="pb-3 sm:pb-6">
+                    <CardTitle className="flex items-center gap-2 text-lg sm:text-xl">
                       <Lightbulb className="h-5 w-5 text-primary" />
                       Key Takeaways
                     </CardTitle>
-                    <CardDescription>
+                    <CardDescription className="text-sm">
                       Remember these points for your next calls
                     </CardDescription>
                   </CardHeader>
-                  <CardContent>
-                    <div className="space-y-4">
+                  <CardContent className="pt-0">
+                    <div className="space-y-3 sm:space-y-4">
                       {coachingData.tips.map((tip, i) => (
                         <Alert key={i}>
                           <Lightbulb className="h-4 w-4" />
-                          <AlertDescription className="text-base">
+                          <AlertDescription className="text-sm sm:text-base">
                             {tip}
                           </AlertDescription>
                         </Alert>
@@ -404,9 +409,9 @@ const CallCoaching = () => {
                 </Card>
               ) : (
                 <Card>
-                  <CardContent className="text-center py-8">
-                    <Lightbulb className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
-                    <p className="text-muted-foreground">No quick tips available</p>
+                  <CardContent className="text-center py-6 sm:py-8">
+                    <Lightbulb className="h-10 w-10 sm:h-12 sm:w-12 text-muted-foreground mx-auto mb-3 sm:mb-4" />
+                    <p className="text-muted-foreground text-sm sm:text-base">No quick tips available</p>
                   </CardContent>
                 </Card>
               )}
@@ -414,24 +419,32 @@ const CallCoaching = () => {
           </Tabs>
 
           {/* Action Buttons */}
-          <div className="flex flex-col sm:flex-row gap-4">
-            <Button onClick={() => navigate('/call-simulation')} className="flex-1">
+          <div className="flex flex-col gap-3 sm:gap-4 mt-6 sm:mt-8">
+            <Button 
+              onClick={() => navigate('/call-simulation')} 
+              className="w-full min-h-[48px] text-base font-medium"
+              size="lg"
+            >
               Practice Again
             </Button>
-            <Button 
-              variant="outline" 
-              onClick={() => navigate(`/call-results/${callId}`)} 
-              className="flex-1"
-            >
-              Back to Call Results
-            </Button>
-            <Button 
-              variant="outline" 
-              onClick={() => navigate('/')} 
-              className="flex-1"
-            >
-              Dashboard
-            </Button>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
+              <Button 
+                variant="outline" 
+                onClick={() => navigate(`/call-results/${callId}`)} 
+                className="min-h-[48px] text-base"
+                size="lg"
+              >
+                Back to Call Results
+              </Button>
+              <Button 
+                variant="outline" 
+                onClick={() => navigate('/')} 
+                className="min-h-[48px] text-base"
+                size="lg"
+              >
+                Dashboard
+              </Button>
+            </div>
           </div>
         </div>
       </div>
