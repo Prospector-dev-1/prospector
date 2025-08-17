@@ -82,6 +82,33 @@ export type Database = {
           },
         ]
       }
+      api_usage_logs: {
+        Row: {
+          created_at: string
+          endpoint: string
+          id: string
+          metadata: Json | null
+          timestamp: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          endpoint: string
+          id?: string
+          metadata?: Json | null
+          timestamp?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          endpoint?: string
+          id?: string
+          metadata?: Json | null
+          timestamp?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       call_uploads: {
         Row: {
           ai_analysis: Json | null
@@ -485,6 +512,10 @@ export type Database = {
       check_email_exists: {
         Args: { email_to_check: string }
         Returns: boolean
+      }
+      cleanup_old_api_logs: {
+        Args: Record<PropertyKey, never>
+        Returns: undefined
       }
       deduct_credits: {
         Args: { amount_param: number; user_id_param: string }
