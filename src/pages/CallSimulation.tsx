@@ -33,6 +33,10 @@ const CallSimulation = () => {
   const transcriptRef = useRef<string>('');
   const callRecordIdRef = useRef<string | null>(null);
   const callDurationRef = useRef<number>(0);
+  const conversationModeRef = useRef<boolean>(false);
+  const turnsRef = useRef<string[]>([]);
+  const lastUserChunkRef = useRef<string>('');
+  const lastAssistantChunkRef = useRef<string>('');
 
   useEffect(() => {
     const initVapi = async () => {
@@ -100,18 +104,33 @@ const CallSimulation = () => {
             
             if (conversationText) {
               transcriptRef.current = conversationText; // Replace with full conversation
-              console.log('Updated full conversation transcript:', conversationText);
+              conversationModeRef.current = true; // Prefer conversation updates
+              // Reset incremental buffers to avoid mixed content
+              turnsRef.current = [];
+              lastUserChunkRef.current = '';
+              lastAssistantChunkRef.current = '';
+              console.log('Updated full conversation transcript (conversation mode ON)');
             }
           }
           
           // Capture user speech
           if (message.type === 'speech-update' && message.role === 'user') {
-            console.log('User speech event (not appending to transcript):', message.transcript || message.text);
+            const chunk = (message.transcript || message.text || '').trim();
+            if (chunk && !conversationModeRef.current && chunk !== lastUserChunkRef.current) {
+              turnsRef.current.push(`User: ${chunk}`);
+              lastUserChunkRef.current = chunk;
+              console.log('Buffered user chunk:', chunk);
+            }
           }
           
           // Capture assistant speech
           if (message.type === 'speech-update' && message.role === 'assistant') {
-            console.log('Assistant speech event (not appending to transcript):', message.transcript || message.text);
+            const chunk = (message.transcript || message.text || '').trim();
+            if (chunk && !conversationModeRef.current && chunk !== lastAssistantChunkRef.current) {
+              turnsRef.current.push(`Assistant: ${chunk}`);
+              lastAssistantChunkRef.current = chunk;
+              console.log('Buffered assistant chunk:', chunk);
+            }
           }
           
           console.log('Current transcript length:', transcriptRef.current.length);
@@ -285,13 +304,27 @@ const CallSimulation = () => {
       try {
         // Get current duration at the time of call end from ref
         const finalDuration = callDurationRef.current;
-        console.log('Starting background analysis - Duration from ref:', finalDuration, 'Transcript:', transcriptRef.current);
+        
+        // Build the best available transcript
+        let tx = (transcriptRef.current || '').trim();
+        if (!tx) {
+          tx = turnsRef.current.join('\n');
+        }
+        tx = tx
+          .replace(/\r/g, '')
+          .replace(/Assistant:\s*Assistant:/g, 'Assistant:')
+          .replace(/User:\s*User:/g, 'User:')
+          .replace(/\s*(Assistant:)/g, '\n$1')
+          .replace(/\s*(User:)/g, '\n$1')
+          .split('\n').map(l => l.trim()).filter(Boolean).join('\n');
+
+        console.log('Starting background analysis - Duration from ref:', finalDuration, 'Prepared transcript length:', tx.length);
         
         // Send transcript for analysis (even if empty) - don't await
         supabase.functions.invoke('end-call-analysis', {
           body: {
             callRecordId: currentCallRecordId,
-            transcript: transcriptRef.current || 'No transcript available',
+            transcript: tx || 'No transcript available',
             duration: finalDuration
           }
         }).then(({ data, error }) => {
@@ -317,6 +350,10 @@ const CallSimulation = () => {
     setCallRecordId(null);
     callRecordIdRef.current = null;
     transcriptRef.current = '';
+    conversationModeRef.current = false;
+    turnsRef.current = [];
+    lastUserChunkRef.current = '';
+    lastAssistantChunkRef.current = '';
     console.log('=== HANDLE CALL END FUNCTION COMPLETED ===');
   };
 
