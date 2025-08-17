@@ -33,10 +33,6 @@ const CallSimulation = () => {
   const transcriptRef = useRef<string>('');
   const callRecordIdRef = useRef<string | null>(null);
   const callDurationRef = useRef<number>(0);
-  const conversationModeRef = useRef<boolean>(false);
-  const turnsRef = useRef<string[]>([]);
-  const lastUserChunkRef = useRef<string>('');
-  const lastAssistantChunkRef = useRef<string>('');
 
   useEffect(() => {
     const initVapi = async () => {
@@ -86,9 +82,9 @@ const CallSimulation = () => {
           console.log('Vapi message received:', message);
           
           // Capture various types of transcript data
-          // Ignore raw message.transcript to avoid duplication; rely on conversation updates
           if (message.transcript) {
-            console.log('Ignoring message.transcript to prevent duplicates:', message.transcript);
+            transcriptRef.current += message.transcript + ' ';
+            console.log('Transcript added from message.transcript:', message.transcript);
           }
           
           // Also capture conversation transcript if available
@@ -104,33 +100,20 @@ const CallSimulation = () => {
             
             if (conversationText) {
               transcriptRef.current = conversationText; // Replace with full conversation
-              conversationModeRef.current = true; // Prefer conversation updates
-              // Reset incremental buffers to avoid mixed content
-              turnsRef.current = [];
-              lastUserChunkRef.current = '';
-              lastAssistantChunkRef.current = '';
-              console.log('Updated full conversation transcript (conversation mode ON)');
+              console.log('Updated full conversation transcript:', conversationText);
             }
           }
           
           // Capture user speech
           if (message.type === 'speech-update' && message.role === 'user') {
-            const chunk = (message.transcript || message.text || '').trim();
-            if (chunk && !conversationModeRef.current && chunk !== lastUserChunkRef.current) {
-              turnsRef.current.push(`User: ${chunk}`);
-              lastUserChunkRef.current = chunk;
-              console.log('Buffered user chunk:', chunk);
-            }
+            transcriptRef.current += `User: ${message.transcript || message.text || ''} `;
+            console.log('User speech captured:', message.transcript || message.text);
           }
           
           // Capture assistant speech
           if (message.type === 'speech-update' && message.role === 'assistant') {
-            const chunk = (message.transcript || message.text || '').trim();
-            if (chunk && !conversationModeRef.current && chunk !== lastAssistantChunkRef.current) {
-              turnsRef.current.push(`Assistant: ${chunk}`);
-              lastAssistantChunkRef.current = chunk;
-              console.log('Buffered assistant chunk:', chunk);
-            }
+            transcriptRef.current += `Assistant: ${message.transcript || message.text || ''} `;
+            console.log('Assistant speech captured:', message.transcript || message.text);
           }
           
           console.log('Current transcript length:', transcriptRef.current.length);
@@ -304,27 +287,13 @@ const CallSimulation = () => {
       try {
         // Get current duration at the time of call end from ref
         const finalDuration = callDurationRef.current;
-        
-        // Build the best available transcript
-        let tx = (transcriptRef.current || '').trim();
-        if (!tx) {
-          tx = turnsRef.current.join('\n');
-        }
-        tx = tx
-          .replace(/\r/g, '')
-          .replace(/Assistant:\s*Assistant:/g, 'Assistant:')
-          .replace(/User:\s*User:/g, 'User:')
-          .replace(/\s*(Assistant:)/g, '\n$1')
-          .replace(/\s*(User:)/g, '\n$1')
-          .split('\n').map(l => l.trim()).filter(Boolean).join('\n');
-
-        console.log('Starting background analysis - Duration from ref:', finalDuration, 'Prepared transcript length:', tx.length);
+        console.log('Starting background analysis - Duration from ref:', finalDuration, 'Transcript:', transcriptRef.current);
         
         // Send transcript for analysis (even if empty) - don't await
         supabase.functions.invoke('end-call-analysis', {
           body: {
             callRecordId: currentCallRecordId,
-            transcript: tx || 'No transcript available',
+            transcript: transcriptRef.current || 'No transcript available',
             duration: finalDuration
           }
         }).then(({ data, error }) => {
@@ -350,10 +319,6 @@ const CallSimulation = () => {
     setCallRecordId(null);
     callRecordIdRef.current = null;
     transcriptRef.current = '';
-    conversationModeRef.current = false;
-    turnsRef.current = [];
-    lastUserChunkRef.current = '';
-    lastAssistantChunkRef.current = '';
     console.log('=== HANDLE CALL END FUNCTION COMPLETED ===');
   };
 
