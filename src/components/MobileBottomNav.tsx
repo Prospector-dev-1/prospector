@@ -1,10 +1,10 @@
 import React from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
-import { Home, Phone, Upload, Trophy, User } from 'lucide-react';
+import { Home, Target, TrendingUp, Trophy, User, Settings } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { useAuth } from '@/contexts/AuthContext';
 import { useUnclaimedChallenges } from '@/hooks/useUnclaimedChallenges';
-
+import { useIsAdmin } from '@/hooks/useIsAdmin';
 import { cn } from '@/lib/utils';
 
 const MobileBottomNav = () => {
@@ -12,34 +12,36 @@ const MobileBottomNav = () => {
   const location = useLocation();
   const { profile } = useAuth();
   const { unclaimedCount, loading } = useUnclaimedChallenges();
+  const { isAdmin } = useIsAdmin();
+
   const baseNavItems = [
     {
       id: 'dashboard',
-      label: 'Home',
+      label: 'Dashboard',
       icon: Home,
       path: '/',
       badge: null,
     },
     {
-      id: 'call-simulation',
-      label: 'Call Sim',
-      icon: Phone,
-      path: '/call-simulation',
-      badge: null,
-    },
-    {
-      id: 'call-upload',
-      label: 'Upload',
-      icon: Upload,
-      path: '/call-upload',
-      badge: null,
-    },
-    {
       id: 'challenges',
       label: 'Challenges',
-      icon: Trophy,
+      icon: Target,
       path: '/challenges',
-      badge: unclaimedCount > 0 && !loading ? unclaimedCount : null,
+      badge: !loading && unclaimedCount > 0 ? unclaimedCount : null,
+    },
+    {
+      id: 'leaderboard',
+      label: 'Leaderboard',
+      icon: Trophy,
+      path: '/leaderboard',
+      badge: null,
+    },
+    {
+      id: 'progress',
+      label: 'Progress',
+      icon: TrendingUp,
+      path: '/progress',
+      badge: null,
     },
     {
       id: 'profile',
@@ -50,7 +52,17 @@ const MobileBottomNav = () => {
     },
   ];
 
-  const navItems = baseNavItems;
+  const adminNavItems = isAdmin ? [
+    {
+      id: 'admin',
+      label: 'Admin',
+      icon: Settings,
+      path: '/admin/users',
+      badge: null,
+    },
+  ] : [];
+
+  const navItems = [...baseNavItems, ...adminNavItems];
 
   const isActive = (path: string) => {
     if (path === '/') {
