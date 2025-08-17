@@ -5,7 +5,8 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Progress } from '@/components/ui/progress';
-import { ArrowLeft, Trophy, Target, Clock, Users, Crown, Upload, Zap, Phone, Star, TrendingUp, Calendar, Flame, Shield } from 'lucide-react';
+import { ArrowLeft, Trophy, Target, Clock, Users, Crown, Upload, Zap, Phone, Star, TrendingUp, Calendar, Flame, Shield, ChevronDown } from 'lucide-react';
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 import { toast } from 'sonner';
 import { supabase } from '@/integrations/supabase/client';
 import SEO from '@/components/SEO';
@@ -46,6 +47,7 @@ const Challenges = () => {
   const [leaderboard, setLeaderboard] = useState<LeaderboardEntry[]>([]);
   const [loading, setLoading] = useState(true);
   const [userRank, setUserRank] = useState<number | null>(null);
+  const [showCompletedChallenges, setShowCompletedChallenges] = useState(false);
 
   useEffect(() => {
     if (!user) return;
@@ -479,54 +481,122 @@ const Challenges = () => {
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
             {/* Challenges */}
             <div className="lg:col-span-2 space-y-6">
+              {/* Active Challenges */}
               <div>
-                <h2 className="text-xl font-semibold mb-4">Challenges</h2>
+                <h2 className="text-xl font-semibold mb-4">Active Challenges</h2>
                 <div className="space-y-4">
-                  {challenges.map((challenge) => {
-                    const progress = getProgressForChallenge(challenge.id);
-                    const Icon = getChallengeIcon(challenge.challenge_type);
-                    const progressPercentage = Math.min(100, ((progress?.current_progress || 0) / challenge.target_value) * 100);
+                  {challenges
+                    .filter((challenge) => {
+                      const progress = getProgressForChallenge(challenge.id);
+                      return !progress?.completed;
+                    })
+                    .map((challenge) => {
+                      const progress = getProgressForChallenge(challenge.id);
+                      const Icon = getChallengeIcon(challenge.challenge_type);
+                      const progressPercentage = Math.min(100, ((progress?.current_progress || 0) / challenge.target_value) * 100);
 
-                    return (
-                      <Card key={challenge.id} className={progress?.completed ? 'border-success bg-success/5' : ''}>
-                        <CardHeader>
-                          <div className="flex items-center justify-between">
-                            <div className="flex items-center gap-3">
-                              <Icon className="h-5 w-5 text-primary" />
-                              <div>
-                                <CardTitle className="text-base">{challenge.name}</CardTitle>
-                                <CardDescription>{challenge.description}</CardDescription>
+                      return (
+                        <Card key={challenge.id}>
+                          <CardHeader>
+                            <div className="flex items-center justify-between">
+                              <div className="flex items-center gap-3">
+                                <Icon className="h-5 w-5 text-primary" />
+                                <div>
+                                  <CardTitle className="text-base">{challenge.name}</CardTitle>
+                                  <CardDescription>{challenge.description}</CardDescription>
+                                </div>
                               </div>
-                            </div>
-                            
-                            <div className="flex items-center gap-2">
+                              
                               <Badge variant="outline" className="text-xs">
                                 +{Number(challenge.reward_credits).toFixed(1)} credits
                               </Badge>
-                              {progress?.completed && (
-                                <Badge variant="default" className="text-xs">
-                                  ✓ Complete
-                                </Badge>
-                              )}
-                              
                             </div>
-                          </div>
-                        </CardHeader>
-                        <CardContent>
-                          <div className="space-y-2">
-                            <div className="flex justify-between text-sm">
-                              <span>Progress: {progress?.current_progress || 0} / {challenge.target_value}</span>
-                              <span>{Math.round(progressPercentage)}%</span>
+                          </CardHeader>
+                          <CardContent>
+                            <div className="space-y-2">
+                              <div className="flex justify-between text-sm">
+                                <span>Progress: {progress?.current_progress || 0} / {challenge.target_value}</span>
+                                <span>{Math.round(progressPercentage)}%</span>
+                              </div>
+                              <Progress value={progressPercentage} className="h-2" />
+                              {getChallengeActionButton(challenge)}
                             </div>
-                            <Progress value={progressPercentage} className="h-2" />
-                            {!progress?.completed && getChallengeActionButton(challenge)}
-                          </div>
-                        </CardContent>
-                      </Card>
-                    );
-                  })}
+                          </CardContent>
+                        </Card>
+                      );
+                    })}
                 </div>
               </div>
+
+              {/* Completed Challenges */}
+              {challenges.filter((challenge) => {
+                const progress = getProgressForChallenge(challenge.id);
+                return progress?.completed;
+              }).length > 0 && (
+                <Collapsible open={showCompletedChallenges} onOpenChange={setShowCompletedChallenges}>
+                  <CollapsibleTrigger asChild>
+                    <Button variant="outline" className="w-full justify-between">
+                      <span>
+                        Completed Challenges ({challenges.filter((challenge) => {
+                          const progress = getProgressForChallenge(challenge.id);
+                          return progress?.completed;
+                        }).length})
+                      </span>
+                      <ChevronDown className={`h-4 w-4 transition-transform ${showCompletedChallenges ? 'rotate-180' : ''}`} />
+                    </Button>
+                  </CollapsibleTrigger>
+                  <CollapsibleContent className="space-y-4 mt-4">
+                    {challenges
+                      .filter((challenge) => {
+                        const progress = getProgressForChallenge(challenge.id);
+                        return progress?.completed;
+                      })
+                      .map((challenge) => {
+                        const progress = getProgressForChallenge(challenge.id);
+                        const Icon = getChallengeIcon(challenge.challenge_type);
+
+                        return (
+                          <Card key={challenge.id} className="opacity-75 border-success/30 bg-success/5">
+                            <CardHeader>
+                              <div className="flex items-center justify-between">
+                                <div className="flex items-center gap-3">
+                                  <Icon className="h-5 w-5 text-muted-foreground" />
+                                  <div>
+                                    <CardTitle className="text-base text-muted-foreground">{challenge.name}</CardTitle>
+                                    <CardDescription className="text-muted-foreground/70">{challenge.description}</CardDescription>
+                                  </div>
+                                </div>
+                                
+                                <div className="flex items-center gap-2">
+                                  <Badge variant="outline" className="text-xs text-muted-foreground border-muted-foreground/30">
+                                    +{Number(challenge.reward_credits).toFixed(1)} credits
+                                  </Badge>
+                                  <Badge variant="secondary" className="text-xs">
+                                    ✓ Complete
+                                  </Badge>
+                                </div>
+                              </div>
+                            </CardHeader>
+                            <CardContent>
+                              <div className="space-y-2">
+                                <div className="flex justify-between text-sm text-muted-foreground">
+                                  <span>Completed: {progress?.current_progress || 0} / {challenge.target_value}</span>
+                                  <span>100%</span>
+                                </div>
+                                <Progress value={100} className="h-2" />
+                                {progress?.completed_at && (
+                                  <p className="text-xs text-muted-foreground">
+                                    Completed {new Date(progress.completed_at).toLocaleDateString()}
+                                  </p>
+                                )}
+                              </div>
+                            </CardContent>
+                          </Card>
+                        );
+                      })}
+                  </CollapsibleContent>
+                </Collapsible>
+              )}
 
               {/* Quick Actions */}
               <Card>
