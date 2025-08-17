@@ -529,7 +529,7 @@ const Challenges = () => {
                     </Button>
                   </div>
                   <div className="mt-3">
-                    <Button variant="outline" onClick={() => navigate('/ai-replay')} className="w-full justify-start">
+                    <Button variant="outline" onClick={() => navigate('/call-upload')} className="w-full justify-start">
                       <Zap className="h-4 w-4 mr-2" />
                       AI Replay Practice
                     </Button>
