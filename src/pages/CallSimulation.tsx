@@ -422,18 +422,6 @@ const CallSimulation = () => {
               </Card>
             )}
 
-            {/* Mission Brief */}
-            <Card>
-              <CardContent className="p-4">
-                <h4 className="font-medium mb-2">Your Mission:</h4>
-                <p className="text-sm text-muted-foreground">
-                  {callObjective 
-                    ? `Your goal is to ${callObjective.toLowerCase()} with this ${businessType || 'business owner'}. ${prospectRole ? `You'll be speaking with their ${prospectRole}.` : ''} Use your sales skills to achieve your objective!`
-                    : "You're making a cold call to a business owner. The prospect doesn't know who you are or what you're selling. Introduce yourself, explain what you're offering, build rapport, handle objections, and either close the sale or schedule a follow-up meeting."
-                  }
-                </p>
-              </CardContent>
-            </Card>
 
             {/* Start Call Button */}
             <div className="space-y-4">

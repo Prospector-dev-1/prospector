@@ -111,55 +111,6 @@ const CallCustomization: React.FC<CallCustomizationProps> = ({
 
   return (
     <div className="space-y-6">
-      {/* Difficulty Level - Always Visible */}
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center space-x-2">
-            <Timer className="h-5 w-5" />
-            <span>Difficulty Level</span>
-          </CardTitle>
-          <p className="text-muted-foreground">
-            Select how challenging you want your prospect to be
-          </p>
-        </CardHeader>
-        <CardContent className="space-y-6">
-          <div className="space-y-4">
-            <div className="flex items-center justify-between">
-              <span className="text-sm font-medium">Difficulty: {difficultyLevel[0]}/10</span>
-              <Badge className={getDifficultyColor(difficultyLevel[0])}>
-                {getDifficultyLabel(difficultyLevel[0])}
-              </Badge>
-            </div>
-            <Slider
-              value={difficultyLevel}
-              onValueChange={setDifficultyLevel}
-              max={10}
-              min={1}
-              step={1}
-              className="w-full"
-            />
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs sm:text-sm text-muted-foreground">
-              <div>
-                <p className="font-medium">Level 1-3: Beginner</p>
-                <p>Friendly prospects, minimal objections</p>
-              </div>
-              <div>
-                <p className="font-medium">Level 4-6: Intermediate</p>
-                <p>Standard objections, moderate resistance</p>
-              </div>
-              <div>
-                <p className="font-medium">Level 7-8: Advanced</p>
-                <p>Skeptical prospects, strong objections</p>
-              </div>
-              <div>
-                <p className="font-medium">Level 9-10: Expert</p>
-                <p>Hostile prospects, maximum difficulty</p>
-              </div>
-            </div>
-          </div>
-        </CardContent>
-      </Card>
-
       {/* Advanced Customization - Collapsible */}
       <Collapsible open={isAdvancedOpen} onOpenChange={setIsAdvancedOpen}>
         <CollapsibleTrigger asChild>
@@ -322,6 +273,55 @@ const CallCustomization: React.FC<CallCustomizationProps> = ({
           </Card>
         </CollapsibleContent>
       </Collapsible>
+
+      {/* Difficulty Level - Now Below Advanced Customization */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center space-x-2">
+            <Timer className="h-5 w-5" />
+            <span>Difficulty Level</span>
+          </CardTitle>
+          <p className="text-muted-foreground">
+            Select how challenging you want your prospect to be
+          </p>
+        </CardHeader>
+        <CardContent className="space-y-6">
+          <div className="space-y-4">
+            <div className="flex items-center justify-between">
+              <span className="text-sm font-medium">Difficulty: {difficultyLevel[0]}/10</span>
+              <Badge className={getDifficultyColor(difficultyLevel[0])}>
+                {getDifficultyLabel(difficultyLevel[0])}
+              </Badge>
+            </div>
+            <Slider
+              value={difficultyLevel}
+              onValueChange={setDifficultyLevel}
+              max={10}
+              min={1}
+              step={1}
+              className="w-full"
+            />
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs sm:text-sm text-muted-foreground">
+              <div>
+                <p className="font-medium">Level 1-3: Beginner</p>
+                <p>Friendly prospects, minimal objections</p>
+              </div>
+              <div>
+                <p className="font-medium">Level 4-6: Intermediate</p>
+                <p>Standard objections, moderate resistance</p>
+              </div>
+              <div>
+                <p className="font-medium">Level 7-8: Advanced</p>
+                <p>Skeptical prospects, strong objections</p>
+              </div>
+              <div>
+                <p className="font-medium">Level 9-10: Expert</p>
+                <p>Hostile prospects, maximum difficulty</p>
+              </div>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
     </div>
   );
 };
