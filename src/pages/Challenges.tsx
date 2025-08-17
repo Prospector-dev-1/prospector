@@ -97,7 +97,6 @@ const Challenges = () => {
       const { data: challengesData, error: challengesError } = await supabase
         .from('challenges')
         .select('*')
-        .gte('end_date', new Date().toISOString())
         .order('created_at', { ascending: false });
 
       if (challengesError) throw challengesError;
@@ -120,7 +119,6 @@ const Challenges = () => {
             .select('*', { count: 'exact', head: true })
             .eq('user_id', user?.id)
             .eq('status', 'completed')
-            .gte('created_at', new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString());
           
           actualProgress = count || 0;
         } else if (challenge.challenge_type === 'complete_replays') {
@@ -128,7 +126,6 @@ const Challenges = () => {
             .from('ai_replays')
             .select('*', { count: 'exact', head: true })
             .eq('user_id', user?.id)
-            .gte('created_at', new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString());
           
           actualProgress = count || 0;
         } else if (challenge.challenge_type === 'improve_score') {
@@ -138,7 +135,6 @@ const Challenges = () => {
             .select('confidence_score, created_at')
             .eq('user_id', user?.id)
             .eq('status', 'completed')
-            .gte('created_at', new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString())
             .order('created_at', { ascending: true });
 
           if (calls && calls.length >= 2) {
@@ -151,7 +147,6 @@ const Challenges = () => {
             .select('*', { count: 'exact', head: true })
             .eq('user_id', user?.id)
             .eq('call_status', 'completed')
-            .gte('created_at', new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString());
           
           actualProgress = count || 0;
         } else if (challenge.challenge_type === 'difficulty_calls') {
@@ -161,7 +156,6 @@ const Challenges = () => {
             .eq('user_id', user?.id)
             .eq('call_status', 'completed')
             .gte('difficulty_level', 5)
-            .gte('created_at', new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString());
           
           actualProgress = count || 0;
         } else if (challenge.challenge_type === 'rookie_calls') {
@@ -172,7 +166,6 @@ const Challenges = () => {
             .eq('call_status', 'completed')
             .gte('difficulty_level', 1)
             .lte('difficulty_level', 3)
-            .gte('created_at', new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString());
           
           actualProgress = count || 0;
         } else if (challenge.challenge_type === 'pro_calls') {
@@ -183,7 +176,6 @@ const Challenges = () => {
             .eq('call_status', 'completed')
             .gte('difficulty_level', 7)
             .lte('difficulty_level', 10)
-            .gte('created_at', new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString());
           
           actualProgress = count || 0;
         } else if (challenge.challenge_type === 'master_closes') {
@@ -194,7 +186,6 @@ const Challenges = () => {
             .eq('call_status', 'completed')
             .eq('successful_sale', true)
             .gte('difficulty_level', 8)
-            .gte('created_at', new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString());
           
           actualProgress = count || 0;
         } else if (challenge.challenge_type === 'successful_closes') {
@@ -204,7 +195,6 @@ const Challenges = () => {
             .eq('user_id', user?.id)
             .eq('call_status', 'completed')
             .eq('successful_sale', true)
-            .gte('created_at', new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString());
           
           actualProgress = count || 0;
         } else if (challenge.challenge_type === 'objection_expert') {
@@ -214,7 +204,6 @@ const Challenges = () => {
             .eq('user_id', user?.id)
             .eq('call_status', 'completed')
             .gte('objection_handling_score', 80)
-            .gte('created_at', new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString());
           
           actualProgress = count || 0;
         } else if (challenge.challenge_type === 'tone_master') {
@@ -224,7 +213,6 @@ const Challenges = () => {
             .eq('user_id', user?.id)
             .eq('call_status', 'completed')
             .gte('tone_score', 85)
-            .gte('created_at', new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString());
           
           actualProgress = count || 0;
         } else if (challenge.challenge_type === 'daily_calls') {
@@ -234,7 +222,7 @@ const Challenges = () => {
             .select('date')
             .eq('user_id', user?.id)
             .gte('calls_completed', 1)
-            .gte('date', new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString().split('T')[0]);
+            
           
           actualProgress = dailyStats?.length || 0;
         } else if (challenge.challenge_type === 'closing_streak') {
@@ -245,7 +233,6 @@ const Challenges = () => {
             .eq('user_id', user?.id)
             .eq('call_status', 'completed')
             .eq('successful_sale', true)
-            .gte('created_at', new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString())
             .order('created_at', { ascending: true });
           
           // Calculate longest streak of consecutive successful calls
@@ -262,14 +249,12 @@ const Challenges = () => {
           // Upload 2 calls + Complete 3 live calls + 1 AI replay
           const [uploadsCount, liveCalls, replays] = await Promise.all([
             supabase.from('call_uploads').select('*', { count: 'exact', head: true })
-              .eq('user_id', user?.id).eq('status', 'completed')
-              .gte('created_at', new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString()),
+              .eq('user_id', user?.id).eq('status', 'completed'),
             supabase.from('calls').select('*', { count: 'exact', head: true })
-              .eq('user_id', user?.id).eq('call_status', 'completed')
-              .gte('created_at', new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString()),
+              .eq('user_id', user?.id).eq('call_status', 'completed'),
+              
             supabase.from('ai_replays').select('*', { count: 'exact', head: true })
               .eq('user_id', user?.id)
-              .gte('created_at', new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString())
           ]);
           
           const uploadProgress = Math.min(2, uploadsCount.count || 0);
@@ -286,7 +271,7 @@ const Challenges = () => {
             .gte('tone_score', 75)
             .gte('objection_handling_score', 75)
             .gte('closing_score', 75)
-            .gte('created_at', new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString());
+            
           
           actualProgress = count || 0;
         }
@@ -434,7 +419,7 @@ const Challenges = () => {
     <>
       <SEO 
         title="Challenges | Prospector"
-        description="Complete weekly challenges to improve your sales skills and earn rewards."
+        description="Complete challenges to improve your sales skills and earn rewards."
         canonicalPath="/challenges"
       />
       
@@ -454,7 +439,7 @@ const Challenges = () => {
             <div className="flex items-center justify-between">
               <div>
                 <h1 className="text-3xl font-bold text-foreground mb-2">
-                  Weekly Challenges
+                  Challenges
                 </h1>
                 <p className="text-muted-foreground">
                   Complete challenges to earn credits and improve your skills
@@ -495,7 +480,7 @@ const Challenges = () => {
             {/* Challenges */}
             <div className="lg:col-span-2 space-y-6">
               <div>
-                <h2 className="text-xl font-semibold mb-4">This Week's Challenges</h2>
+                <h2 className="text-xl font-semibold mb-4">Challenges</h2>
                 <div className="space-y-4">
                   {challenges.map((challenge) => {
                     const progress = getProgressForChallenge(challenge.id);
@@ -516,7 +501,7 @@ const Challenges = () => {
                             
                             <div className="flex items-center gap-2">
                               <Badge variant="outline" className="text-xs">
-                                +{challenge.reward_credits} credits
+                                +{Number(challenge.reward_credits).toFixed(1)} credits
                               </Badge>
                               {progress?.completed && (
                                 <Badge variant="default" className="text-xs">
@@ -534,9 +519,6 @@ const Challenges = () => {
                               <span>{Math.round(progressPercentage)}%</span>
                             </div>
                             <Progress value={progressPercentage} className="h-2" />
-                            <p className="text-xs text-muted-foreground">
-                              Ends {new Date(challenge.end_date).toLocaleDateString()}
-                            </p>
                             {!progress?.completed && getChallengeActionButton(challenge)}
                           </div>
                         </CardContent>
@@ -588,7 +570,7 @@ const Challenges = () => {
                     Leaderboard
                   </CardTitle>
                   <CardDescription>
-                    This week's top performers
+                    Top performers
                   </CardDescription>
                 </CardHeader>
                 <CardContent>
