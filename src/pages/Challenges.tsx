@@ -130,6 +130,7 @@ const Challenges = () => {
             .select('*', { count: 'exact', head: true })
             .eq('user_id', user?.id)
             .eq('call_status', 'completed')
+            .gte('difficulty_level', 1)
             .lte('difficulty_level', 3)
             .gte('created_at', new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString());
           
@@ -481,6 +482,7 @@ const Challenges = () => {
                                   ✓ Complete
                                 </Badge>
                               )}
+                              
                             </div>
                           </div>
                         </CardHeader>
@@ -494,7 +496,7 @@ const Challenges = () => {
                             <p className="text-xs text-muted-foreground">
                               Ends {new Date(challenge.end_date).toLocaleDateString()}
                             </p>
-                            {getChallengeActionButton(challenge)}
+                            {!progress?.completed && getChallengeActionButton(challenge)}
                           </div>
                         </CardContent>
                       </Card>
