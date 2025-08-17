@@ -10,7 +10,7 @@ const MobileBottomNav = () => {
   const navigate = useNavigate();
   const location = useLocation();
   const { profile } = useAuth();
-  const { unclaimedCount } = useUnclaimedChallenges();
+  const { unclaimedCount, loading } = useUnclaimedChallenges();
 
   const navItems = [
     {
@@ -25,7 +25,7 @@ const MobileBottomNav = () => {
       label: 'Challenges',
       icon: Target,
       path: '/challenges',
-      badge: unclaimedCount,
+      badge: !loading && unclaimedCount > 0 ? unclaimedCount : null,
     },
     {
       id: 'leaderboard',
