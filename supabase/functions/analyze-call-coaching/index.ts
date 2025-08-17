@@ -149,40 +149,65 @@ Guidelines:
 - Keep responses human and natural, not robotic.`;
 
     console.log('Making OpenAI request...');
-    const aiRes = await fetch('https://api.openai.com/v1/chat/completions', {
-      method: 'POST',
-      headers: {
-        'Authorization': `Bearer ${openAIApiKey}`,
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        model: 'gpt-4o-mini',
+
+    const attempts = [
+      { model: 'gpt-5-mini-2025-08-07', useNewParams: true, max: 900 },
+      { model: 'gpt-5-nano-2025-08-07', useNewParams: true, max: 700 },
+      { model: 'gpt-4.1-2025-04-14', useNewParams: true, max: 900 },
+      { model: 'gpt-4o-mini', useNewParams: false, max: 900 },
+    ];
+
+    let aiData: any | null = null;
+    let lastErrText = '';
+    for (const attempt of attempts) {
+      console.log(`Attempting model: ${attempt.model}`);
+      const body: any = {
+        model: attempt.model,
         messages: [
           { role: 'system', content: 'You are a concise, practical sales coach. Always return strict JSON.' },
           { role: 'user', content: prompt },
         ],
-        temperature: 0.7,
-        max_tokens: 1200,
-      }),
-    });
+      };
+      if (attempt.useNewParams) {
+        body.max_completion_tokens = attempt.max;
+      } else {
+        body.max_tokens = attempt.max;
+        body.temperature = 0.6;
+      }
 
-    if (!aiRes.ok) {
-      const errText = await aiRes.text();
-      console.error('OpenAI error', errText);
-      // Handle OpenAI rate limit gracefully
-      if (aiRes.status === 429 || errText.includes('rate_limit_exceeded') || errText.includes('Rate limit')) {
-        return new Response(JSON.stringify({ error: 'AI service is temporarily overloaded. Please try again in a few minutes. No credits were deducted.' }), {
-          status: 429,
+      const resp = await fetch('https://api.openai.com/v1/chat/completions', {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${openAIApiKey}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(body),
+      });
+
+      if (resp.ok) {
+        aiData = await resp.json();
+        break;
+      }
+
+      const t = await resp.text();
+      lastErrText = t;
+      console.error(`OpenAI error for ${attempt.model}`, t);
+      if (!(resp.status === 429 || t.includes('rate_limit_exceeded') || t.includes('Rate limit'))) {
+        // Non-rate-limit error: stop trying
+        return new Response(JSON.stringify({ error: 'AI analysis failed. Please try again. No credits were deducted.' }), {
+          status: 502,
           headers: { ...corsHeaders, 'Content-Type': 'application/json' },
         });
       }
-      return new Response(JSON.stringify({ error: 'AI analysis failed. Please try again. No credits were deducted.' }), {
-        status: 502,
+    }
+
+    if (!aiData) {
+      return new Response(JSON.stringify({ error: 'AI service is temporarily overloaded. Please try again in a few minutes. No credits were deducted.' }), {
+        status: 429,
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       });
     }
 
-    const aiData = await aiRes.json();
     let content: string = aiData.choices?.[0]?.message?.content ?? '';
 
     // Strip markdown fences if present
