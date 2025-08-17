@@ -162,46 +162,64 @@ Respond in this EXACT JSON format:
 
     console.log('Sending analysis prompt to OpenAI...');
     
-    const openAIResponse = await fetch('https://api.openai.com/v1/chat/completions', {
-      method: 'POST',
-      headers: {
-        'Authorization': `Bearer ${Deno.env.get('OPENAI_API_KEY')}`,
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        model: 'gpt-4o-mini',
-        messages: [
-          { 
-            role: 'system', 
-            content: 'You are an expert sales coach. You MUST respond with valid JSON only. Analyze cold calling performance and provide specific, actionable feedback with quotes from the transcript.' 
-          },
-          { role: 'user', content: analysisPrompt }
-        ],
-        temperature: 0.2,
-        max_tokens: 1000,
-      }),
-    });
+    // Multiple fallback models for reliability
+    const models = ['gpt-4o-mini', 'gpt-4o'];
+    let analysis;
+    let openAISuccess = false;
 
-    console.log('OpenAI response status:', openAIResponse.status);
-    if (!openAIResponse.ok) {
-      const errorText = await openAIResponse.text();
-      console.log('OpenAI API error:', errorText);
-      throw new Error(`OpenAI API failed with status ${openAIResponse.status}: ${errorText}`);
+    for (const model of models) {
+      try {
+        console.log(`Attempting OpenAI model: ${model}`);
+        
+        const openAIResponse = await fetch('https://api.openai.com/v1/chat/completions', {
+          method: 'POST',
+          headers: {
+            'Authorization': `Bearer ${Deno.env.get('OPENAI_API_KEY')}`,
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            model: model,
+            messages: [
+              { 
+                role: 'system', 
+                content: 'You are an expert sales coach. You MUST respond with valid JSON only. Analyze cold calling performance and provide specific, actionable feedback with quotes from the transcript.' 
+              },
+              { role: 'user', content: analysisPrompt }
+            ],
+            temperature: 0.2,
+            max_tokens: 1000,
+          }),
+        });
+
+        console.log(`OpenAI response status for ${model}:`, openAIResponse.status);
+        
+        if (openAIResponse.ok) {
+          const openAIData = await openAIResponse.json();
+          const analysisText = openAIData.choices[0].message.content;
+          
+          try {
+            analysis = JSON.parse(analysisText);
+            console.log('OpenAI analysis successful with model:', model);
+            openAISuccess = true;
+            break;
+          } catch (parseError) {
+            console.log(`JSON parsing failed for ${model}, trying next model`);
+            continue;
+          }
+        } else {
+          const errorText = await openAIResponse.text();
+          console.log(`OpenAI API error for ${model}:`, errorText);
+          continue;
+        }
+      } catch (error) {
+        console.log(`OpenAI request failed for ${model}:`, error.message);
+        continue;
+      }
     }
 
-    const openAIData = await openAIResponse.json();
-    console.log('OpenAI response:', openAIData);
-    const analysisText = openAIData.choices[0].message.content;
-    console.log('Analysis text from OpenAI:', analysisText);
-    
-    // Parse the JSON response
-    let analysis;
-    try {
-      analysis = JSON.parse(analysisText);
-      console.log('Parsed analysis:', analysis);
-    } catch (e) {
-      console.log('JSON parsing failed, using rigorous manual analysis. Error:', e);
-      console.log('Raw OpenAI response that failed to parse:', analysisText);
+    // If OpenAI failed, use manual analysis
+    if (!openAISuccess) {
+      console.log('All OpenAI models failed, using manual analysis');
       
       // Rigorous manual analysis based on actual sales performance
       const transcriptLower = transcript.toLowerCase();
@@ -307,6 +325,19 @@ ${overallScore < 3 ? 'This was a weak sales call. Focus on: 1) Professional intr
 
   } catch (error) {
     console.error('Error in end-call-analysis function:', error);
+    
+    // Update call status to failed so it doesn't stay in analyzing state
+    if (callRecordId) {
+      try {
+        await supabaseService
+          .from('calls')
+          .update({ call_status: 'failed' })
+          .eq('id', callRecordId);
+      } catch (updateError) {
+        console.error('Failed to update call status to failed:', updateError);
+      }
+    }
+    
     return new Response(JSON.stringify({ error: error.message }), {
       status: 500,
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },

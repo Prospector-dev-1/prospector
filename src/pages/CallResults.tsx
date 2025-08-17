@@ -51,6 +51,7 @@ const CallResults = () => {
   const { toast } = useToast();
   const [callRecord, setCallRecord] = useState<CallRecord | null>(null);
   const [loading, setLoading] = useState(true);
+  const [analysisError, setAnalysisError] = useState<string | null>(null);
 
   useEffect(() => {
     if (callId && user) {
@@ -77,10 +78,15 @@ const CallResults = () => {
 
       setCallRecord(data);
 
-      // If analysis is not complete yet (no overall_score), poll for completion
+      // Check if analysis is complete, failed, or still in progress
       if (data && data.overall_score === null) {
-        console.log('Analysis not complete, starting polling...');
-        pollForAnalysisCompletion();
+        if (data.call_status === 'failed') {
+          setAnalysisError('Call analysis failed. This may be due to external service issues.');
+          setLoading(false);
+        } else {
+          console.log('Analysis not complete, starting polling...');
+          pollForAnalysisCompletion();
+        }
       } else {
         setLoading(false);
       }
@@ -92,7 +98,7 @@ const CallResults = () => {
 
   const pollForAnalysisCompletion = async () => {
     let attempts = 0;
-    const maxAttempts = 30; // Poll for up to 30 seconds
+    const maxAttempts = 60; // Poll for up to 60 seconds
     
     const pollInterval = setInterval(async () => {
       attempts++;
@@ -100,6 +106,7 @@ const CallResults = () => {
       if (attempts >= maxAttempts) {
         console.log('Max polling attempts reached');
         clearInterval(pollInterval);
+        setAnalysisError('Analysis is taking too long. Please try refreshing the page.');
         setLoading(false);
         return;
       }
@@ -112,16 +119,54 @@ const CallResults = () => {
           .eq('user_id', user.id)
           .single();
 
-        if (!error && data && data.overall_score !== null) {
-          console.log('Analysis completed, updating call record');
-          setCallRecord(data);
-          setLoading(false);
-          clearInterval(pollInterval);
+        if (!error && data) {
+          if (data.overall_score !== null) {
+            console.log('Analysis completed, updating call record');
+            setCallRecord(data);
+            setLoading(false);
+            clearInterval(pollInterval);
+          } else if (data.call_status === 'failed') {
+            setAnalysisError('Call analysis failed. This may be due to external service issues.');
+            setLoading(false);
+            clearInterval(pollInterval);
+          }
         }
       } catch (error) {
         console.error('Error polling for analysis completion:', error);
       }
     }, 1000); // Poll every second
+  };
+
+  const retryAnalysis = async () => {
+    if (!callId || !user) return;
+    
+    setLoading(true);
+    setAnalysisError(null);
+    
+    try {
+      // Reset call status to trigger reanalysis
+      const { error } = await supabase
+        .from('calls')
+        .update({ call_status: 'started' })
+        .eq('id', callId)
+        .eq('user_id', user.id);
+        
+      if (error) {
+        throw error;
+      }
+      
+      // Start polling again
+      pollForAnalysisCompletion();
+      
+      toast({
+        title: "Analysis restarted",
+        description: "We're processing your call again. This may take a moment.",
+      });
+    } catch (error) {
+      console.error('Error retrying analysis:', error);
+      setAnalysisError('Failed to restart analysis. Please try again.');
+      setLoading(false);
+    }
   };
 
   const handleCoaching = () => {
@@ -161,7 +206,28 @@ const CallResults = () => {
       <div className="min-h-screen flex items-center justify-center bg-background">
         <div className="text-center">
           <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto"></div>
-          <p className="mt-4 text-muted-foreground">Loading call results...</p>
+          <p className="mt-4 text-muted-foreground">
+            {analysisError ? 'Retrying analysis...' : 'Analyzing your call performance...'}
+          </p>
+          <p className="text-sm text-muted-foreground mt-2">This may take up to a minute</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (analysisError) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-background">
+        <div className="text-center max-w-md mx-auto">
+          <p className="text-destructive mb-4">{analysisError}</p>
+          <div className="space-y-2">
+            <Button onClick={retryAnalysis} variant="default">
+              Retry Analysis
+            </Button>
+            <Button onClick={() => navigate('/')} variant="outline" className="w-full">
+              Return to Dashboard
+            </Button>
+          </div>
         </div>
       </div>
     );
