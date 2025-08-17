@@ -9,7 +9,6 @@ import { supabase } from '@/integrations/supabase/client';
 import { ArrowLeft, Trophy, HelpCircle, Brain, Target, Lightbulb, Ear, DollarSign, FileText, Sparkles } from 'lucide-react';
 import SEO from '@/components/SEO';
 import { useToast } from '@/hooks/use-toast';
-
 interface CallRecord {
   id: string;
   difficulty_level: number;
@@ -27,7 +26,6 @@ interface CallRecord {
   ai_feedback: string;
   created_at: string;
 }
-
 type CoachingItem = {
   assistant_said: string;
   your_response: string;
@@ -36,7 +34,6 @@ type CoachingItem = {
   why_better: string;
   category: string;
 };
-
 type CoachingResponse = {
   success?: boolean;
   coaching: CoachingItem[];
@@ -45,37 +42,38 @@ type CoachingResponse = {
   credits_remaining?: number;
 };
 const CallResults = () => {
-  const { callId } = useParams<{ callId: string }>();
+  const {
+    callId
+  } = useParams<{
+    callId: string;
+  }>();
   const navigate = useNavigate();
-  const { user } = useAuth();
-  const { toast } = useToast();
+  const {
+    user
+  } = useAuth();
+  const {
+    toast
+  } = useToast();
   const [callRecord, setCallRecord] = useState<CallRecord | null>(null);
   const [loading, setLoading] = useState(true);
   const [analysisError, setAnalysisError] = useState<string | null>(null);
-
   useEffect(() => {
     if (callId && user) {
       fetchCallRecord();
     }
   }, [callId, user]);
-
   const fetchCallRecord = async () => {
     if (!callId || !user) return;
-
     try {
-      const { data, error } = await supabase
-        .from('calls')
-        .select('*')
-        .eq('id', callId)
-        .eq('user_id', user.id)
-        .single();
-
+      const {
+        data,
+        error
+      } = await supabase.from('calls').select('*').eq('id', callId).eq('user_id', user.id).single();
       if (error) {
         console.error('Error fetching call record:', error);
         navigate('/');
         return;
       }
-
       setCallRecord(data);
 
       // Check if analysis is complete, failed, or still in progress
@@ -95,14 +93,12 @@ const CallResults = () => {
       navigate('/');
     }
   };
-
   const pollForAnalysisCompletion = async () => {
     let attempts = 0;
     const maxAttempts = 60; // Poll for up to 60 seconds
-    
+
     const pollInterval = setInterval(async () => {
       attempts++;
-      
       if (attempts >= maxAttempts) {
         console.log('Max polling attempts reached');
         clearInterval(pollInterval);
@@ -110,15 +106,11 @@ const CallResults = () => {
         setLoading(false);
         return;
       }
-
       try {
-        const { data, error } = await supabase
-          .from('calls')
-          .select('*')
-          .eq('id', callId)
-          .eq('user_id', user.id)
-          .single();
-
+        const {
+          data,
+          error
+        } = await supabase.from('calls').select('*').eq('id', callId).eq('user_id', user.id).single();
         if (!error && data) {
           if (data.overall_score !== null) {
             console.log('Analysis completed, updating call record');
@@ -136,31 +128,26 @@ const CallResults = () => {
       }
     }, 1000); // Poll every second
   };
-
   const retryAnalysis = async () => {
     if (!callId || !user) return;
-    
     setLoading(true);
     setAnalysisError(null);
-    
     try {
       // Reset call status to trigger reanalysis
-      const { error } = await supabase
-        .from('calls')
-        .update({ call_status: 'started' })
-        .eq('id', callId)
-        .eq('user_id', user.id);
-        
+      const {
+        error
+      } = await supabase.from('calls').update({
+        call_status: 'started'
+      }).eq('id', callId).eq('user_id', user.id);
       if (error) {
         throw error;
       }
-      
+
       // Start polling again
       pollForAnalysisCompletion();
-      
       toast({
         title: "Analysis restarted",
-        description: "We're processing your call again. This may take a moment.",
+        description: "We're processing your call again. This may take a moment."
       });
     } catch (error) {
       console.error('Error retrying analysis:', error);
@@ -168,31 +155,26 @@ const CallResults = () => {
       setLoading(false);
     }
   };
-
   const handleCoaching = () => {
     navigate(`/call-coaching/${callId}`);
   };
-
   const formatDuration = (seconds: number) => {
     const mins = Math.floor(seconds / 60);
     const secs = seconds % 60;
     return `${mins}m ${secs}s`;
   };
-
   const getScoreColor = (score: number) => {
     if (score >= 8) return 'text-green-500';
     if (score >= 6) return 'text-yellow-500';
     if (score >= 4) return 'text-orange-500';
     return 'text-red-500';
   };
-
   const getScoreBadge = (score: number) => {
     if (score >= 8) return 'Excellent';
     if (score >= 6) return 'Good';
     if (score >= 4) return 'Needs Work';
     return 'Needs Improvement';
   };
-
   const getDifficultyLabel = (level: number) => {
     if (level <= 2) return "Very Easy";
     if (level <= 4) return "Easy";
@@ -200,10 +182,8 @@ const CallResults = () => {
     if (level <= 8) return "Hard";
     return "Expert";
   };
-
   if (loading) {
-    return (
-      <div className="min-h-screen flex items-center justify-center bg-background">
+    return <div className="min-h-screen flex items-center justify-center bg-background">
         <div className="text-center">
           <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto"></div>
           <p className="mt-4 text-muted-foreground">
@@ -211,13 +191,10 @@ const CallResults = () => {
           </p>
           <p className="text-sm text-muted-foreground mt-2">This may take up to a minute</p>
         </div>
-      </div>
-    );
+      </div>;
   }
-
   if (analysisError) {
-    return (
-      <div className="min-h-screen flex items-center justify-center bg-background">
+    return <div className="min-h-screen flex items-center justify-center bg-background">
         <div className="text-center max-w-md mx-auto">
           <p className="text-destructive mb-4">{analysisError}</p>
           <div className="space-y-2">
@@ -229,34 +206,55 @@ const CallResults = () => {
             </Button>
           </div>
         </div>
-      </div>
-    );
+      </div>;
   }
-
   if (!callRecord) {
-    return (
-      <div className="min-h-screen flex items-center justify-center bg-background">
+    return <div className="min-h-screen flex items-center justify-center bg-background">
         <div className="text-center">
           <p className="text-muted-foreground">Call record not found.</p>
           <Button onClick={() => navigate('/')} className="mt-4">
             Return to Dashboard
           </Button>
         </div>
-      </div>
-    );
+      </div>;
   }
-
-  const scoreCategories = [
-    { name: '❓ Objection Handling', description: 'Did you turn around the objection or ignore it?', score: callRecord.objection_handling_score, icon: HelpCircle },
-    { name: '🧠 Confidence', description: 'Was your tone assertive or hesitant?', score: callRecord.confidence_score, icon: Brain },
-    { name: '🎯 Clarity', description: 'Was your message focused?', score: callRecord.clarity_score, icon: Target },
-    { name: '💡 Persuasion', description: 'Did you appeal emotionally or logically?', score: callRecord.persuasiveness_score, icon: Lightbulb },
-    { name: '👂 Listening & Response', description: 'Did you tailor answers or script-dump?', score: callRecord.tone_score, icon: Ear },
-    { name: '📋 Overall Pitch / Script', description: 'How well structured and delivered was your overall pitch?', score: callRecord.overall_pitch_score, icon: FileText },
-    { name: 'Closing Ability', description: 'How effectively did you close or advance the sale?', score: callRecord.closing_score, icon: DollarSign },
-  ];
-
-  return (<>
+  const scoreCategories = [{
+    name: '❓ Objection Handling',
+    description: 'Did you turn around the objection or ignore it?',
+    score: callRecord.objection_handling_score,
+    icon: HelpCircle
+  }, {
+    name: '🧠 Confidence',
+    description: 'Was your tone assertive or hesitant?',
+    score: callRecord.confidence_score,
+    icon: Brain
+  }, {
+    name: '🎯 Clarity',
+    description: 'Was your message focused?',
+    score: callRecord.clarity_score,
+    icon: Target
+  }, {
+    name: '💡 Persuasion',
+    description: 'Did you appeal emotionally or logically?',
+    score: callRecord.persuasiveness_score,
+    icon: Lightbulb
+  }, {
+    name: '👂 Listening & Response',
+    description: 'Did you tailor answers or script-dump?',
+    score: callRecord.tone_score,
+    icon: Ear
+  }, {
+    name: '📋 Overall Pitch / Script',
+    description: 'How well structured and delivered was your overall pitch?',
+    score: callRecord.overall_pitch_score,
+    icon: FileText
+  }, {
+    name: 'Closing Ability',
+    description: 'How effectively did you close or advance the sale?',
+    score: callRecord.closing_score,
+    icon: DollarSign
+  }];
+  return <>
     <SEO title={`Call Results | Score & Feedback`} description="Detailed breakdown of your AI practice call with scores and feedback." canonicalPath={`/call-results/${callId}`} />
     <div className="min-h-screen bg-background">
       {/* Header */}
@@ -332,8 +330,7 @@ const CallResults = () => {
           </CardHeader>
           <CardContent>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              {scoreCategories.map((category) => (
-                <div key={category.name} className="space-y-2">
+              {scoreCategories.map(category => <div key={category.name} className="space-y-2">
                   <div className="flex items-center justify-between">
                     <div className="flex items-center space-x-2">
                       <category.icon className="h-4 w-4 text-muted-foreground" />
@@ -347,8 +344,7 @@ const CallResults = () => {
                     </span>
                   </div>
                   <Progress value={(category.score || 0) * 10} className="h-2" />
-                </div>
-              ))}
+                </div>)}
             </div>
           </CardContent>
         </Card>
@@ -369,15 +365,13 @@ const CallResults = () => {
             </div>
           </CardHeader>
           <CardContent className="p-0">
-            {callRecord.ai_feedback ? (
-              <div className="divide-y divide-border">
+            {callRecord.ai_feedback ? <div className="divide-y divide-border">
                 {/* Feedback Content */}
                 <div className="p-6">
                   <div className="relative">
                     <div className="absolute -left-2 top-0 w-1 h-full bg-gradient-to-b from-primary to-accent rounded-full"></div>
                     <div className="pl-6 space-y-4">
-                      {callRecord.ai_feedback.split('\n\n').map((paragraph, index) => (
-                        <div key={index} className="group">
+                      {callRecord.ai_feedback.split('\n\n').map((paragraph, index) => <div key={index} className="group">
                           <div className="flex items-start gap-3">
                             <div className="flex-shrink-0 w-6 h-6 rounded-full bg-primary/10 flex items-center justify-center mt-1">
                               <span className="text-xs font-medium text-primary">{index + 1}</span>
@@ -388,8 +382,7 @@ const CallResults = () => {
                               </p>
                             </div>
                           </div>
-                        </div>
-                      ))}
+                        </div>)}
                     </div>
                   </div>
                 </div>
@@ -401,38 +394,23 @@ const CallResults = () => {
                       <Sparkles className="h-4 w-4" />
                       <span>Generated by AI Coach</span>
                     </div>
-                    <Button 
-                      variant="outline" 
-                      size="sm"
-                      onClick={handleCoaching}
-                      className="text-xs"
-                    >
-                      Get detailed coaching
-                    </Button>
+                    
                   </div>
                 </div>
-              </div>
-            ) : (
-              <div className="p-8 text-center">
+              </div> : <div className="p-8 text-center">
                 <div className="mx-auto w-12 h-12 rounded-full bg-muted flex items-center justify-center mb-4">
                   <Brain className="h-6 w-6 text-muted-foreground" />
                 </div>
                 <p className="text-muted-foreground mb-4">No feedback available for this call.</p>
-                <Button 
-                  variant="outline" 
-                  onClick={handleCoaching}
-                  className="text-sm"
-                >
+                <Button variant="outline" onClick={handleCoaching} className="text-sm">
                   Generate detailed coaching
                 </Button>
-              </div>
-            )}
+              </div>}
           </CardContent>
         </Card>
 
         {/* Call Transcript */}
-        {callRecord.transcript && (
-          <Card className="mb-8">
+        {callRecord.transcript && <Card className="mb-8">
             <CardHeader>
               <CardTitle>Call Transcript</CardTitle>
               <CardDescription>
@@ -446,8 +424,7 @@ const CallResults = () => {
                 </p>
               </div>
             </CardContent>
-          </Card>
-        )}
+          </Card>}
 
         {/* Objection Coaching */}
         <Card className="mb-8">
@@ -478,8 +455,6 @@ const CallResults = () => {
         </div>
       </div>
     </div>
-    </>
-  );
+    </>;
 };
-
 export default CallResults;
