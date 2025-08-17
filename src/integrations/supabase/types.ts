@@ -7,13 +7,111 @@ export type Json =
   | Json[]
 
 export type Database = {
-  // Allows to automatically instanciate createClient with right options
+  // Allows to automatically instantiate createClient with right options
   // instead of createClient<Database, { PostgrestVersion: 'XX' }>(URL, KEY)
   __InternalSupabase: {
     PostgrestVersion: "12.2.12 (cd3cf9e)"
   }
   public: {
     Tables: {
+      ai_replays: {
+        Row: {
+          created_at: string
+          id: string
+          improvement: number | null
+          new_score: number | null
+          original_call_id: string | null
+          original_score: number | null
+          transcript: string | null
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          improvement?: number | null
+          new_score?: number | null
+          original_call_id?: string | null
+          original_score?: number | null
+          transcript?: string | null
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          improvement?: number | null
+          new_score?: number | null
+          original_call_id?: string | null
+          original_score?: number | null
+          transcript?: string | null
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "ai_replays_original_call_id_fkey"
+            columns: ["original_call_id"]
+            isOneToOne: false
+            referencedRelation: "call_uploads"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      call_uploads: {
+        Row: {
+          ai_analysis: Json | null
+          better_responses: Json | null
+          confidence_score: number | null
+          created_at: string
+          file_size: number
+          file_type: string
+          id: string
+          objection_handling_scores: Json | null
+          original_filename: string
+          psychological_insights: string | null
+          status: string
+          strengths: string[] | null
+          transcript: string | null
+          updated_at: string
+          user_id: string
+          weaknesses: string[] | null
+        }
+        Insert: {
+          ai_analysis?: Json | null
+          better_responses?: Json | null
+          confidence_score?: number | null
+          created_at?: string
+          file_size: number
+          file_type: string
+          id?: string
+          objection_handling_scores?: Json | null
+          original_filename: string
+          psychological_insights?: string | null
+          status?: string
+          strengths?: string[] | null
+          transcript?: string | null
+          updated_at?: string
+          user_id: string
+          weaknesses?: string[] | null
+        }
+        Update: {
+          ai_analysis?: Json | null
+          better_responses?: Json | null
+          confidence_score?: number | null
+          created_at?: string
+          file_size?: number
+          file_type?: string
+          id?: string
+          objection_handling_scores?: Json | null
+          original_filename?: string
+          psychological_insights?: string | null
+          status?: string
+          strengths?: string[] | null
+          transcript?: string | null
+          updated_at?: string
+          user_id?: string
+          weaknesses?: string[] | null
+        }
+        Relationships: []
+      }
       calls: {
         Row: {
           ai_feedback: string | null
@@ -71,6 +169,42 @@ export type Database = {
           tone_score?: number | null
           transcript?: string | null
           user_id?: string
+        }
+        Relationships: []
+      }
+      challenges: {
+        Row: {
+          challenge_type: string
+          created_at: string
+          description: string
+          end_date: string
+          id: string
+          name: string
+          reward_credits: number
+          start_date: string
+          target_value: number
+        }
+        Insert: {
+          challenge_type: string
+          created_at?: string
+          description: string
+          end_date: string
+          id?: string
+          name: string
+          reward_credits?: number
+          start_date?: string
+          target_value: number
+        }
+        Update: {
+          challenge_type?: string
+          created_at?: string
+          description?: string
+          end_date?: string
+          id?: string
+          name?: string
+          reward_credits?: number
+          start_date?: string
+          target_value?: number
         }
         Relationships: []
       }
@@ -199,6 +333,47 @@ export type Database = {
           user_id?: string | null
         }
         Relationships: []
+      }
+      user_challenge_progress: {
+        Row: {
+          challenge_id: string
+          completed: boolean
+          completed_at: string | null
+          created_at: string
+          current_progress: number
+          id: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          challenge_id: string
+          completed?: boolean
+          completed_at?: string | null
+          created_at?: string
+          current_progress?: number
+          id?: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          challenge_id?: string
+          completed?: boolean
+          completed_at?: string | null
+          created_at?: string
+          current_progress?: number
+          id?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "user_challenge_progress_challenge_id_fkey"
+            columns: ["challenge_id"]
+            isOneToOne: false
+            referencedRelation: "challenges"
+            referencedColumns: ["id"]
+          },
+        ]
       }
     }
     Views: {
