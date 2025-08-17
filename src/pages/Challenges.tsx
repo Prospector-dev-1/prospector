@@ -51,6 +51,112 @@ const Challenges = () => {
     fetchChallengesData();
   }, [user]);
 
+  const fetchLeaderboard = async () => {
+    try {
+      // Calculate comprehensive scores for all users who have activity
+      const { data: allUsers, error: usersError } = await supabase
+        .from('profiles')
+        .select('user_id, first_name, last_name')
+        .not('first_name', 'is', null); // Only include users with names
+
+      if (usersError) throw usersError;
+
+      const leaderboardScores = await Promise.all((allUsers || []).map(async (userProfile) => {
+        let totalScore = 0;
+
+        // Challenge completion points (reward_credits from completed challenges)
+        const { data: completedChallenges } = await supabase
+          .from('user_challenge_progress')
+          .select('challenge_id, challenges(reward_credits)')
+          .eq('user_id', userProfile.user_id)
+          .eq('completed', true)
+          .gte('completed_at', new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString());
+
+        const challengePoints = completedChallenges?.reduce((sum, cp) => 
+          sum + (cp.challenges?.reward_credits || 0), 0) || 0;
+
+        // Performance points from calls (this week)
+        const { data: callsData } = await supabase
+          .from('calls')
+          .select('overall_score, successful_sale, difficulty_level')
+          .eq('user_id', userProfile.user_id)
+          .eq('call_status', 'completed')
+          .gte('created_at', new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString());
+
+        let performancePoints = 0;
+        if (callsData && callsData.length > 0) {
+          // Average score multiplied by 10
+          const avgScore = callsData.reduce((sum, call) => sum + (call.overall_score || 0), 0) / callsData.length;
+          performancePoints += Math.round(avgScore * 10);
+
+          // Successful sales bonus (50 points each)
+          const successfulSales = callsData.filter(call => call.successful_sale).length;
+          performancePoints += successfulSales * 50;
+
+          // Call completion bonus (5 points per call)
+          performancePoints += callsData.length * 5;
+
+          // Difficulty bonus (higher difficulty = more points)
+          const difficultyBonus = callsData.reduce((sum, call) => 
+            sum + (call.difficulty_level || 0) * 5, 0);
+          performancePoints += difficultyBonus;
+        }
+
+        // Upload activity points (this week)
+        const { count: uploadsCount } = await supabase
+          .from('call_uploads')
+          .select('*', { count: 'exact', head: true })
+          .eq('user_id', userProfile.user_id)
+          .eq('status', 'completed')
+          .gte('created_at', new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString());
+
+        const uploadPoints = (uploadsCount || 0) * 25; // 25 points per upload
+
+        // AI Replay activity points (this week)
+        const { count: replaysCount } = await supabase
+          .from('ai_replays')
+          .select('*', { count: 'exact', head: true })
+          .eq('user_id', userProfile.user_id)
+          .gte('created_at', new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString());
+
+        const replayPoints = (replaysCount || 0) * 15; // 15 points per replay
+
+        totalScore = challengePoints + performancePoints + uploadPoints + replayPoints;
+
+        return {
+          user_id: userProfile.user_id,
+          total_score: totalScore,
+          rank: 0, // Will be calculated after sorting
+          profile: {
+            first_name: userProfile.first_name,
+            last_name: userProfile.last_name
+          }
+        };
+      }));
+
+      // Filter out users with zero scores and sort by score
+      const activeUsers = leaderboardScores
+        .filter(user => user.total_score > 0)
+        .sort((a, b) => b.total_score - a.total_score)
+        .map((user, index) => ({ ...user, rank: index + 1 }));
+
+      // Return top 10 and ensure current user is included
+      const currentUserEntry = activeUsers.find(entry => entry.user_id === user?.id);
+      const topUsers = activeUsers.slice(0, 10);
+      
+      // If current user is not in top 10, add them
+      if (currentUserEntry && !topUsers.find(u => u.user_id === user?.id)) {
+        topUsers.push(currentUserEntry);
+      }
+
+      return topUsers;
+
+    } catch (error) {
+      console.error('Error fetching leaderboard:', error);
+      return [];
+    }
+  };
+
   const fetchChallengesData = async () => {
     try {
       // Fetch active challenges
@@ -286,19 +392,14 @@ const Challenges = () => {
         };
       }));
 
-      // Generate mock leaderboard data (in a real app, this would come from the database)
-      const mockLeaderboard = [
-        { user_id: 'user1', total_score: 1250, rank: 1, profile: { first_name: 'Alex', last_name: 'Chen' } },
-        { user_id: 'user2', total_score: 1180, rank: 2, profile: { first_name: 'Sarah', last_name: 'Johnson' } },
-        { user_id: 'user3', total_score: 1050, rank: 3, profile: { first_name: 'Mike', last_name: 'Davis' } },
-        { user_id: user?.id || 'current', total_score: 890, rank: 12, profile: { first_name: profile?.first_name, last_name: profile?.last_name } },
-        { user_id: 'user5', total_score: 820, rank: 15, profile: { first_name: 'Emma', last_name: 'Wilson' } },
-      ];
+      // Fetch real leaderboard data
+      const leaderboardData = await fetchLeaderboard();
+      const currentUserRank = leaderboardData.find(entry => entry.user_id === user?.id)?.rank;
 
       setChallenges(challengesData || []);
       setUserProgress(updatedProgress);
-      setLeaderboard(mockLeaderboard);
-      setUserRank(12); // Mock rank
+      setLeaderboard(leaderboardData);
+      setUserRank(currentUserRank || null);
 
     } catch (error) {
       console.error('Error fetching challenges data:', error);
@@ -439,10 +540,16 @@ const Challenges = () => {
               <div className="flex items-center justify-between">
                 <div>
                   <h3 className="text-lg font-semibold text-foreground mb-2">
-                    🎯 You're in the top 12% this week!
+                    {userRank ? 
+                      `🎯 ${userRank <= 3 ? `Rank #${userRank} - You're crushing it!` : 
+                            userRank <= 10 ? `Top ${Math.round((userRank / Math.max(leaderboard.length, 1)) * 100)}% - Great work!` :
+                            'Keep building your skills!'}`
+                      : '🎯 Start your journey to the top!'}
                   </h3>
                   <p className="text-sm text-muted-foreground">
-                    Keep pushing forward - you're doing amazing work improving your sales skills.
+                    {userRank ? 
+                      'Keep pushing forward - every challenge completed improves your ranking.' :
+                      'Complete challenges and practice calls to join the leaderboard!'}
                   </p>
                 </div>
                 <Trophy className="h-12 w-12 text-primary" />
@@ -590,14 +697,21 @@ const Challenges = () => {
                     ))}
                   </div>
                   
-                  <div className="mt-4 p-3 bg-primary/5 rounded-lg text-center">
-                    <div className="text-sm font-medium text-primary">
-                      🎉 You're in the top 12%!
+                  {userRank && (
+                    <div className="mt-4 p-3 bg-primary/5 rounded-lg text-center">
+                      <div className="text-sm font-medium text-primary">
+                        {userRank <= 3 ? '🏆' : userRank <= 10 ? '🎉' : '💪'} 
+                        {userRank <= 3 ? ` Top ${userRank}!` : 
+                         userRank <= Math.ceil(leaderboard.length * 0.25) ? ` Top ${Math.round((userRank / Math.max(leaderboard.length, 1)) * 100)}%!` :
+                         ' Keep climbing!'}
+                      </div>
+                      <div className="text-xs text-muted-foreground mt-1">
+                        {userRank <= 3 ? 'Outstanding performance!' :
+                         userRank <= 10 ? 'You\'re doing great!' :
+                         'Every challenge completed counts!'}
+                      </div>
                     </div>
-                    <div className="text-xs text-muted-foreground mt-1">
-                      Keep going to climb higher
-                    </div>
-                  </div>
+                  )}
                 </CardContent>
               </Card>
             </div>
