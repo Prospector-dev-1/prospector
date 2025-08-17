@@ -204,4 +204,14 @@ All colors MUST be HSL.
   .mobile-safe-bottom {
     padding-bottom: env(safe-area-inset-bottom, 0px);
   }
+
+  /* Standard notification badge - like Telegram style */
+  .notification-badge {
+    @apply absolute -top-1 -right-1 h-4 w-4 bg-red-500 text-white rounded-full flex items-center justify-center text-xs font-bold;
+  }
+
+  /* Animated notification badge for important notifications */
+  .notification-badge-animated {
+    @apply notification-badge animate-pulse;
+  }
 }

@@ -80,7 +80,7 @@ const MobileBottomNav = () => {
                   <Icon className={cn("h-5 w-5 mb-1", active && "scale-110")} />
                   {item.badge && item.badge > 0 && (
                     <div className={cn(
-                      "absolute -top-1 -right-1 h-4 w-4 bg-red-500 text-white rounded-full flex items-center justify-center text-xs font-bold",
+                      "notification-badge",
                       item.id === 'challenges' && "animate-pulse"
                     )}>
                       {item.badge > 9 ? '9+' : item.badge}
