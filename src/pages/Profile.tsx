@@ -14,7 +14,7 @@ import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { Progress } from '@/components/ui/progress';
 import { StatsCard } from '@/components/ui/stats-card';
 import MobileLayout from '@/components/MobileLayout';
-import { User, Phone, CreditCard, History, Settings, LogOut, Edit, Save, X, Loader2, Shield, Trophy, Target, Calendar, CheckCircle } from 'lucide-react';
+import { User, Phone, CreditCard, History, Settings, LogOut, Edit, Save, X, Loader2, Shield, Trophy, Target, Calendar, CheckCircle, ChevronDown, ChevronUp } from 'lucide-react';
 import SEO from '@/components/SEO';
 interface Profile {
   id: string;
@@ -54,6 +54,7 @@ const Profile = () => {
   const [isEditing, setIsEditing] = useState(false);
   const [showPasswordForm, setShowPasswordForm] = useState(false);
   const [showEmailForm, setShowEmailForm] = useState(false);
+  const [showProfileCompletion, setShowProfileCompletion] = useState(false);
   const [editForm, setEditForm] = useState({
     first_name: '',
     last_name: '',
@@ -391,6 +392,23 @@ const Profile = () => {
     return Math.round((completed / fields.length) * 100);
   };
 
+  // Get missing profile fields
+  const getMissingFields = () => {
+    if (!profile) return [];
+    
+    const fieldMapping = [
+      { key: 'first_name', label: 'First Name', value: profile.first_name },
+      { key: 'last_name', label: 'Last Name', value: profile.last_name },
+      { key: 'phone_number', label: 'Phone Number', value: profile.phone_number }
+    ];
+    
+    return fieldMapping.filter(field => 
+      field.value === null || 
+      field.value === undefined || 
+      field.value.toString().trim() === ''
+    );
+  };
+
   // Calculate stats
   const totalCalls = callHistory.length;
   const successfulCalls = callHistory.filter(call => call.successful_sale).length;
@@ -454,11 +472,51 @@ const Profile = () => {
 
             {/* Profile Completion */}
             <div className="mb-6">
-              <div className="flex items-center justify-between mb-2">
+              <button 
+                onClick={() => setShowProfileCompletion(!showProfileCompletion)}
+                className="w-full flex items-center justify-between mb-2 hover:opacity-80 transition-opacity"
+              >
                 <span className="text-sm font-medium">Profile Completion</span>
-                <span className="text-sm text-muted-foreground">{getProfileCompletion()}%</span>
-              </div>
+                <div className="flex items-center gap-2">
+                  <span className="text-sm text-muted-foreground">{getProfileCompletion()}%</span>
+                  {showProfileCompletion ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
+                </div>
+              </button>
               <Progress value={getProfileCompletion()} className="h-2" />
+              
+              {showProfileCompletion && (
+                <div className="mt-3 p-3 glass-card rounded-lg">
+                  <h4 className="text-sm font-medium mb-2">Complete your profile:</h4>
+                  {getMissingFields().length === 0 ? (
+                    <div className="flex items-center gap-2 text-green-500">
+                      <CheckCircle className="h-4 w-4" />
+                      <span className="text-sm">Profile is 100% complete!</span>
+                    </div>
+                  ) : (
+                    <div className="space-y-2">
+                      {getMissingFields().map((field) => (
+                        <div key={field.key} className="flex items-center gap-2 text-muted-foreground">
+                          <X className="h-3 w-3" />
+                          <span className="text-sm">Add your {field.label}</span>
+                        </div>
+                      ))}
+                      <Button 
+                        variant="outline" 
+                        size="sm" 
+                        className="mt-2 w-full"
+                        onClick={() => {
+                          setActiveTab('profile');
+                          setIsEditing(true);
+                          setShowProfileCompletion(false);
+                        }}
+                      >
+                        <Edit className="h-3 w-3 mr-1" />
+                        Edit Profile
+                      </Button>
+                    </div>
+                  )}
+                </div>
+              )}
             </div>
 
             {/* Quick Stats */}
