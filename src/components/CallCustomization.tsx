@@ -6,9 +6,10 @@ import { Textarea } from '@/components/ui/textarea';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
 import { Slider } from '@/components/ui/slider';
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
-import { Building2, Target, User2, FileText, Timer } from 'lucide-react';
+import { Building2, Target, User2, FileText, Timer, ChevronDown } from 'lucide-react';
 
 interface BusinessType {
   id: string;
@@ -56,6 +57,7 @@ const CallCustomization: React.FC<CallCustomizationProps> = ({
 }) => {
   const [callObjectives, setCallObjectives] = useState<CallObjective[]>([]);
   const [selectedObjectiveData, setSelectedObjectiveData] = useState<CallObjective | null>(null);
+  const [isAdvancedOpen, setIsAdvancedOpen] = useState(false);
   const { toast } = useToast();
 
   useEffect(() => {
@@ -109,120 +111,7 @@ const CallCustomization: React.FC<CallCustomizationProps> = ({
 
   return (
     <div className="space-y-6">
-      {/* Business Type Selection */}
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center space-x-2">
-            <Building2 className="h-5 w-5" />
-            <span>Business Type</span>
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div>
-            <Label htmlFor="business-type">What type of business is your prospect?</Label>
-            <Input
-              id="business-type"
-              placeholder="e.g., Plumber, Restaurant Owner, Tech Startup, Healthcare Clinic..."
-              value={businessType}
-              onChange={(e) => setBusinessType(e.target.value)}
-              className="mt-2"
-            />
-            <p className="text-xs text-muted-foreground mt-2">
-              Be specific about the industry or business type to get realistic scenarios.
-            </p>
-          </div>
-        </CardContent>
-      </Card>
-
-      {/* Prospect Role Selection */}
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center space-x-2">
-            <User2 className="h-5 w-5" />
-            <span>Prospect Role</span>
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div>
-            <Label htmlFor="prospect-role">Who will you be speaking with?</Label>
-            <Input
-              id="prospect-role"
-              placeholder="e.g., Owner, Manager, Director, CEO, Operations Manager..."
-              value={prospectRole}
-              onChange={(e) => setProspectRole(e.target.value)}
-              className="mt-2"
-            />
-            <p className="text-xs text-muted-foreground mt-2">
-              Specify the decision-maker's role or title you'll be calling.
-            </p>
-          </div>
-        </CardContent>
-      </Card>
-
-      {/* Call Objective Selection */}
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center space-x-2">
-            <Target className="h-5 w-5" />
-            <span>Call Objective</span>
-          </CardTitle>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          <div>
-            <Label htmlFor="call-objective">What's your goal for this call?</Label>
-            <Select value={callObjective} onValueChange={setCallObjective}>
-              <SelectTrigger>
-                <SelectValue placeholder="Select objective..." />
-              </SelectTrigger>
-              <SelectContent>
-                {callObjectives.map((objective) => (
-                  <SelectItem key={objective.id} value={objective.name}>
-                    <div>
-                      <div className="font-medium">{objective.name}</div>
-                      <div className="text-xs text-muted-foreground">{objective.description}</div>
-                    </div>
-                  </SelectItem>
-                ))}
-                <SelectItem value="Custom">
-                  <div>
-                    <div className="font-medium">Custom</div>
-                    <div className="text-xs text-muted-foreground">Define your own call objective</div>
-                  </div>
-                </SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
-
-          {callObjective === 'Custom' && (
-            <div>
-              <Label htmlFor="custom-objective">Custom Objective</Label>
-              <Input
-                id="custom-objective"
-                placeholder="e.g., Schedule a product demo, Get budget information, Qualify lead..."
-                value={customObjective}
-                onChange={(e) => setCustomObjective(e.target.value)}
-                className="mt-2"
-              />
-            </div>
-          )}
-
-          {selectedObjectiveData && (
-            <div className="bg-muted p-3 rounded-lg">
-              <h4 className="text-sm font-medium mb-2">You'll be graded on:</h4>
-              <div className="space-y-1">
-                {selectedObjectiveData.scoring_categories && Object.entries(selectedObjectiveData.scoring_categories as Record<string, any>).map(([key, category]) => (
-                  <div key={key} className="flex justify-between text-xs">
-                    <span>{category.description}</span>
-                    <span className="text-muted-foreground">{category.weight}%</span>
-                  </div>
-                ))}
-              </div>
-            </div>
-          )}
-        </CardContent>
-      </Card>
-
-      {/* Difficulty Level */}
+      {/* Difficulty Level - Always Visible */}
       <Card>
         <CardHeader>
           <CardTitle className="flex items-center space-x-2">
@@ -271,31 +160,168 @@ const CallCustomization: React.FC<CallCustomizationProps> = ({
         </CardContent>
       </Card>
 
-      {/* Custom Instructions */}
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center space-x-2">
-            <FileText className="h-5 w-5" />
-            <span>Custom Instructions</span>
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div>
-            <Label htmlFor="custom-instructions">Additional scenario customization (optional)</Label>
-            <Textarea
-              id="custom-instructions"
-              placeholder="e.g., 'Make them skeptical of new contractors', 'They just had a bad experience with a similar service', 'They're comparing multiple vendors'..."
-              value={customInstructions}
-              onChange={(e) => setCustomInstructions(e.target.value)}
-              className="mt-2"
-              rows={3}
-            />
-            <p className="text-xs text-muted-foreground mt-2">
-              Customize the prospect's attitude, recent experiences, or specific challenges to make the scenario more realistic.
-            </p>
-          </div>
-        </CardContent>
-      </Card>
+      {/* Advanced Customization - Collapsible */}
+      <Collapsible open={isAdvancedOpen} onOpenChange={setIsAdvancedOpen}>
+        <CollapsibleTrigger asChild>
+          <Card className="cursor-pointer hover:bg-muted/50 transition-colors">
+            <CardContent className="pt-6">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center space-x-2">
+                  <div className="text-sm font-medium">Advanced Customization</div>
+                  <Badge variant="outline" className="text-xs">
+                    Optional
+                  </Badge>
+                </div>
+                <ChevronDown className={`h-4 w-4 transition-transform ${isAdvancedOpen ? 'rotate-180' : ''}`} />
+              </div>
+              <p className="text-xs text-muted-foreground mt-1">
+                Customize business type, prospect role, call objective, and scenario details
+              </p>
+            </CardContent>
+          </Card>
+        </CollapsibleTrigger>
+
+        <CollapsibleContent className="space-y-4 mt-4">
+          {/* Business Type Selection */}
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center space-x-2">
+                <Building2 className="h-5 w-5" />
+                <span>Business Type</span>
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div>
+                <Label htmlFor="business-type">What type of business is your prospect?</Label>
+                <Input
+                  id="business-type"
+                  placeholder="e.g., Plumber, Restaurant Owner, Tech Startup, Healthcare Clinic..."
+                  value={businessType}
+                  onChange={(e) => setBusinessType(e.target.value)}
+                  className="mt-2"
+                />
+                <p className="text-xs text-muted-foreground mt-2">
+                  Be specific about the industry or business type to get realistic scenarios.
+                </p>
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* Prospect Role Selection */}
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center space-x-2">
+                <User2 className="h-5 w-5" />
+                <span>Prospect Role</span>
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div>
+                <Label htmlFor="prospect-role">Who will you be speaking with?</Label>
+                <Input
+                  id="prospect-role"
+                  placeholder="e.g., Owner, Manager, Director, CEO, Operations Manager..."
+                  value={prospectRole}
+                  onChange={(e) => setProspectRole(e.target.value)}
+                  className="mt-2"
+                />
+                <p className="text-xs text-muted-foreground mt-2">
+                  Specify the decision-maker's role or title you'll be calling.
+                </p>
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* Call Objective Selection */}
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center space-x-2">
+                <Target className="h-5 w-5" />
+                <span>Call Objective</span>
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div>
+                <Label htmlFor="call-objective">What's your goal for this call?</Label>
+                <Select value={callObjective} onValueChange={setCallObjective}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select objective..." />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {callObjectives.map((objective) => (
+                      <SelectItem key={objective.id} value={objective.name}>
+                        <div>
+                          <div className="font-medium">{objective.name}</div>
+                          <div className="text-xs text-muted-foreground">{objective.description}</div>
+                        </div>
+                      </SelectItem>
+                    ))}
+                    <SelectItem value="Custom">
+                      <div>
+                        <div className="font-medium">Custom</div>
+                        <div className="text-xs text-muted-foreground">Define your own call objective</div>
+                      </div>
+                    </SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+
+              {callObjective === 'Custom' && (
+                <div>
+                  <Label htmlFor="custom-objective">Custom Objective</Label>
+                  <Input
+                    id="custom-objective"
+                    placeholder="e.g., Schedule a product demo, Get budget information, Qualify lead..."
+                    value={customObjective}
+                    onChange={(e) => setCustomObjective(e.target.value)}
+                    className="mt-2"
+                  />
+                </div>
+              )}
+
+              {selectedObjectiveData && (
+                <div className="bg-muted p-3 rounded-lg">
+                  <h4 className="text-sm font-medium mb-2">You'll be graded on:</h4>
+                  <div className="space-y-1">
+                    {selectedObjectiveData.scoring_categories && Object.entries(selectedObjectiveData.scoring_categories as Record<string, any>).map(([key, category]) => (
+                      <div key={key} className="flex justify-between text-xs">
+                        <span>{category.description}</span>
+                        <span className="text-muted-foreground">{category.weight}%</span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </CardContent>
+          </Card>
+
+          {/* Custom Instructions */}
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center space-x-2">
+                <FileText className="h-5 w-5" />
+                <span>Custom Instructions</span>
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div>
+                <Label htmlFor="custom-instructions">Additional scenario customization (optional)</Label>
+                <Textarea
+                  id="custom-instructions"
+                  placeholder="e.g., 'Make them skeptical of new contractors', 'They just had a bad experience with a similar service', 'They're comparing multiple vendors'..."
+                  value={customInstructions}
+                  onChange={(e) => setCustomInstructions(e.target.value)}
+                  className="mt-2"
+                  rows={3}
+                />
+                <p className="text-xs text-muted-foreground mt-2">
+                  Customize the prospect's attitude, recent experiences, or specific challenges to make the scenario more realistic.
+                </p>
+              </div>
+            </CardContent>
+          </Card>
+        </CollapsibleContent>
+      </Collapsible>
     </div>
   );
 };
