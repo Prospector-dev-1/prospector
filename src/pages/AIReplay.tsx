@@ -284,7 +284,7 @@ const AIReplay = () => {
                       (replaySession.improvement || 0) > 0 ? 'text-success' : 'text-destructive'
                     }`}>
                       {(replaySession.improvement || 0) > 0 ? <TrendingUp className="h-5 w-5" /> : <TrendingDown className="h-5 w-5" />}
-                      {replaySession.improvement > 0 ? '+' : ''}{replaySession.improvement}%
+                      {(replaySession.improvement || 0) > 0 ? '+' : ''}{replaySession.improvement || 0}%
                     </div>
                     <p className="text-sm text-muted-foreground">Improvement</p>
                   </div>
@@ -400,10 +400,10 @@ const AIReplay = () => {
                 <div className="p-4 border rounded-lg bg-muted/50">
                   <h4 className="font-semibold mb-2">🎯 Focus Areas</h4>
                   <div className="grid grid-cols-2 gap-2 text-sm">
-                    {originalCall.objection_handling_scores && Object.entries(originalCall.objection_handling_scores).map(([category, score]) => (
+                    {originalCall.objection_handling_scores && Object.entries(originalCall.objection_handling_scores as Record<string, number>).map(([category, score]) => (
                       <div key={category} className="flex justify-between">
                         <span className="capitalize">{category}:</span>
-                        <Badge variant={score as number >= 80 ? 'default' : 'secondary'}>
+                        <Badge variant={score >= 80 ? 'default' : 'secondary'}>
                           {score}%
                         </Badge>
                       </div>

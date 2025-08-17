@@ -74,7 +74,7 @@ const CallReview = () => {
   };
 
   const averageObjectionScore = callData?.objection_handling_scores 
-    ? Object.values(callData.objection_handling_scores).reduce((a, b) => a + b, 0) / 4 
+    ? Object.values(callData.objection_handling_scores as Record<string, number>).reduce((a, b) => a + b, 0) / 4 
     : 0;
 
   if (loading) {
@@ -264,7 +264,7 @@ const CallReview = () => {
 
             <TabsContent value="objections" className="space-y-6">
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-                {Object.entries(callData.objection_handling_scores || {}).map(([category, score]) => (
+                {Object.entries((callData.objection_handling_scores as Record<string, number>) || {}).map(([category, score]) => (
                   <Card key={category}>
                     <CardHeader className="pb-3">
                       <CardTitle className="text-base capitalize">{category}</CardTitle>
@@ -290,12 +290,12 @@ const CallReview = () => {
                 </CardHeader>
                 <CardContent>
                   <div className="space-y-4">
-                    {Object.entries(callData.better_responses || {}).map(([key, response]) => (
+                    {Object.entries((callData.better_responses as Record<string, string>) || {}).map(([key, response]) => (
                       <div key={key} className="p-4 border rounded-lg bg-muted/50">
                         <h4 className="font-semibold mb-2 capitalize">
                           {key.replace('_', ' ')}
                         </h4>
-                        <p className="text-sm text-muted-foreground">{response as string}</p>
+                        <p className="text-sm text-muted-foreground">{response}</p>
                       </div>
                     ))}
                   </div>

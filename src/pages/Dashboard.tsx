@@ -5,7 +5,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Badge } from '@/components/ui/badge';
 import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/integrations/supabase/client';
-import { Phone, TrendingUp, User, Settings, LogOut, CreditCard, FileText, Sparkles, HelpCircle } from 'lucide-react';
+import { Phone, TrendingUp, User, Settings, LogOut, CreditCard, FileText, Sparkles, HelpCircle, Upload, Trophy } from 'lucide-react';
 interface CallRecord {
   id: string;
   difficulty_level: number;
@@ -145,7 +145,7 @@ const Dashboard = () => {
         </div>
 
         {/* Action Cards */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-6 gap-4 mb-6">
           <Card className="hover:shadow-lg transition-shadow cursor-pointer flex flex-col" onClick={() => navigate('/call-simulation')}>
             <CardHeader className="text-center pb-3 flex-1">
               <Phone className="h-8 w-8 sm:h-10 sm:w-10 text-primary mx-auto mb-2" />
@@ -172,6 +172,51 @@ const Dashboard = () => {
             <CardContent className="pt-0">
               <Button className="w-full h-12" size="lg">
                 Analyze Script
+              </Button>
+            </CardContent>
+          </Card>
+
+          <Card className="hover:shadow-lg transition-shadow cursor-pointer flex flex-col" onClick={() => navigate('/call-upload')}>
+            <CardHeader className="text-center pb-3 flex-1">
+              <Upload className="h-8 w-8 sm:h-10 sm:w-10 text-accent mx-auto mb-2" />
+              <CardTitle className="text-base sm:text-lg">Upload Call</CardTitle>
+              <CardDescription className="text-sm">
+                Get AI review of your recorded calls
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="pt-0">
+              <Button className="w-full h-12" size="lg" variant="outline">
+                Upload & Analyze
+              </Button>
+            </CardContent>
+          </Card>
+
+          <Card className="hover:shadow-lg transition-shadow cursor-pointer flex flex-col" onClick={() => navigate('/progress')}>
+            <CardHeader className="text-center pb-3 flex-1">
+              <TrendingUp className="h-8 w-8 sm:h-10 sm:w-10 text-info mx-auto mb-2" />
+              <CardTitle className="text-base sm:text-lg">My Progress</CardTitle>
+              <CardDescription className="text-sm">
+                Track your improvement over time
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="pt-0">
+              <Button className="w-full h-12" size="lg" variant="outline">
+                View Analytics
+              </Button>
+            </CardContent>
+          </Card>
+
+          <Card className="hover:shadow-lg transition-shadow cursor-pointer flex flex-col" onClick={() => navigate('/challenges')}>
+            <CardHeader className="text-center pb-3 flex-1">
+              <Trophy className="h-8 w-8 sm:h-10 sm:w-10 text-warning mx-auto mb-2" />
+              <CardTitle className="text-base sm:text-lg">Challenges</CardTitle>
+              <CardDescription className="text-sm">
+                Complete weekly goals for rewards
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="pt-0">
+              <Button className="w-full h-12" size="lg" variant="outline">
+                View Challenges
               </Button>
             </CardContent>
           </Card>
