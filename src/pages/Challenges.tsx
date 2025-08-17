@@ -5,7 +5,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Progress } from '@/components/ui/progress';
-import { ArrowLeft, Trophy, Target, Clock, Users, Crown, Upload, Zap } from 'lucide-react';
+import { ArrowLeft, Trophy, Target, Clock, Users, Crown, Upload, Zap, Phone, Star, TrendingUp, Calendar, Flame, Shield } from 'lucide-react';
 import { toast } from 'sonner';
 import { supabase } from '@/integrations/supabase/client';
 import SEO from '@/components/SEO';
@@ -105,6 +105,149 @@ const Challenges = () => {
             const improvement = calls[calls.length - 1].confidence_score - calls[0].confidence_score;
             actualProgress = Math.max(0, improvement);
           }
+        } else if (challenge.challenge_type === 'live_calls') {
+          const { count } = await supabase
+            .from('calls')
+            .select('*', { count: 'exact', head: true })
+            .eq('user_id', user?.id)
+            .eq('call_status', 'completed')
+            .gte('created_at', new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString());
+          
+          actualProgress = count || 0;
+        } else if (challenge.challenge_type === 'difficulty_calls') {
+          const { count } = await supabase
+            .from('calls')
+            .select('*', { count: 'exact', head: true })
+            .eq('user_id', user?.id)
+            .eq('call_status', 'completed')
+            .gte('difficulty_level', 5)
+            .gte('created_at', new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString());
+          
+          actualProgress = count || 0;
+        } else if (challenge.challenge_type === 'rookie_calls') {
+          const { count } = await supabase
+            .from('calls')
+            .select('*', { count: 'exact', head: true })
+            .eq('user_id', user?.id)
+            .eq('call_status', 'completed')
+            .lte('difficulty_level', 3)
+            .gte('created_at', new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString());
+          
+          actualProgress = count || 0;
+        } else if (challenge.challenge_type === 'pro_calls') {
+          const { count } = await supabase
+            .from('calls')
+            .select('*', { count: 'exact', head: true })
+            .eq('user_id', user?.id)
+            .eq('call_status', 'completed')
+            .gte('difficulty_level', 7)
+            .lte('difficulty_level', 10)
+            .gte('created_at', new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString());
+          
+          actualProgress = count || 0;
+        } else if (challenge.challenge_type === 'master_closes') {
+          const { count } = await supabase
+            .from('calls')
+            .select('*', { count: 'exact', head: true })
+            .eq('user_id', user?.id)
+            .eq('call_status', 'completed')
+            .eq('successful_sale', true)
+            .gte('difficulty_level', 8)
+            .gte('created_at', new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString());
+          
+          actualProgress = count || 0;
+        } else if (challenge.challenge_type === 'successful_closes') {
+          const { count } = await supabase
+            .from('calls')
+            .select('*', { count: 'exact', head: true })
+            .eq('user_id', user?.id)
+            .eq('call_status', 'completed')
+            .eq('successful_sale', true)
+            .gte('created_at', new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString());
+          
+          actualProgress = count || 0;
+        } else if (challenge.challenge_type === 'objection_expert') {
+          const { count } = await supabase
+            .from('calls')
+            .select('*', { count: 'exact', head: true })
+            .eq('user_id', user?.id)
+            .eq('call_status', 'completed')
+            .gte('objection_handling_score', 80)
+            .gte('created_at', new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString());
+          
+          actualProgress = count || 0;
+        } else if (challenge.challenge_type === 'tone_master') {
+          const { count } = await supabase
+            .from('calls')
+            .select('*', { count: 'exact', head: true })
+            .eq('user_id', user?.id)
+            .eq('call_status', 'completed')
+            .gte('tone_score', 85)
+            .gte('created_at', new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString());
+          
+          actualProgress = count || 0;
+        } else if (challenge.challenge_type === 'daily_calls') {
+          // Count unique days with at least 1 call
+          const { data: dailyStats } = await supabase
+            .from('user_daily_stats')
+            .select('date')
+            .eq('user_id', user?.id)
+            .gte('calls_completed', 1)
+            .gte('date', new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString().split('T')[0]);
+          
+          actualProgress = dailyStats?.length || 0;
+        } else if (challenge.challenge_type === 'closing_streak') {
+          // This would need a more complex query to track consecutive successful sales
+          const { data: successfulCalls } = await supabase
+            .from('calls')
+            .select('successful_sale, created_at')
+            .eq('user_id', user?.id)
+            .eq('call_status', 'completed')
+            .eq('successful_sale', true)
+            .gte('created_at', new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString())
+            .order('created_at', { ascending: true });
+          
+          // Calculate longest streak of consecutive successful calls
+          let maxStreak = 0;
+          let currentStreak = 0;
+          
+          successfulCalls?.forEach(() => {
+            currentStreak++;
+            maxStreak = Math.max(maxStreak, currentStreak);
+          });
+          
+          actualProgress = maxStreak;
+        } else if (challenge.challenge_type === 'mixed_challenge') {
+          // Upload 2 calls + Complete 3 live calls + 1 AI replay
+          const [uploadsCount, liveCalls, replays] = await Promise.all([
+            supabase.from('call_uploads').select('*', { count: 'exact', head: true })
+              .eq('user_id', user?.id).eq('status', 'completed')
+              .gte('created_at', new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString()),
+            supabase.from('calls').select('*', { count: 'exact', head: true })
+              .eq('user_id', user?.id).eq('call_status', 'completed')
+              .gte('created_at', new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString()),
+            supabase.from('ai_replays').select('*', { count: 'exact', head: true })
+              .eq('user_id', user?.id)
+              .gte('created_at', new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString())
+          ]);
+          
+          const uploadProgress = Math.min(2, uploadsCount.count || 0);
+          const liveCallProgress = Math.min(3, liveCalls.count || 0);
+          const replayProgress = Math.min(1, replays.count || 0);
+          
+          actualProgress = uploadProgress + liveCallProgress + replayProgress;
+        } else if (challenge.challenge_type === 'skills_showcase') {
+          const { count } = await supabase
+            .from('calls')
+            .select('*', { count: 'exact', head: true })
+            .eq('user_id', user?.id)
+            .eq('call_status', 'completed')
+            .gte('tone_score', 75)
+            .gte('objection_handling_score', 75)
+            .gte('closing_score', 75)
+            .gte('created_at', new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString());
+          
+          actualProgress = count || 0;
         }
 
         // Update progress in database
@@ -173,7 +316,70 @@ const Challenges = () => {
       case 'upload_calls': return Upload;
       case 'improve_score': return Target;
       case 'complete_replays': return Zap;
+      case 'live_calls': return Phone;
+      case 'difficulty_calls': return TrendingUp;
+      case 'rookie_calls': return Star;
+      case 'pro_calls': return Shield;
+      case 'master_closes': return Crown;
+      case 'successful_closes': return Trophy;
+      case 'objection_expert': return Target;
+      case 'tone_master': return Star;
+      case 'daily_calls': return Calendar;
+      case 'closing_streak': return Flame;
+      case 'mixed_challenge': return Users;
+      case 'skills_showcase': return Crown;
       default: return Trophy;
+    }
+  };
+
+  const getChallengeActionButton = (challenge: Challenge) => {
+    const difficulty = challenge.challenge_type === 'rookie_calls' ? 2 : 
+                      challenge.challenge_type === 'pro_calls' ? 8 :
+                      challenge.challenge_type === 'master_closes' ? 9 : 5;
+
+    switch (challenge.challenge_type) {
+      case 'live_calls':
+      case 'difficulty_calls':
+      case 'rookie_calls':
+      case 'pro_calls':
+      case 'master_closes':
+      case 'successful_closes':
+      case 'objection_expert':
+      case 'tone_master':
+      case 'closing_streak':
+      case 'skills_showcase':
+        return (
+          <Button 
+            size="sm" 
+            onClick={() => navigate(`/call-simulation?difficulty=${difficulty}`)}
+            className="mt-2"
+          >
+            <Phone className="h-3 w-3 mr-1" />
+            Start Call (Difficulty {difficulty})
+          </Button>
+        );
+      case 'mixed_challenge':
+        return (
+          <div className="flex gap-2 mt-2">
+            <Button 
+              size="sm" 
+              variant="outline"
+              onClick={() => navigate('/call-upload')}
+            >
+              <Upload className="h-3 w-3 mr-1" />
+              Upload
+            </Button>
+            <Button 
+              size="sm"
+              onClick={() => navigate('/call-simulation')}
+            >
+              <Phone className="h-3 w-3 mr-1" />
+              Live Call
+            </Button>
+          </div>
+        );
+      default:
+        return null;
     }
   };
 
@@ -288,6 +494,7 @@ const Challenges = () => {
                             <p className="text-xs text-muted-foreground">
                               Ends {new Date(challenge.end_date).toLocaleDateString()}
                             </p>
+                            {getChallengeActionButton(challenge)}
                           </div>
                         </CardContent>
                       </Card>
@@ -305,14 +512,24 @@ const Challenges = () => {
                   </CardDescription>
                 </CardHeader>
                 <CardContent>
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
                     <Button onClick={() => navigate('/call-upload')} className="justify-start">
                       <Upload className="h-4 w-4 mr-2" />
                       Upload Call
                     </Button>
-                    <Button variant="outline" onClick={() => navigate('/call-simulation')} className="justify-start">
+                    <Button onClick={() => navigate('/call-simulation?difficulty=3')} className="justify-start">
+                      <Phone className="h-4 w-4 mr-2" />
+                      Easy Call
+                    </Button>
+                    <Button onClick={() => navigate('/call-simulation?difficulty=7')} className="justify-start">
+                      <Phone className="h-4 w-4 mr-2" />
+                      Hard Call
+                    </Button>
+                  </div>
+                  <div className="mt-3">
+                    <Button variant="outline" onClick={() => navigate('/ai-replay')} className="w-full justify-start">
                       <Zap className="h-4 w-4 mr-2" />
-                      Practice Call
+                      AI Replay Practice
                     </Button>
                   </div>
                 </CardContent>
