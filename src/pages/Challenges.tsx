@@ -53,11 +53,10 @@ const Challenges = () => {
 
   const fetchLeaderboard = async () => {
     try {
-      // Calculate comprehensive scores for all users who have activity
+      // Calculate comprehensive scores for all users
       const { data: allUsers, error: usersError } = await supabase
         .from('profiles')
-        .select('user_id, first_name, last_name')
-        .not('first_name', 'is', null); // Only include users with names
+        .select('user_id, first_name, last_name');
 
       if (usersError) throw usersError;
 
@@ -134,17 +133,16 @@ const Challenges = () => {
         };
       }));
 
-      // Filter out users with zero scores and sort by score
-      const activeUsers = leaderboardScores
-        .filter(user => user.total_score > 0)
+      // Filter users and sort by score - show all users, even with 0 scores
+      const allUsersWithScores = leaderboardScores
         .sort((a, b) => b.total_score - a.total_score)
         .map((user, index) => ({ ...user, rank: index + 1 }));
 
-      // Return top 10 and ensure current user is included
-      const currentUserEntry = activeUsers.find(entry => entry.user_id === user?.id);
-      const topUsers = activeUsers.slice(0, 10);
+      // Return top 15 and ensure current user is included
+      const currentUserEntry = allUsersWithScores.find(entry => entry.user_id === user?.id);
+      const topUsers = allUsersWithScores.slice(0, 15);
       
-      // If current user is not in top 10, add them
+      // If current user is not in top 15, add them
       if (currentUserEntry && !topUsers.find(u => u.user_id === user?.id)) {
         topUsers.push(currentUserEntry);
       }
@@ -678,7 +676,7 @@ const Challenges = () => {
                           <div>
                             <div className="font-medium text-sm">
                               {entry.user_id === user?.id ? 'You' : 
-                               `${entry.profile?.first_name || 'User'} ${entry.profile?.last_name || ''}`.trim()}
+                               `${entry.profile?.first_name || 'User'} ${(entry.profile?.last_name || '').charAt(0) || ''}`.trim()}
                             </div>
                             <div className="text-xs text-muted-foreground">
                               {entry.total_score} points
