@@ -168,19 +168,19 @@ serve(async (req) => {
     if (!hasBasicParticipation) {
       console.log('No participation detected');
       const analysis = {
-        confidence_score: 0,
-        objection_handling_score: 0,
-        clarity_score: 0,
-        persuasiveness_score: 0,
-        tone_score: 0,
-        overall_pitch_score: 0,
-        closing_score: 0,
-        overall_score: 0,
+        confidence_score: 1,
+        objection_handling_score: 1,
+        clarity_score: 1,
+        persuasiveness_score: 1,
+        tone_score: 1,
+        overall_pitch_score: 1,
+        closing_score: 1,
+        overall_score: 1,
         successful_sale: false,
-        feedback: "No sales conversation detected. You need to actively participate in the call by speaking to the prospect."
+        feedback: "No sales conversation detected. Assigned minimum score (1/10). Please actively participate by speaking to the prospect to receive a full analysis."
       };
       
-      console.log('Using zero scores for no participation');
+      console.log('Using minimum scores (1) for no participation');
       
       // Update call record with analysis
       const { error: updateError } = await supabaseService
