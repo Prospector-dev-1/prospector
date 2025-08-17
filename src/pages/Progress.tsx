@@ -349,7 +349,7 @@ const Progress = () => {
                        <XAxis dataKey="date" />
                        <YAxis domain={[0, 100]} />
                        <Tooltip formatter={(value, name, props) => [`${value}%`, `Confidence (${props.payload.source === 'live' ? 'Live Call' : 'Upload'})`]} />
-                       <Line type="monotone" dataKey="score" stroke="hsl(var(--primary))" strokeWidth={2} dot={props => <circle cx={props.cx} cy={props.cy} r={4} fill={props.payload.source === 'live' ? "hsl(var(--primary))" : "hsl(var(--accent))"} stroke="white" strokeWidth={2} />} />
+                       <Line type="monotone" dataKey="score" stroke="hsl(var(--primary))" strokeWidth={2} dot={false} />
                      </LineChart>
                    </ResponsiveContainer>}
               </CardContent>
