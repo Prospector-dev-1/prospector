@@ -12,7 +12,7 @@ serve(async (req) => {
   }
 
   try {
-    console.log('Get-leaderboard function called');
+    console.log('Get-leaderboard function called with avatar support');
     
     const supabaseUrl = Deno.env.get('SUPABASE_URL');
     const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY');
