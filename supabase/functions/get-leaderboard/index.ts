@@ -104,7 +104,7 @@ serve(async (req) => {
 
       return {
         user_id: userProfile.user_id,
-        total_score: totalScore,
+        score: totalScore,
         rank: 0, // Will be calculated after sorting
         profile: {
           // Only expose first name and last initial for privacy
@@ -116,7 +116,7 @@ serve(async (req) => {
 
     // Sort by score and assign ranks
     const allUsersWithScores = leaderboardScores
-      .sort((a, b) => b.total_score - a.total_score)
+      .sort((a, b) => b.score - a.score)
       .map((user, index) => ({ ...user, rank: index + 1 }));
 
     // Return top 15 users
@@ -124,7 +124,7 @@ serve(async (req) => {
 
     console.log(`Returning ${topUsers.length} users in leaderboard`);
 
-    return new Response(JSON.stringify({ leaderboard: topUsers }), {
+    return new Response(JSON.stringify(topUsers), {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       status: 200
     });

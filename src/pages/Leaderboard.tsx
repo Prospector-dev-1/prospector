@@ -39,10 +39,12 @@ const Leaderboard = () => {
         return;
       }
 
-      setLeaderboard(data || []);
+      // Ensure data is an array
+      const leaderboardData = Array.isArray(data) ? data : [];
+      setLeaderboard(leaderboardData);
       
       // Find current user's rank
-      const currentUserEntry = data?.find((entry: LeaderboardEntry) => entry.user_id === user?.id);
+      const currentUserEntry = leaderboardData.find((entry: LeaderboardEntry) => entry.user_id === user?.id);
       setUserRank(currentUserEntry?.rank || null);
     } catch (error) {
       console.error('Error fetching leaderboard:', error);
