@@ -44,7 +44,7 @@ const MobileBottomNav = () => {
       label: 'Profile',
       icon: User,
       path: '/profile',
-      badge: profile?.credits || 0,
+      badge: null,
     },
   ];
 
