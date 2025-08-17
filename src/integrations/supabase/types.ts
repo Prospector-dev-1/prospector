@@ -496,9 +496,11 @@ export type Database = {
       user_challenge_progress: {
         Row: {
           challenge_id: string
+          claimed_at: string | null
           completed: boolean
           completed_at: string | null
           created_at: string
+          credits_claimed: boolean
           current_progress: number
           id: string
           updated_at: string
@@ -506,9 +508,11 @@ export type Database = {
         }
         Insert: {
           challenge_id: string
+          claimed_at?: string | null
           completed?: boolean
           completed_at?: string | null
           created_at?: string
+          credits_claimed?: boolean
           current_progress?: number
           id?: string
           updated_at?: string
@@ -516,9 +520,11 @@ export type Database = {
         }
         Update: {
           challenge_id?: string
+          claimed_at?: string | null
           completed?: boolean
           completed_at?: string | null
           created_at?: string
+          credits_claimed?: boolean
           current_progress?: number
           id?: string
           updated_at?: string

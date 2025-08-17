@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
+import { toast } from '@/hooks/use-toast';
 import { useNavigate } from 'react-router-dom';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -7,8 +8,8 @@ import { Badge } from '@/components/ui/badge';
 import { Progress } from '@/components/ui/progress';
 import { ArrowLeft, Trophy, Target, Clock, Users, Crown, Upload, Zap, Phone, Star, TrendingUp, Calendar, Flame, Shield, ChevronDown } from 'lucide-react';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
-import { toast } from 'sonner';
 import { supabase } from '@/integrations/supabase/client';
+import { cn } from '@/lib/utils';
 import SEO from '@/components/SEO';
 
 interface Challenge {
@@ -26,6 +27,8 @@ interface UserProgress {
   current_progress: number;
   completed: boolean;
   completed_at: string | null;
+  credits_claimed?: boolean;
+  claimed_at?: string | null;
 }
 
 interface LeaderboardEntry {
@@ -40,14 +43,13 @@ interface LeaderboardEntry {
 }
 
 const Challenges = () => {
-  const { user, profile } = useAuth();
+  const { user, profile, refreshProfile } = useAuth();
   const navigate = useNavigate();
   const [challenges, setChallenges] = useState<Challenge[]>([]);
   const [userProgress, setUserProgress] = useState<UserProgress[]>([]);
   const [leaderboard, setLeaderboard] = useState<LeaderboardEntry[]>([]);
   const [loading, setLoading] = useState(true);
   const [userRank, setUserRank] = useState<number | null>(null);
-  const [showCompletedChallenges, setShowCompletedChallenges] = useState(false);
 
   useEffect(() => {
     if (!user) return;
@@ -56,9 +58,6 @@ const Challenges = () => {
 
   const fetchLeaderboard = async () => {
     try {
-      console.log('Fetching leaderboard from secure endpoint...');
-      
-      // Call the secure edge function that uses service role
       const { data, error } = await supabase.functions.invoke('get-leaderboard');
       
       if (error) {
@@ -66,9 +65,6 @@ const Challenges = () => {
         return [];
       }
       
-      console.log('Challenges page leaderboard data:', data);
-      
-      // Extract the leaderboard array from the response
       let leaderboardData = [];
       if (data && data.leaderboard && Array.isArray(data.leaderboard)) {
         leaderboardData = data.leaderboard;
@@ -76,17 +72,14 @@ const Challenges = () => {
         leaderboardData = data;
       }
       
-      // Find current user's entry and add to top users if not already included
       const currentUserEntry = leaderboardData.find((entry: any) => entry.user_id === user?.id);
       let topUsers = leaderboardData.slice(0, 15);
       
-      // If current user is not in top 15, we need to fetch their rank separately
       if (currentUserEntry && !topUsers.find((u: any) => u.user_id === user?.id)) {
         topUsers.push(currentUserEntry);
       }
       
       return topUsers;
-
     } catch (error) {
       console.error('Error fetching leaderboard:', error);
       return [];
@@ -94,312 +87,274 @@ const Challenges = () => {
   };
 
   const fetchChallengesData = async () => {
+    if (!user) return;
+
     try {
-      // Fetch active challenges
+      setLoading(true);
+      
+      // Fetch challenges
       const { data: challengesData, error: challengesError } = await supabase
         .from('challenges')
         .select('*')
         .order('created_at', { ascending: false });
 
-      if (challengesError) throw challengesError;
+      if (challengesError) {
+        console.error('Error fetching challenges:', challengesError);
+        return;
+      }
 
       // Fetch user progress
       const { data: progressData, error: progressError } = await supabase
         .from('user_challenge_progress')
         .select('*')
-        .eq('user_id', user?.id);
+        .eq('user_id', user.id);
 
-      if (progressError) throw progressError;
+      if (progressError) {
+        console.error('Error fetching user progress:', progressError);
+        return;
+      }
 
-      // Calculate actual progress for each challenge type
-      const updatedProgress = await Promise.all((challengesData || []).map(async (challenge) => {
+      // Calculate actual progress for each challenge
+      for (const challenge of challengesData || []) {
+        const userProgress = progressData?.find(p => p.challenge_id === challenge.id);
         let actualProgress = 0;
-
-        if (challenge.challenge_type === 'upload_calls') {
-          const { count } = await supabase
-            .from('call_uploads')
-            .select('*', { count: 'exact', head: true })
-            .eq('user_id', user?.id)
-            .eq('status', 'completed')
-          
-          actualProgress = count || 0;
-        } else if (challenge.challenge_type === 'complete_replays') {
-          const { count } = await supabase
-            .from('ai_replays')
-            .select('*', { count: 'exact', head: true })
-            .eq('user_id', user?.id)
-          
-          actualProgress = count || 0;
-        } else if (challenge.challenge_type === 'improve_score') {
-          // For improvement challenges, check the difference between first and last call this week
-          const { data: calls } = await supabase
-            .from('call_uploads')
-            .select('confidence_score, created_at')
-            .eq('user_id', user?.id)
-            .eq('status', 'completed')
-            .order('created_at', { ascending: true });
-
-          if (calls && calls.length >= 2) {
-            const improvement = calls[calls.length - 1].confidence_score - calls[0].confidence_score;
-            actualProgress = Math.max(0, improvement);
-          }
-        } else if (challenge.challenge_type === 'live_calls') {
-          const { count } = await supabase
-            .from('calls')
-            .select('*', { count: 'exact', head: true })
-            .eq('user_id', user?.id)
-            .eq('call_status', 'completed')
-          
-          actualProgress = count || 0;
-        } else if (challenge.challenge_type === 'difficulty_calls') {
-          const { count } = await supabase
-            .from('calls')
-            .select('*', { count: 'exact', head: true })
-            .eq('user_id', user?.id)
-            .eq('call_status', 'completed')
-            .gte('difficulty_level', 5)
-          
-          actualProgress = count || 0;
-        } else if (challenge.challenge_type === 'rookie_calls') {
-          const { count } = await supabase
-            .from('calls')
-            .select('*', { count: 'exact', head: true })
-            .eq('user_id', user?.id)
-            .eq('call_status', 'completed')
-            .gte('difficulty_level', 1)
-            .lte('difficulty_level', 3)
-          
-          actualProgress = count || 0;
-        } else if (challenge.challenge_type === 'pro_calls') {
-          const { count } = await supabase
-            .from('calls')
-            .select('*', { count: 'exact', head: true })
-            .eq('user_id', user?.id)
-            .eq('call_status', 'completed')
-            .gte('difficulty_level', 7)
-            .lte('difficulty_level', 10)
-          
-          actualProgress = count || 0;
-        } else if (challenge.challenge_type === 'master_closes') {
-          const { count } = await supabase
-            .from('calls')
-            .select('*', { count: 'exact', head: true })
-            .eq('user_id', user?.id)
-            .eq('call_status', 'completed')
-            .eq('successful_sale', true)
-            .gte('difficulty_level', 8)
-          
-          actualProgress = count || 0;
-        } else if (challenge.challenge_type === 'successful_closes') {
-          const { count } = await supabase
-            .from('calls')
-            .select('*', { count: 'exact', head: true })
-            .eq('user_id', user?.id)
-            .eq('call_status', 'completed')
-            .eq('successful_sale', true)
-          
-          actualProgress = count || 0;
-        } else if (challenge.challenge_type === 'objection_expert') {
-          const { count } = await supabase
-            .from('calls')
-            .select('*', { count: 'exact', head: true })
-            .eq('user_id', user?.id)
-            .eq('call_status', 'completed')
-            .gte('objection_handling_score', 80)
-          
-          actualProgress = count || 0;
-        } else if (challenge.challenge_type === 'tone_master') {
-          const { count } = await supabase
-            .from('calls')
-            .select('*', { count: 'exact', head: true })
-            .eq('user_id', user?.id)
-            .eq('call_status', 'completed')
-            .gte('tone_score', 85)
-          
-          actualProgress = count || 0;
-        } else if (challenge.challenge_type === 'daily_calls') {
-          // Count unique days with at least 1 call
-          const { data: dailyStats } = await supabase
-            .from('user_daily_stats')
-            .select('date')
-            .eq('user_id', user?.id)
-            .gte('calls_completed', 1)
+        const isCompleted = userProgress?.completed || false;
+        const creditsAlreadyClaimed = userProgress?.credits_claimed || false;
+        
+        switch (challenge.challenge_type) {
+          case 'daily_calls':
+            const today = new Date().toISOString().split('T')[0];
+            const { data: todayCalls } = await supabase
+              .from('calls')
+              .select('id')
+              .eq('user_id', user.id)
+              .gte('created_at', `${today}T00:00:00.000Z`)
+              .lt('created_at', `${new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString().split('T')[0]}T00:00:00.000Z`);
+            actualProgress = todayCalls?.length || 0;
+            break;
             
-          
-          actualProgress = dailyStats?.length || 0;
-        } else if (challenge.challenge_type === 'closing_streak') {
-          // This would need a more complex query to track consecutive successful sales
-          const { data: successfulCalls } = await supabase
-            .from('calls')
-            .select('successful_sale, created_at')
-            .eq('user_id', user?.id)
-            .eq('call_status', 'completed')
-            .eq('successful_sale', true)
-            .order('created_at', { ascending: true });
-          
-          // Calculate longest streak of consecutive successful calls
-          let maxStreak = 0;
-          let currentStreak = 0;
-          
-          successfulCalls?.forEach(() => {
-            currentStreak++;
-            maxStreak = Math.max(maxStreak, currentStreak);
-          });
-          
-          actualProgress = maxStreak;
-        } else if (challenge.challenge_type === 'mixed_challenge') {
-          // Upload 2 calls + Complete 3 live calls + 1 AI replay
-          const [uploadsCount, liveCalls, replays] = await Promise.all([
-            supabase.from('call_uploads').select('*', { count: 'exact', head: true })
-              .eq('user_id', user?.id).eq('status', 'completed'),
-            supabase.from('calls').select('*', { count: 'exact', head: true })
-              .eq('user_id', user?.id).eq('call_status', 'completed'),
-              
-            supabase.from('ai_replays').select('*', { count: 'exact', head: true })
-              .eq('user_id', user?.id)
-          ]);
-          
-          const uploadProgress = Math.min(2, uploadsCount.count || 0);
-          const liveCallProgress = Math.min(3, liveCalls.count || 0);
-          const replayProgress = Math.min(1, replays.count || 0);
-          
-          actualProgress = uploadProgress + liveCallProgress + replayProgress;
-        } else if (challenge.challenge_type === 'skills_showcase') {
-          const { count } = await supabase
-            .from('calls')
-            .select('*', { count: 'exact', head: true })
-            .eq('user_id', user?.id)
-            .eq('call_status', 'completed')
-            .gte('tone_score', 75)
-            .gte('objection_handling_score', 75)
-            .gte('closing_score', 75)
+          case 'weekly_calls':
+            const weekStart = new Date();
+            weekStart.setDate(weekStart.getDate() - weekStart.getDay());
+            weekStart.setHours(0, 0, 0, 0);
+            const { data: weekCalls } = await supabase
+              .from('calls')
+              .select('id')
+              .eq('user_id', user.id)
+              .gte('created_at', weekStart.toISOString());
+            actualProgress = weekCalls?.length || 0;
+            break;
             
-          
-          actualProgress = count || 0;
+          case 'upload_calls':
+            const { data: uploads } = await supabase
+              .from('call_uploads')
+              .select('id')
+              .eq('user_id', user.id)
+              .gte('created_at', challenge.start_date)
+              .lte('created_at', challenge.end_date);
+            actualProgress = uploads?.length || 0;
+            break;
+            
+          case 'ai_replay_sessions':
+            const { data: replays } = await supabase
+              .from('ai_replays')
+              .select('id')
+              .eq('user_id', user.id)
+              .gte('created_at', challenge.start_date)
+              .lte('created_at', challenge.end_date);
+            actualProgress = replays?.length || 0;
+            break;
+            
+          case 'high_score':
+            const { data: bestCall } = await supabase
+              .from('calls')
+              .select('overall_score')
+              .eq('user_id', user.id)
+              .gte('created_at', challenge.start_date)
+              .lte('created_at', challenge.end_date)
+              .order('overall_score', { ascending: false })
+              .limit(1);
+            actualProgress = bestCall?.[0]?.overall_score || 0;
+            break;
+            
+          default:
+            actualProgress = userProgress?.current_progress || 0;
         }
 
-        // Update progress in database
-        const existingProgress = progressData?.find(p => p.challenge_id === challenge.id);
-        const isCompleted = actualProgress >= challenge.target_value;
+        // Check if challenge should be marked as completed
+        const isNowCompleted = actualProgress >= challenge.target_value;
+        const wasCompleted = userProgress?.completed || false;
 
-        if (existingProgress) {
-          if (existingProgress.current_progress !== actualProgress || (isCompleted && !existingProgress.completed)) {
-            await supabase
-              .from('user_challenge_progress')
-              .update({
-                current_progress: actualProgress,
-                completed: isCompleted,
-                completed_at: isCompleted ? new Date().toISOString() : null
-              })
-              .eq('id', existingProgress.id);
-          }
-        } else {
+        // Update progress if it has changed or if completion status changed
+        if (actualProgress !== (userProgress?.current_progress || 0) || isNowCompleted !== wasCompleted) {
           await supabase
             .from('user_challenge_progress')
-            .insert({
-              user_id: user?.id,
+            .upsert({
+              user_id: user.id,
               challenge_id: challenge.id,
               current_progress: actualProgress,
-              completed: isCompleted,
-              completed_at: isCompleted ? new Date().toISOString() : null
+              completed: isNowCompleted,
+              completed_at: isNowCompleted && !wasCompleted ? new Date().toISOString() : userProgress?.completed_at,
+              credits_claimed: userProgress?.credits_claimed || false,
+              claimed_at: userProgress?.claimed_at,
+              updated_at: new Date().toISOString()
             });
+
+          // Show completion notification for newly completed challenges
+          if (isNowCompleted && !wasCompleted) {
+            toast({
+              title: "🎉 Challenge Completed!",
+              description: `Claim your ${challenge.reward_credits} credits from the Challenges page!`,
+              duration: 5000,
+            });
+          }
         }
+      }
 
-        return {
-          challenge_id: challenge.id,
-          current_progress: actualProgress,
-          completed: isCompleted,
-          completed_at: isCompleted ? new Date().toISOString() : null
-        };
-      }));
+      // Fetch updated progress data
+      const { data: updatedProgressData } = await supabase
+        .from('user_challenge_progress')
+        .select('*')
+        .eq('user_id', user.id);
 
-      // Fetch real leaderboard data
+      // Fetch leaderboard
       const leaderboardData = await fetchLeaderboard();
       const currentUserRank = leaderboardData.find(entry => entry.user_id === user?.id)?.rank;
 
       setChallenges(challengesData || []);
-      setUserProgress(updatedProgress);
+      setUserProgress(updatedProgressData || []);
       setLeaderboard(leaderboardData);
       setUserRank(currentUserRank || null);
 
     } catch (error) {
       console.error('Error fetching challenges data:', error);
-      toast.error('Failed to load challenges');
+      toast({
+        title: "Error",
+        description: "Failed to load challenges",
+        variant: "destructive",
+      });
     } finally {
       setLoading(false);
     }
   };
 
-  const getProgressForChallenge = (challengeId: string) => {
+  const getProgressForChallenge = (challengeId: string): UserProgress | undefined => {
     return userProgress.find(p => p.challenge_id === challengeId);
+  };
+
+  const claimChallengeCredits = async (challengeId: string, rewardCredits: number) => {
+    try {
+      const { data, error } = await supabase.functions.invoke('claim-challenge-credits', {
+        body: { challengeId }
+      });
+
+      if (error) {
+        console.error('Error claiming credits:', error);
+        toast({
+          title: "Error",
+          description: "Failed to claim credits. Please try again.",
+          variant: "destructive",
+        });
+        return;
+      }
+
+      if (data?.success) {
+        toast({
+          title: "Credits Claimed! 🎉",
+          description: `${rewardCredits} credits have been added to your account!`,
+        });
+        
+        // Refresh challenges data and user profile
+        await fetchChallengesData();
+        await refreshProfile();
+      }
+    } catch (error) {
+      console.error('Error claiming credits:', error);
+      toast({
+        title: "Error",
+        description: "Failed to claim credits. Please try again.",
+        variant: "destructive",
+      });
+    }
   };
 
   const getChallengeIcon = (type: string) => {
     switch (type) {
-      case 'upload_calls': return Upload;
-      case 'improve_score': return Target;
-      case 'complete_replays': return Zap;
-      case 'live_calls': return Phone;
-      case 'difficulty_calls': return TrendingUp;
-      case 'rookie_calls': return Star;
-      case 'pro_calls': return Shield;
-      case 'master_closes': return Crown;
-      case 'successful_closes': return Trophy;
-      case 'objection_expert': return Target;
-      case 'tone_master': return Star;
-      case 'daily_calls': return Calendar;
-      case 'closing_streak': return Flame;
-      case 'mixed_challenge': return Users;
-      case 'skills_showcase': return Crown;
-      default: return Trophy;
+      case 'daily_calls':
+      case 'weekly_calls':
+        return Phone;
+      case 'upload_calls':
+        return Upload;
+      case 'ai_replay_sessions':
+        return Zap;
+      case 'high_score':
+        return Target;
+      default:
+        return Trophy;
     }
   };
 
-  const getChallengeActionButton = (challenge: Challenge) => {
-    const difficulty = challenge.challenge_type === 'rookie_calls' ? 2 : 
-                      challenge.challenge_type === 'pro_calls' ? 8 :
-                      challenge.challenge_type === 'master_closes' ? 9 : 5;
+  const getChallengeActionButton = (challenge: Challenge, progress?: UserProgress) => {
+    const isCompleted = progress?.completed || false;
+    const creditsAlreadyClaimed = progress?.credits_claimed || false;
 
+    // If challenge is completed but credits not claimed, show claim button
+    if (isCompleted && !creditsAlreadyClaimed) {
+      return (
+        <Button 
+          onClick={() => claimChallengeCredits(challenge.id, challenge.reward_credits)}
+          className="w-full bg-primary hover:bg-primary/90 text-primary-foreground font-semibold"
+        >
+          Claim {challenge.reward_credits} Credits 🎁
+        </Button>
+      );
+    }
+
+    // If challenge is completed and credits claimed, don't show any button (will be in dropdown)
+    if (isCompleted && creditsAlreadyClaimed) {
+      return null;
+    }
+
+    // Regular action buttons for active challenges
     switch (challenge.challenge_type) {
-      case 'live_calls':
-      case 'difficulty_calls':
-      case 'rookie_calls':
-      case 'pro_calls':
-      case 'master_closes':
-      case 'successful_closes':
-      case 'objection_expert':
-      case 'tone_master':
-      case 'closing_streak':
-      case 'skills_showcase':
+      case 'daily_calls':
+      case 'weekly_calls':
         return (
           <Button 
-            size="sm" 
-            onClick={() => navigate(`/call-simulation?difficulty=${difficulty}`)}
-            className="mt-2"
+            onClick={() => navigate('/call-simulation')}
+            className="w-full"
           >
-            <Phone className="h-3 w-3 mr-1" />
-            Start Call (Difficulty {difficulty})
+            Start Call
           </Button>
         );
-      case 'mixed_challenge':
+      case 'upload_calls':
         return (
-          <div className="flex gap-2 mt-2">
-            <Button 
-              size="sm" 
-              variant="outline"
-              onClick={() => navigate('/call-upload')}
-            >
-              <Upload className="h-3 w-3 mr-1" />
-              Upload
-            </Button>
-            <Button 
-              size="sm"
-              onClick={() => navigate('/call-simulation')}
-            >
-              <Phone className="h-3 w-3 mr-1" />
-              Live Call
-            </Button>
-          </div>
+          <Button 
+            onClick={() => navigate('/call-upload')}
+            variant="outline"
+            className="w-full"
+          >
+            Upload Call
+          </Button>
+        );
+      case 'ai_replay_sessions':
+        return (
+          <Button 
+            onClick={() => navigate('/ai-replay')}
+            variant="secondary"
+            className="w-full"
+          >
+            Start AI Replay
+          </Button>
+        );
+      case 'high_score':
+        return (
+          <Button 
+            onClick={() => navigate('/call-simulation')}
+            className="w-full"
+          >
+            Practice Call
+          </Button>
         );
       default:
         return null;
@@ -481,122 +436,118 @@ const Challenges = () => {
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
             {/* Challenges */}
             <div className="lg:col-span-2 space-y-6">
-              {/* Active Challenges */}
-              <div>
-                <h2 className="text-xl font-semibold mb-4">Active Challenges</h2>
-                <div className="space-y-4">
+              {/* Active and Completed but Unclaimed Challenges */}
+              <div className="space-y-4">
+                <h2 className="text-xl font-semibold text-foreground mb-4">Challenges</h2>
+                
+                {challenges
+                  .filter(challenge => {
+                    const progress = getProgressForChallenge(challenge.id);
+                    const isCompleted = progress?.completed || false;
+                    const creditsAlreadyClaimed = progress?.credits_claimed || false;
+                    // Show if not completed OR completed but credits not claimed
+                    return !isCompleted || (isCompleted && !creditsAlreadyClaimed);
+                  })
+                  .map((challenge) => {
+                    const progress = getProgressForChallenge(challenge.id);
+                    const Icon = getChallengeIcon(challenge.challenge_type);
+
+                    return (
+                      <Card key={challenge.id} className={cn(
+                        progress?.completed && !progress?.credits_claimed && "border-primary bg-primary/5"
+                      )}>
+                        <CardContent className="p-6">
+                          <div className="flex justify-between items-center mb-3">
+                            <div className="flex items-center gap-2">
+                              <Icon className="h-5 w-5 text-primary" />
+                              <h3 className="font-medium text-foreground">{challenge.name}</h3>
+                              {progress?.completed && !progress?.credits_claimed && (
+                                <Badge className="bg-primary text-primary-foreground animate-pulse">
+                                  Completed! 
+                                </Badge>
+                              )}
+                            </div>
+                            <Badge variant="outline" className="text-xs">
+                              {challenge.reward_credits} Credits
+                            </Badge>
+                          </div>
+                          
+                          <p className="text-sm text-muted-foreground mb-4">{challenge.description}</p>
+                          
+                          <div className="space-y-3">
+                            <div className="flex justify-between text-sm">
+                              <span className="text-muted-foreground">Progress</span>
+                              <span className="font-medium">
+                                {Math.min(progress?.current_progress || 0, challenge.target_value)}/{challenge.target_value}
+                              </span>
+                            </div>
+                            <Progress 
+                              value={(Math.min(progress?.current_progress || 0, challenge.target_value) / challenge.target_value) * 100} 
+                              className="w-full"
+                            />
+                            <div className="pt-2">
+                              {getChallengeActionButton(challenge, progress)}
+                            </div>
+                          </div>
+                        </CardContent>
+                      </Card>
+                    );
+                  })}
+              </div>
+              
+              <Collapsible>
+                <CollapsibleTrigger asChild>
+                  <Button variant="ghost" className="flex items-center gap-2 w-full justify-start">
+                    <ChevronDown className="h-4 w-4" />
+                    <span>Completed Challenges ({challenges.filter(c => {
+                      const progress = getProgressForChallenge(c.id);
+                      return progress?.completed && progress?.credits_claimed;
+                    }).length})</span>
+                  </Button>
+                </CollapsibleTrigger>
+                <CollapsibleContent className="space-y-4 mt-4">
                   {challenges
-                    .filter((challenge) => {
+                    .filter(challenge => {
                       const progress = getProgressForChallenge(challenge.id);
-                      return !progress?.completed;
+                      return progress?.completed && progress?.credits_claimed;
                     })
                     .map((challenge) => {
                       const progress = getProgressForChallenge(challenge.id);
                       const Icon = getChallengeIcon(challenge.challenge_type);
-                      const progressPercentage = Math.min(100, ((progress?.current_progress || 0) / challenge.target_value) * 100);
 
                       return (
-                        <Card key={challenge.id}>
-                          <CardHeader>
-                            <div className="flex items-center justify-between">
-                              <div className="flex items-center gap-3">
-                                <Icon className="h-5 w-5 text-primary" />
-                                <div>
-                                  <CardTitle className="text-base">{challenge.name}</CardTitle>
-                                  <CardDescription>{challenge.description}</CardDescription>
-                                </div>
+                        <Card key={challenge.id} className="opacity-75">
+                          <CardContent className="p-6">
+                            <div className="flex justify-between items-center mb-3">
+                              <div className="flex items-center gap-2">
+                                <Icon className="h-5 w-5 text-muted-foreground" />
+                                <h3 className="font-medium text-muted-foreground">{challenge.name}</h3>
+                                <Badge variant="secondary" className="text-xs">
+                                  ✓ Claimed
+                                </Badge>
                               </div>
-                              
                               <Badge variant="outline" className="text-xs">
-                                +{Number(challenge.reward_credits).toFixed(1)} credits
+                                {challenge.reward_credits} Credits
                               </Badge>
                             </div>
-                          </CardHeader>
-                          <CardContent>
-                            <div className="space-y-2">
+                            
+                            <p className="text-sm text-muted-foreground mb-4">{challenge.description}</p>
+                            
+                            <div className="space-y-3">
                               <div className="flex justify-between text-sm">
-                                <span>Progress: {progress?.current_progress || 0} / {challenge.target_value}</span>
-                                <span>{Math.round(progressPercentage)}%</span>
+                                <span className="text-muted-foreground">Progress</span>
+                                <span className="font-medium text-muted-foreground">
+                                  {challenge.target_value}/{challenge.target_value}
+                                </span>
                               </div>
-                              <Progress value={progressPercentage} className="h-2" />
-                              {getChallengeActionButton(challenge)}
+                              <Progress value={100} className="w-full" />
                             </div>
                           </CardContent>
                         </Card>
                       );
                     })}
-                </div>
-              </div>
-
-              {/* Completed Challenges */}
-              {challenges.filter((challenge) => {
-                const progress = getProgressForChallenge(challenge.id);
-                return progress?.completed;
-              }).length > 0 && (
-                <Collapsible open={showCompletedChallenges} onOpenChange={setShowCompletedChallenges}>
-                  <CollapsibleTrigger asChild>
-                    <Button variant="outline" className="w-full justify-between">
-                      <span>
-                        Completed Challenges ({challenges.filter((challenge) => {
-                          const progress = getProgressForChallenge(challenge.id);
-                          return progress?.completed;
-                        }).length})
-                      </span>
-                      <ChevronDown className={`h-4 w-4 transition-transform ${showCompletedChallenges ? 'rotate-180' : ''}`} />
-                    </Button>
-                  </CollapsibleTrigger>
-                  <CollapsibleContent className="space-y-4 mt-4">
-                    {challenges
-                      .filter((challenge) => {
-                        const progress = getProgressForChallenge(challenge.id);
-                        return progress?.completed;
-                      })
-                      .map((challenge) => {
-                        const progress = getProgressForChallenge(challenge.id);
-                        const Icon = getChallengeIcon(challenge.challenge_type);
-
-                        return (
-                          <Card key={challenge.id} className="opacity-75 border-success/30 bg-success/5">
-                            <CardHeader>
-                              <div className="flex items-center justify-between">
-                                <div className="flex items-center gap-3">
-                                  <Icon className="h-5 w-5 text-muted-foreground" />
-                                  <div>
-                                    <CardTitle className="text-base text-muted-foreground">{challenge.name}</CardTitle>
-                                    <CardDescription className="text-muted-foreground/70">{challenge.description}</CardDescription>
-                                  </div>
-                                </div>
-                                
-                                <div className="flex items-center gap-2">
-                                  <Badge variant="outline" className="text-xs text-muted-foreground border-muted-foreground/30">
-                                    +{Number(challenge.reward_credits).toFixed(1)} credits
-                                  </Badge>
-                                  <Badge variant="secondary" className="text-xs">
-                                    ✓ Complete
-                                  </Badge>
-                                </div>
-                              </div>
-                            </CardHeader>
-                            <CardContent>
-                              <div className="space-y-2">
-                                <div className="flex justify-between text-sm text-muted-foreground">
-                                  <span>Completed: {progress?.current_progress || 0} / {challenge.target_value}</span>
-                                  <span>100%</span>
-                                </div>
-                                <Progress value={100} className="h-2" />
-                                {progress?.completed_at && (
-                                  <p className="text-xs text-muted-foreground">
-                                    Completed {new Date(progress.completed_at).toLocaleDateString()}
-                                  </p>
-                                )}
-                              </div>
-                            </CardContent>
-                          </Card>
-                        );
-                      })}
-                  </CollapsibleContent>
-                </Collapsible>
-              )}
+                </CollapsibleContent>
+              </Collapsible>
 
               {/* Quick Actions */}
               <Card>
@@ -608,23 +559,17 @@ const Challenges = () => {
                 </CardHeader>
                 <CardContent>
                   <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-                    <Button onClick={() => navigate('/call-upload')} className="justify-start">
+                    <Button onClick={() => navigate('/call-upload')} variant="outline" className="justify-start">
                       <Upload className="h-4 w-4 mr-2" />
                       Upload Call
                     </Button>
-                    <Button onClick={() => navigate('/call-simulation?difficulty=3')} className="justify-start">
+                    <Button onClick={() => navigate('/call-simulation')} className="justify-start">
                       <Phone className="h-4 w-4 mr-2" />
-                      Easy Call
+                      Start Call
                     </Button>
-                    <Button onClick={() => navigate('/call-simulation?difficulty=7')} className="justify-start">
-                      <Phone className="h-4 w-4 mr-2" />
-                      Hard Call
-                    </Button>
-                  </div>
-                  <div className="mt-3">
-                    <Button variant="outline" onClick={() => navigate('/call-upload')} className="w-full justify-start">
+                    <Button onClick={() => navigate('/ai-replay')} variant="secondary" className="justify-start">
                       <Zap className="h-4 w-4 mr-2" />
-                      AI Replay Practice
+                      AI Replay
                     </Button>
                   </div>
                 </CardContent>
@@ -636,7 +581,7 @@ const Challenges = () => {
               <Card>
                 <CardHeader>
                   <CardTitle className="flex items-center gap-2">
-                    <Crown className="h-5 w-5" />
+                    <Trophy className="h-5 w-5" />
                     Leaderboard
                   </CardTitle>
                   <CardDescription>
@@ -645,7 +590,7 @@ const Challenges = () => {
                 </CardHeader>
                 <CardContent>
                   <div className="space-y-3">
-                    {leaderboard.map((entry, index) => (
+                    {leaderboard.map((entry) => (
                       <div 
                         key={entry.user_id} 
                         className={`flex items-center justify-between p-3 rounded-lg ${
@@ -682,22 +627,6 @@ const Challenges = () => {
                       </div>
                     ))}
                   </div>
-                  
-                  {userRank && (
-                    <div className="mt-4 p-3 bg-primary/5 rounded-lg text-center">
-                      <div className="text-sm font-medium text-primary">
-                        {userRank <= 3 ? '🏆' : userRank <= 10 ? '🎉' : '💪'} 
-                        {userRank <= 3 ? ` Top ${userRank}!` : 
-                         userRank <= Math.ceil(leaderboard.length * 0.25) ? ` Top ${Math.round((userRank / Math.max(leaderboard.length, 1)) * 100)}%!` :
-                         ' Keep climbing!'}
-                      </div>
-                      <div className="text-xs text-muted-foreground mt-1">
-                        {userRank <= 3 ? 'Outstanding performance!' :
-                         userRank <= 10 ? 'You\'re doing great!' :
-                         'Every challenge completed counts!'}
-                      </div>
-                    </div>
-                  )}
                 </CardContent>
               </Card>
             </div>

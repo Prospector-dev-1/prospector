@@ -3,12 +3,14 @@ import { useNavigate, useLocation } from 'react-router-dom';
 import { Home, Target, TrendingUp, Trophy, User } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { useAuth } from '@/contexts/AuthContext';
+import { useUnclaimedChallenges } from '@/hooks/useUnclaimedChallenges';
 import { cn } from '@/lib/utils';
 
 const MobileBottomNav = () => {
   const navigate = useNavigate();
   const location = useLocation();
   const { profile } = useAuth();
+  const { unclaimedCount } = useUnclaimedChallenges();
 
   const navItems = [
     {
@@ -23,7 +25,7 @@ const MobileBottomNav = () => {
       label: 'Challenges',
       icon: Target,
       path: '/challenges',
-      badge: null,
+      badge: unclaimedCount,
     },
     {
       id: 'leaderboard',
@@ -79,7 +81,10 @@ const MobileBottomNav = () => {
                   {item.badge && item.badge > 0 && (
                     <Badge 
                       variant="destructive" 
-                      className="absolute -top-2 -right-2 h-5 w-5 p-0 flex items-center justify-center text-xs"
+                      className={cn(
+                        "absolute -top-2 -right-2 h-5 w-5 p-0 flex items-center justify-center text-xs",
+                        item.id === 'challenges' && item.badge > 0 && "animate-pulse"
+                      )}
                     >
                       {item.badge > 99 ? '99+' : item.badge}
                     </Badge>
