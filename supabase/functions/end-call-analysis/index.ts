@@ -55,8 +55,43 @@ serve(async (req) => {
     console.log('Transcript length:', transcript.length);
     console.log('Duration:', duration);
 
+    // Clean up transcript to remove duplicates and repetitive text
+    function cleanTranscript(rawTranscript: string): string {
+      if (!rawTranscript) return '';
+      
+      // Split into lines and clean each line
+      const lines = rawTranscript.split('\n').map(line => line.trim()).filter(Boolean);
+      const cleanedLines: string[] = [];
+      
+      for (const line of lines) {
+        // Remove duplicate consecutive words/phrases within the same line
+        const words = line.split(' ');
+        const cleanedWords: string[] = [];
+        
+        for (let i = 0; i < words.length; i++) {
+          const word = words[i];
+          // Skip if this word is the same as the previous word (avoiding duplicates like "Hello? Hello?")
+          if (i === 0 || word !== words[i - 1]) {
+            cleanedWords.push(word);
+          }
+        }
+        
+        const cleanedLine = cleanedWords.join(' ');
+        
+        // Only add if this line is different from the previous line
+        if (cleanedLines.length === 0 || cleanedLines[cleanedLines.length - 1] !== cleanedLine) {
+          cleanedLines.push(cleanedLine);
+        }
+      }
+      
+      return cleanedLines.join(' ');
+    }
+
+    const cleanedTranscript = cleanTranscript(transcript);
+    console.log('Cleaned transcript:', cleanedTranscript);
+
     // Check if the transcript shows meaningful caller participation
-    const transcriptLower = transcript.toLowerCase();
+    const transcriptLower = cleanedTranscript.toLowerCase();
     const hasBasicParticipation = transcript.length > 30 && (
       transcriptLower.includes('hello') || 
       transcriptLower.includes('hi') || 
@@ -99,7 +134,7 @@ serve(async (req) => {
           closing_score: analysis.closing_score,
           overall_score: analysis.overall_score,
           successful_sale: analysis.successful_sale,
-          transcript: transcript,
+        transcript: cleanedTranscript,
           ai_feedback: analysis.feedback,
           call_status: 'completed'
         })
@@ -123,7 +158,7 @@ serve(async (req) => {
 Analyze this cold calling transcript and provide detailed, personalized feedback. The transcript shows a conversation between a CALLER (salesperson) and a PROSPECT (business owner).
 
 TRANSCRIPT:
-${transcript}
+${cleanedTranscript}
 
 TASK: Analyze the CALLER'S performance only. Provide scores (1-10) for each category and detailed personalized feedback.
 
@@ -222,7 +257,7 @@ Respond in this EXACT JSON format:
       console.log('All OpenAI models failed, using manual analysis');
       
       // Rigorous manual analysis based on actual sales performance
-      const transcriptLower = transcript.toLowerCase();
+      const transcriptLower = cleanedTranscript.toLowerCase();
       
       // Check for proper introduction (professional opening)
       const hasProperIntro = transcriptLower.includes('this is') || transcriptLower.includes('my name is') || transcriptLower.includes('calling from');
@@ -306,7 +341,7 @@ ${overallScore < 3 ? 'This was a weak sales call. Focus on: 1) Professional intr
         closing_score: analysis.closing_score,
         overall_score: analysis.overall_score,
         successful_sale: analysis.successful_sale,
-        transcript: transcript,
+        transcript: cleanedTranscript,
         ai_feedback: analysis.feedback,
         call_status: 'completed'
       })
