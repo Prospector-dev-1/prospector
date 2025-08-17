@@ -34,6 +34,8 @@ const Dashboard = () => {
   const [totalCallsCount, setTotalCallsCount] = useState<number>(0);
   const [thisWeekCallsCount, setThisWeekCallsCount] = useState<number>(0);
   const [loading, setLoading] = useState(true);
+  const [userRank, setUserRank] = useState<number | null>(null);
+  const [topUsers, setTopUsers] = useState<any[]>([]);
   useEffect(() => {
     fetchRecentCalls();
   }, [user]);
@@ -80,6 +82,14 @@ const Dashboard = () => {
         console.error('Error fetching this week call count:', thisWeekError);
       } else {
         setThisWeekCallsCount(thisWeekCount || 0);
+      }
+
+      // Fetch leaderboard data
+      const { data: leaderboardData } = await supabase.functions.invoke('get-leaderboard');
+      if (leaderboardData) {
+        setTopUsers(leaderboardData.slice(0, 3));
+        const currentUserEntry = leaderboardData.find((entry: any) => entry.user_id === user?.id);
+        setUserRank(currentUserEntry?.rank || null);
       }
     } catch (error) {
       console.error('Error fetching calls:', error);
@@ -185,6 +195,67 @@ const Dashboard = () => {
               onAction={() => navigate('/custom-script')}
             />
           </div>
+        </div>
+
+        {/* Leaderboard Preview */}
+        <div className="space-y-4">
+          <div className="flex items-center justify-between">
+            <h3 className="text-lg font-bold text-foreground">Weekly Leaderboard</h3>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => navigate('/leaderboard')}
+            >
+              View All
+            </Button>
+          </div>
+          
+          <Card className="glass-card">
+            <CardContent className="p-4">
+              {loading ? (
+                <div className="text-center py-4">
+                  <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-primary mx-auto"></div>
+                </div>
+              ) : topUsers.length === 0 ? (
+                <div className="text-center py-4">
+                  <Trophy className="h-8 w-8 mx-auto mb-2 text-muted-foreground" />
+                  <p className="text-sm text-muted-foreground">No rankings yet</p>
+                </div>
+              ) : (
+                <div className="space-y-2">
+                  {topUsers.map((entry, index) => (
+                    <div
+                      key={entry.user_id}
+                      className={`flex items-center justify-between p-2 rounded-lg ${
+                        entry.user_id === user?.id ? 'bg-primary/10' : 'bg-muted/20'
+                      }`}
+                    >
+                      <div className="flex items-center space-x-2">
+                        <span className="text-sm font-bold">#{entry.rank}</span>
+                        <span className="text-sm">
+                          {entry.profile.first_name} {entry.profile.last_initial}.
+                        </span>
+                        {entry.user_id === user?.id && (
+                          <Badge variant="outline" className="text-xs">You</Badge>
+                        )}
+                      </div>
+                      <span className="text-sm font-bold text-primary">{entry.score}</span>
+                    </div>
+                  ))}
+                  {userRank && userRank > 3 && (
+                    <div className="border-t pt-2 mt-2">
+                      <div className="flex items-center justify-between p-2 rounded-lg bg-primary/10">
+                        <span className="text-sm">Your rank: #{userRank}</span>
+                        <Button variant="outline" size="sm" onClick={() => navigate('/leaderboard')}>
+                          View Details
+                        </Button>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              )}
+            </CardContent>
+          </Card>
         </div>
 
         {/* Recent Activity */}

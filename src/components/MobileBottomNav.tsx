@@ -26,17 +26,17 @@ const MobileBottomNav = () => {
       badge: null,
     },
     {
+      id: 'leaderboard',
+      label: 'Leaderboard',
+      icon: Trophy,
+      path: '/leaderboard',
+      badge: null,
+    },
+    {
       id: 'progress',
       label: 'Progress',
       icon: TrendingUp,
       path: '/progress',
-      badge: null,
-    },
-    {
-      id: 'challenges',
-      label: 'Challenges',
-      icon: Trophy,
-      path: '/challenges',
       badge: null,
     },
     {

@@ -14,6 +14,7 @@ import CallReview from "./pages/CallReview";
 import AIReplay from "./pages/AIReplay";
 import Progress from "./pages/Progress";
 import Challenges from "./pages/Challenges";
+import Leaderboard from "./pages/Leaderboard";
 import Profile from "./pages/Profile";
 import BuyCredits from "./pages/BuyCredits";
 import Plans from "./pages/Plans";
@@ -44,6 +45,7 @@ const App = () => (
             <Route path="/ai-replay/:uploadId" element={<ProtectedRoute><AIReplay /></ProtectedRoute>} />
             <Route path="/progress" element={<ProtectedRoute><Progress /></ProtectedRoute>} />
             <Route path="/challenges" element={<ProtectedRoute><Challenges /></ProtectedRoute>} />
+            <Route path="/leaderboard" element={<ProtectedRoute><Leaderboard /></ProtectedRoute>} />
             <Route path="/profile" element={<ProtectedRoute><Profile /></ProtectedRoute>} />
             <Route path="/plans" element={<ProtectedRoute><Plans /></ProtectedRoute>} />
             <Route path="/buy-credits" element={<ProtectedRoute><BuyCredits /></ProtectedRoute>} />
