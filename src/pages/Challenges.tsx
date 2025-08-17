@@ -34,6 +34,7 @@ interface LeaderboardEntry {
   profile?: {
     first_name?: string;
     last_name?: string;
+    last_initial?: string;
   };
 }
 
@@ -53,100 +54,27 @@ const Challenges = () => {
 
   const fetchLeaderboard = async () => {
     try {
-      // Calculate comprehensive scores for all users
-      const { data: allUsers, error: usersError } = await supabase
-        .from('profiles')
-        .select('user_id, first_name, last_name');
-
-      if (usersError) throw usersError;
-
-      const leaderboardScores = await Promise.all((allUsers || []).map(async (userProfile) => {
-        let totalScore = 0;
-
-        // Challenge completion points (reward_credits from completed challenges)
-        const { data: completedChallenges } = await supabase
-          .from('user_challenge_progress')
-          .select('challenge_id, challenges(reward_credits)')
-          .eq('user_id', userProfile.user_id)
-          .eq('completed', true)
-          .gte('completed_at', new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString());
-
-        const challengePoints = completedChallenges?.reduce((sum, cp) => 
-          sum + (cp.challenges?.reward_credits || 0), 0) || 0;
-
-        // Performance points from calls (this week)
-        const { data: callsData } = await supabase
-          .from('calls')
-          .select('overall_score, successful_sale, difficulty_level')
-          .eq('user_id', userProfile.user_id)
-          .eq('call_status', 'completed')
-          .gte('created_at', new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString());
-
-        let performancePoints = 0;
-        if (callsData && callsData.length > 0) {
-          // Average score multiplied by 10
-          const avgScore = callsData.reduce((sum, call) => sum + (call.overall_score || 0), 0) / callsData.length;
-          performancePoints += Math.round(avgScore * 10);
-
-          // Successful sales bonus (50 points each)
-          const successfulSales = callsData.filter(call => call.successful_sale).length;
-          performancePoints += successfulSales * 50;
-
-          // Call completion bonus (5 points per call)
-          performancePoints += callsData.length * 5;
-
-          // Difficulty bonus (higher difficulty = more points)
-          const difficultyBonus = callsData.reduce((sum, call) => 
-            sum + (call.difficulty_level || 0) * 5, 0);
-          performancePoints += difficultyBonus;
-        }
-
-        // Upload activity points (this week)
-        const { count: uploadsCount } = await supabase
-          .from('call_uploads')
-          .select('*', { count: 'exact', head: true })
-          .eq('user_id', userProfile.user_id)
-          .eq('status', 'completed')
-          .gte('created_at', new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString());
-
-        const uploadPoints = (uploadsCount || 0) * 25; // 25 points per upload
-
-        // AI Replay activity points (this week)
-        const { count: replaysCount } = await supabase
-          .from('ai_replays')
-          .select('*', { count: 'exact', head: true })
-          .eq('user_id', userProfile.user_id)
-          .gte('created_at', new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString());
-
-        const replayPoints = (replaysCount || 0) * 15; // 15 points per replay
-
-        totalScore = challengePoints + performancePoints + uploadPoints + replayPoints;
-
-        return {
-          user_id: userProfile.user_id,
-          total_score: totalScore,
-          rank: 0, // Will be calculated after sorting
-          profile: {
-            first_name: userProfile.first_name,
-            last_name: userProfile.last_name
-          }
-        };
-      }));
-
-      // Filter users and sort by score - show all users, even with 0 scores
-      const allUsersWithScores = leaderboardScores
-        .sort((a, b) => b.total_score - a.total_score)
-        .map((user, index) => ({ ...user, rank: index + 1 }));
-
-      // Return top 15 and ensure current user is included
-      const currentUserEntry = allUsersWithScores.find(entry => entry.user_id === user?.id);
-      const topUsers = allUsersWithScores.slice(0, 15);
+      console.log('Fetching leaderboard from secure endpoint...');
       
-      // If current user is not in top 15, add them
-      if (currentUserEntry && !topUsers.find(u => u.user_id === user?.id)) {
+      // Call the secure edge function that uses service role
+      const { data, error } = await supabase.functions.invoke('get-leaderboard');
+      
+      if (error) {
+        console.error('Error fetching leaderboard:', error);
+        return [];
+      }
+      
+      const leaderboardData = data?.leaderboard || [];
+      
+      // Find current user's entry and add to top users if not already included
+      const currentUserEntry = leaderboardData.find((entry: any) => entry.user_id === user?.id);
+      let topUsers = leaderboardData.slice(0, 15);
+      
+      // If current user is not in top 15, we need to fetch their rank separately
+      if (currentUserEntry && !topUsers.find((u: any) => u.user_id === user?.id)) {
         topUsers.push(currentUserEntry);
       }
-
+      
       return topUsers;
 
     } catch (error) {
@@ -676,7 +604,7 @@ const Challenges = () => {
                           <div>
                             <div className="font-medium text-sm">
                               {entry.user_id === user?.id ? 'You' : 
-                               `${entry.profile?.first_name || 'User'} ${(entry.profile?.last_name || '').charAt(0) || ''}`.trim()}
+                               `${entry.profile?.first_name || 'User'} ${entry.profile?.last_initial || ''}`.trim()}
                             </div>
                             <div className="text-xs text-muted-foreground">
                               {entry.total_score} points

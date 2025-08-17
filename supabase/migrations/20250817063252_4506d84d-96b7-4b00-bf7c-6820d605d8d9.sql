@@ -1,0 +1,1 @@
+DROP POLICY IF EXISTS "Allow viewing basic profile info for leaderboard" ON public.profiles;
