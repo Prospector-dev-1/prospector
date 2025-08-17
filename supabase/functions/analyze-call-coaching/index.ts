@@ -118,6 +118,24 @@ serve(async (req) => {
     }
 
     // Build OpenAI prompt for objection coaching
+    // Prepare a trimmed, normalized transcript to avoid overload and improve parsing
+    const rawTranscript = call.transcript as string;
+    let normalizedTranscript = rawTranscript.replace(/\r/g, '');
+    normalizedTranscript = normalizedTranscript
+      .replace(/Assistant:\s*Assistant:/g, 'Assistant:')
+      .replace(/User:\s*User:/g, 'User:')
+      .replace(/\s*(Assistant:)/g, '\n$1')
+      .replace(/\s*(User:)/g, '\n$1');
+    const parts = normalizedTranscript.split('\n').map(l => l.trim()).filter(Boolean);
+    const compact: string[] = [];
+    for (const l of parts) { if (compact.length === 0 || compact[compact.length - 1] !== l) compact.push(l); }
+    const maxLines = 160;
+    let limitedParts = compact.length > maxLines ? compact.slice(-maxLines) : compact;
+    let safeTranscript = limitedParts.join('\n');
+    const maxChars = 6000;
+    if (safeTranscript.length > maxChars) {
+      safeTranscript = safeTranscript.slice(-maxChars);
+    }
     const prompt = `You are a world-class sales coach. Analyze the following call transcript and extract concrete objection-coaching advice.
 
 TRANSCRIPT FORMAT AND ROLE MAPPING:
@@ -129,11 +147,11 @@ TRANSCRIPT FORMAT AND ROLE MAPPING:
   - "your_response" MUST quote what the sales rep said (from a line starting with "User:").
   - Never swap these.
 
-TRANSCRIPT:
-"""
-${call.transcript}
-"""
-
+    TRANSCRIPT:
+    """
+    ${safeTranscript}
+    """
+    
 Return ONLY valid JSON with this exact shape:
 {
   "coaching": [
@@ -162,54 +180,72 @@ Instructions:
     console.log('Making OpenAI request...');
 
     const attempts = [
-      { model: 'gpt-5-mini-2025-08-07', useNewParams: true, max: 900 },
-      { model: 'gpt-5-nano-2025-08-07', useNewParams: true, max: 700 },
-      { model: 'gpt-4.1-2025-04-14', useNewParams: true, max: 900 },
-      { model: 'gpt-4o-mini', useNewParams: false, max: 900 },
+      { model: 'gpt-5-2025-08-07', useNewParams: true, max: 700 },
+      { model: 'o4-mini-2025-04-16', useNewParams: true, max: 650 },
+      { model: 'gpt-5-mini-2025-08-07', useNewParams: true, max: 650 },
+      { model: 'gpt-5-nano-2025-08-07', useNewParams: true, max: 600 },
+      { model: 'gpt-4.1-2025-04-14', useNewParams: true, max: 650 },
+      { model: 'gpt-4o-mini', useNewParams: false, max: 600 },
     ];
 
+    const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
     let aiData: any | null = null;
     let lastErrText = '';
     for (const attempt of attempts) {
       console.log(`Attempting model: ${attempt.model}`);
-      const body: any = {
+
+      const bodyBase: any = {
         model: attempt.model,
         messages: [
           { role: 'system', content: 'You are a concise, practical sales coach. Always return strict JSON.' },
           { role: 'user', content: prompt },
         ],
       };
-      if (attempt.useNewParams) {
-        body.max_completion_tokens = attempt.max;
-      } else {
-        body.max_tokens = attempt.max;
-        body.temperature = 0.6;
-      }
 
-      const resp = await fetch('https://api.openai.com/v1/chat/completions', {
-        method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${openAIApiKey}`,
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(body),
-      });
+      const maxTries = 3;
+      for (let i = 0; i < maxTries; i++) {
+        const body = { ...bodyBase } as any;
+        if (attempt.useNewParams) {
+          body.max_completion_tokens = attempt.max;
+        } else {
+          body.max_tokens = attempt.max;
+          body.temperature = 0.6;
+        }
 
-      if (resp.ok) {
-        aiData = await resp.json();
-        break;
-      }
-
-      const t = await resp.text();
-      lastErrText = t;
-      console.error(`OpenAI error for ${attempt.model}`, t);
-      if (!(resp.status === 429 || t.includes('rate_limit_exceeded') || t.includes('Rate limit'))) {
-        // Non-rate-limit error: stop trying
-        return new Response(JSON.stringify({ error: 'AI analysis failed. Please try again. No credits were deducted.' }), {
-          status: 502,
-          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        const resp = await fetch('https://api.openai.com/v1/chat/completions', {
+          method: 'POST',
+          headers: {
+            'Authorization': `Bearer ${openAIApiKey}`,
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify(body),
         });
+
+        if (resp.ok) {
+          aiData = await resp.json();
+          break;
+        }
+
+        const t = await resp.text();
+        lastErrText = t;
+        console.error(`OpenAI error for ${attempt.model} (try ${i + 1}/${maxTries})`, t);
+
+        const isRateLimit = resp.status === 429 || t.includes('rate_limit_exceeded') || t.includes('Rate limit');
+        if (!isRateLimit) {
+          return new Response(JSON.stringify({ error: 'AI analysis failed. Please try again. No credits were deducted.' }), {
+            status: 502,
+            headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+          });
+        }
+
+        // rate limited: backoff and retry
+        if (i < maxTries - 1) {
+          await sleep(500 * (i + 1));
+          continue;
+        }
       }
+
+      if (aiData) break;
     }
 
     if (!aiData) {
