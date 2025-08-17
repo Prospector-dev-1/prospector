@@ -20,7 +20,6 @@ import BuyCredits from "./pages/BuyCredits";
 import Plans from "./pages/Plans";
 import ScriptAnalysis from "./pages/ScriptAnalysis";
 import CustomScriptGenerator from "./pages/CustomScriptGenerator";
-import AdminUsers from "./pages/AdminUsers";
 import NotFound from "./pages/NotFound";
 import Help from "./pages/Help";
 import Privacy from "./pages/Privacy";
@@ -52,7 +51,6 @@ const App = () => (
             <Route path="/buy-credits" element={<ProtectedRoute><BuyCredits /></ProtectedRoute>} />
               <Route path="/script-analysis" element={<ProtectedRoute><ScriptAnalysis /></ProtectedRoute>} />
               <Route path="/custom-script" element={<ProtectedRoute><CustomScriptGenerator /></ProtectedRoute>} />
-            <Route path="/admin/users" element={<ProtectedRoute><AdminUsers /></ProtectedRoute>} />
             <Route path="/help" element={<Help />} />
             <Route path="/privacy" element={<Privacy />} />
             {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
