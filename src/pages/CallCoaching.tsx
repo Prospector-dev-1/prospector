@@ -51,9 +51,14 @@ const CallCoaching = () => {
       
       if (error) {
         console.error('Coaching error:', error, data);
+        const generic = 'Objection Coaching is temporarily unavailable. Please try again shortly. No credits were deducted.';
+        const status = (error as any)?.context?.response?.status as number | undefined;
+        const description = (data as any)?.error || (status === 429
+          ? 'Rate limited by AI provider. Please retry in a few minutes. No credits were deducted.'
+          : generic);
         toast({ 
           title: 'Coaching failed', 
-          description: (data as any)?.error || error.message 
+          description
         });
         navigate(`/call-results/${callId}`);
         return;
