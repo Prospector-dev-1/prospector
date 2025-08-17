@@ -152,21 +152,25 @@ serve(async (req) => {
     const cleanedTranscript = rebuildTurns(initialClean);
     console.log('Cleaned transcript:', cleanedTranscript);
 
-    // Check if the transcript shows meaningful caller participation
-    const transcriptLower = cleanedTranscript.toLowerCase();
-    const hasBasicParticipation = transcript.length > 30 && (
-      transcriptLower.includes('hello') || 
-      transcriptLower.includes('hi') || 
-      transcriptLower.includes('website') ||
-      transcriptLower.includes('business') ||
-      transcriptLower.includes('call')
-    );
+    // Check for meaningful USER participation based on cleaned, labeled turns
+    const userTurns = cleanedTranscript
+      .split('\n')
+      .filter(l => l.startsWith('User:'))
+      .map(l => l.replace(/^User:\s*/, '').trim())
+      .filter(Boolean);
+
+    const trivialUtterances = new Set(['hi','hello','yeah','ok','okay','mm-hmm','mhm','right','got it','bye','thanks','hmm']);
+    const hasMeaningfulParticipation = userTurns.some(t => {
+      const tClean = t.toLowerCase().replace(/[.,!?]/g, '').trim();
+      if (tClean.length < 8) return false;
+      return !trivialUtterances.has(tClean);
+    });
     
-    console.log('Has basic participation:', hasBasicParticipation);
+    console.log('User turns:', userTurns.length, 'Has meaningful participation:', hasMeaningfulParticipation);
     
-    // If no participation at all, return zeros immediately
-    if (!hasBasicParticipation) {
-      console.log('No participation detected');
+    // If no meaningful user participation, assign minimum scores and finish
+    if (!hasMeaningfulParticipation) {
+      console.log('No meaningful user participation detected');
       const analysis = {
         confidence_score: 1,
         objection_handling_score: 1,
