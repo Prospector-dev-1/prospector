@@ -120,6 +120,15 @@ serve(async (req) => {
     // Build OpenAI prompt for objection coaching
     const prompt = `You are a world-class sales coach. Analyze the following call transcript and extract concrete objection-coaching advice.
 
+TRANSCRIPT FORMAT AND ROLE MAPPING:
+- The transcript contains lines prefixed by "User:" and "Assistant:".
+- "User:" = the sales rep being coached (the person you address as "You").
+- "Assistant:" = the prospect/customer.
+- When you output JSON:
+  - "assistant_said" MUST quote what the prospect said (from a line starting with "Assistant:").
+  - "your_response" MUST quote what the sales rep said (from a line starting with "User:").
+  - Never swap these.
+
 TRANSCRIPT:
 """
 ${call.transcript}
@@ -129,8 +138,8 @@ Return ONLY valid JSON with this exact shape:
 {
   "coaching": [
     {
-      "assistant_said": "verbatim or close paraphrase of the prospect's objection or question",
-      "your_response": "verbatim or close paraphrase of your reply",
+      "assistant_said": "verbatim or close paraphrase of the prospect's objection or question (from Assistant)",
+      "your_response": "verbatim or close paraphrase of your reply (from User)",
       "issue": "what went wrong in your reply (1-2 sentences, address the person as 'You')",
       "better_response": "a concise, high-quality response you should say next time (2-4 sentences, natural phrasing)",
       "why_better": "brief reasoning why this works (1-2 sentences)",
@@ -141,12 +150,14 @@ Return ONLY valid JSON with this exact shape:
   "tips": ["3 short bullet tips you should remember"]
 }
 
-Guidelines:
+Instructions:
+- Prefer analyzing moments where an Assistant line is followed by a User reply; pick the most instructive examples.
 - Focus on your weaknesses and how to respond better next time.
 - Use plain language; avoid jargon.
 - Address the person directly as "You" throughout all feedback.
 - If no clear objection exists, still identify weak spots and propose better phrasing.
-- Keep responses human and natural, not robotic.`;
+- Keep responses human and natural, not robotic.
+- Do NOT include markdown fences or any text outside of the JSON.`;
 
     console.log('Making OpenAI request...');
 
