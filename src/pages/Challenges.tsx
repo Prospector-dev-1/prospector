@@ -64,7 +64,15 @@ const Challenges = () => {
         return [];
       }
       
-      const leaderboardData = data?.leaderboard || [];
+      console.log('Challenges page leaderboard data:', data);
+      
+      // Extract the leaderboard array from the response
+      let leaderboardData = [];
+      if (data && data.leaderboard && Array.isArray(data.leaderboard)) {
+        leaderboardData = data.leaderboard;
+      } else if (Array.isArray(data)) {
+        leaderboardData = data;
+      }
       
       // Find current user's entry and add to top users if not already included
       const currentUserEntry = leaderboardData.find((entry: any) => entry.user_id === user?.id);
