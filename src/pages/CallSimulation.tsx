@@ -7,9 +7,11 @@ import { Slider } from '@/components/ui/slider';
 import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
-import { Phone, PhoneOff, Timer, Mic, MicOff, ArrowLeft, User } from 'lucide-react';
+import { Phone, PhoneOff, Timer, Mic, MicOff, ArrowLeft, User, Settings2 } from 'lucide-react';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import Vapi from '@vapi-ai/web';
 import SEO from '@/components/SEO';
+import CallCustomization from '@/components/CallCustomization';
 
 const CallSimulation = () => {
   const navigate = useNavigate();
@@ -21,6 +23,12 @@ const CallSimulation = () => {
   const [isCallActive, setIsCallActive] = useState(false);
   const [callStarted, setCallStarted] = useState(false);
   const [isConnecting, setIsConnecting] = useState(false);
+  
+  // Customization states
+  const [businessType, setBusinessType] = useState('');
+  const [prospectRole, setProspectRole] = useState('');
+  const [callObjective, setCallObjective] = useState('');
+  const [customInstructions, setCustomInstructions] = useState('');
   
   // Call state tracking
   const [callDuration, setCallDuration] = useState(0);
@@ -218,7 +226,13 @@ const CallSimulation = () => {
     try {
       // Start call through our edge function
       const { data, error } = await supabase.functions.invoke('start-call', {
-        body: { difficulty_level: difficultyLevel[0] }
+        body: { 
+          difficulty_level: difficultyLevel[0],
+          business_type: businessType,
+          prospect_role: prospectRole,
+          call_objective: callObjective,
+          custom_instructions: customInstructions
+        }
       });
 
       console.log('Edge function response:', { data, error });
@@ -360,85 +374,152 @@ const CallSimulation = () => {
 
       <div className="px-3 sm:px-4 lg:px-8 py-4 sm:py-6">
         {!callStarted ? (
-          // Call Setup
-          <div className="space-y-8">
+          // Call Setup with Tabs
+          <div className="space-y-6">
+            <Tabs defaultValue="customize" className="w-full">
+              <TabsList className="grid w-full grid-cols-2">
+                <TabsTrigger value="customize" className="flex items-center space-x-2">
+                  <Settings2 className="h-4 w-4" />
+                  <span>Customize Call</span>
+                </TabsTrigger>
+                <TabsTrigger value="difficulty" className="flex items-center space-x-2">
+                  <Timer className="h-4 w-4" />
+                  <span>Difficulty</span>
+                </TabsTrigger>
+              </TabsList>
+
+              <TabsContent value="customize" className="space-y-4">
+                <CallCustomization
+                  businessType={businessType}
+                  setBusinessType={setBusinessType}
+                  prospectRole={prospectRole}
+                  setProspectRole={setProspectRole}
+                  callObjective={callObjective}
+                  setCallObjective={setCallObjective}
+                  customInstructions={customInstructions}
+                  setCustomInstructions={setCustomInstructions}
+                />
+              </TabsContent>
+
+              <TabsContent value="difficulty" className="space-y-4">
+                <Card>
+                  <CardHeader>
+                    <CardTitle>Choose Difficulty Level</CardTitle>
+                    <p className="text-muted-foreground">
+                      Select how challenging you want your prospect to be
+                    </p>
+                  </CardHeader>
+                  <CardContent className="space-y-6">
+                    <div className="space-y-4">
+                      <div className="flex items-center justify-between">
+                        <span className="text-sm font-medium">Difficulty: {difficultyLevel[0]}/10</span>
+                        <Badge className={getDifficultyColor(difficultyLevel[0])}>
+                          {getDifficultyLabel(difficultyLevel[0])}
+                        </Badge>
+                      </div>
+                      <Slider
+                        value={difficultyLevel}
+                        onValueChange={setDifficultyLevel}
+                        max={10}
+                        min={1}
+                        step={1}
+                        className="w-full"
+                      />
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs sm:text-sm text-muted-foreground">
+                        <div>
+                          <p className="font-medium">Level 1-3: Beginner</p>
+                          <p>Friendly prospects, minimal objections</p>
+                        </div>
+                        <div>
+                          <p className="font-medium">Level 4-6: Intermediate</p>
+                          <p>Standard objections, moderate resistance</p>
+                        </div>
+                        <div>
+                          <p className="font-medium">Level 7-8: Advanced</p>
+                          <p>Skeptical prospects, strong objections</p>
+                        </div>
+                        <div>
+                          <p className="font-medium">Level 9-10: Expert</p>
+                          <p>Hostile prospects, maximum difficulty</p>
+                        </div>
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+              </TabsContent>
+            </Tabs>
+
+            {/* Scenario Preview */}
+            {(businessType || prospectRole || callObjective) && (
+              <Card className="border-primary/20 bg-primary/5">
+                <CardHeader>
+                  <CardTitle className="text-primary">Scenario Preview</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="space-y-2 text-sm">
+                    {businessType && (
+                      <div>
+                        <span className="font-medium">Business:</span> {businessType}
+                      </div>
+                    )}
+                    {prospectRole && (
+                      <div>
+                        <span className="font-medium">Role:</span> {prospectRole}
+                      </div>
+                    )}
+                    {callObjective && (
+                      <div>
+                        <span className="font-medium">Objective:</span> {callObjective}
+                      </div>
+                    )}
+                    <div>
+                      <span className="font-medium">Difficulty:</span> Level {difficultyLevel[0]} ({getDifficultyLabel(difficultyLevel[0])})
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+            )}
+
+            {/* Mission Brief */}
             <Card>
-              <CardHeader>
-                <CardTitle>Choose Difficulty Level</CardTitle>
-                <p className="text-muted-foreground">
-                  Select how challenging you want your prospect to be
+              <CardContent className="p-4">
+                <h4 className="font-medium mb-2">Your Mission:</h4>
+                <p className="text-sm text-muted-foreground">
+                  {callObjective 
+                    ? `Your goal is to ${callObjective.toLowerCase()} with this ${businessType || 'business owner'}. ${prospectRole ? `You'll be speaking with their ${prospectRole}.` : ''} Use your sales skills to achieve your objective!`
+                    : "You're making a cold call to a business owner. The prospect doesn't know who you are or what you're selling. Introduce yourself, explain what you're offering, build rapport, handle objections, and either close the sale or schedule a follow-up meeting."
+                  }
                 </p>
-              </CardHeader>
-              <CardContent className="space-y-6">
-                <div className="space-y-4">
-                  <div className="flex items-center justify-between">
-                    <span className="text-sm font-medium">Difficulty: {difficultyLevel[0]}/10</span>
-                    <Badge className={getDifficultyColor(difficultyLevel[0])}>
-                      {getDifficultyLabel(difficultyLevel[0])}
-                    </Badge>
-                  </div>
-                  <Slider
-                    value={difficultyLevel}
-                    onValueChange={setDifficultyLevel}
-                    max={10}
-                    min={1}
-                    step={1}
-                    className="w-full"
-                  />
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs sm:text-sm text-muted-foreground">
-                    <div>
-                      <p className="font-medium">Level 1-3: Beginner</p>
-                      <p>Friendly prospects, minimal objections</p>
-                    </div>
-                    <div>
-                      <p className="font-medium">Level 4-6: Intermediate</p>
-                      <p>Standard objections, moderate resistance</p>
-                    </div>
-                    <div>
-                      <p className="font-medium">Level 7-8: Advanced</p>
-                      <p>Skeptical prospects, strong objections</p>
-                    </div>
-                    <div>
-                      <p className="font-medium">Level 9-10: Expert</p>
-                      <p>Hostile prospects, maximum difficulty</p>
-                    </div>
-                  </div>
-                </div>
-
-                <div className="bg-muted p-4 rounded-lg">
-                  <h4 className="font-medium mb-2">Your Mission:</h4>
-                  <p className="text-sm text-muted-foreground">
-                    You're making a cold call to a business owner. The prospect doesn't know who you are or what you're selling. 
-                    Introduce yourself, explain what you're offering, build rapport, handle objections, and either close the sale or schedule a follow-up meeting.
-                  </p>
-                </div>
-
-                <Button 
-                  onClick={startCall} 
-                  disabled={isConnecting || (profile.subscription_type !== 'premium' && profile.credits <= 0)}
-                  className="w-full"
-                  size="lg"
-                >
-                  {isConnecting ? (
-                    <>
-                      <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-current mr-2"></div>
-                      Connecting...
-                    </>
-                  ) : (
-                    <>
-                      <Phone className="mr-2 h-4 w-4" />
-                      Start Practice Call {profile.subscription_type !== 'premium' && `(1 Credit)`}
-                    </>
-                  )}
-                </Button>
-
-                {profile.subscription_type !== 'premium' && profile.credits <= 0 && (
-                  <p className="text-center text-sm text-destructive">
-                    You need credits to start a call. Purchase more credits to continue.
-                  </p>
-                )}
               </CardContent>
             </Card>
+
+            {/* Start Call Button */}
+            <div className="space-y-4">
+              <Button 
+                onClick={startCall} 
+                disabled={isConnecting || (profile.subscription_type !== 'premium' && profile.credits <= 0)}
+                className="w-full"
+                size="lg"
+              >
+                {isConnecting ? (
+                  <>
+                    <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-current mr-2"></div>
+                    Connecting...
+                  </>
+                ) : (
+                  <>
+                    <Phone className="mr-2 h-4 w-4" />
+                    Start Practice Call {profile.subscription_type !== 'premium' && `(1 Credit)`}
+                  </>
+                )}
+              </Button>
+
+              {profile.subscription_type !== 'premium' && profile.credits <= 0 && (
+                <p className="text-center text-sm text-destructive">
+                  You need credits to start a call. Purchase more credits to continue.
+                </p>
+              )}
+            </div>
           </div>
         ) : (
           // Active Call Interface
@@ -453,8 +534,17 @@ const CallSimulation = () => {
 
                   {/* Prospect Name */}
                   <div>
-                    <h3 className="text-xl font-semibold">Business Owner</h3>
-                    <p className="text-muted-foreground">Level {difficultyLevel[0]} Prospect</p>
+                    <h3 className="text-xl font-semibold">
+                      {prospectRole || 'Business Owner'}
+                    </h3>
+                    <p className="text-muted-foreground">
+                      {businessType ? `${businessType} • ` : ''}Level {difficultyLevel[0]} Prospect
+                    </p>
+                    {callObjective && (
+                      <p className="text-xs text-muted-foreground mt-1">
+                        Goal: {callObjective}
+                      </p>
+                    )}
                   </div>
 
                   {/* Call Timer */}

@@ -109,6 +109,57 @@ export type Database = {
         }
         Relationships: []
       }
+      business_types: {
+        Row: {
+          category: string
+          common_pain_points: string[]
+          created_at: string
+          id: string
+          name: string
+          typical_roles: string[]
+        }
+        Insert: {
+          category: string
+          common_pain_points: string[]
+          created_at?: string
+          id?: string
+          name: string
+          typical_roles: string[]
+        }
+        Update: {
+          category?: string
+          common_pain_points?: string[]
+          created_at?: string
+          id?: string
+          name?: string
+          typical_roles?: string[]
+        }
+        Relationships: []
+      }
+      call_objectives: {
+        Row: {
+          created_at: string
+          description: string
+          id: string
+          name: string
+          scoring_categories: Json
+        }
+        Insert: {
+          created_at?: string
+          description: string
+          id?: string
+          name: string
+          scoring_categories: Json
+        }
+        Update: {
+          created_at?: string
+          description?: string
+          id?: string
+          name?: string
+          scoring_categories?: Json
+        }
+        Relationships: []
+      }
       call_uploads: {
         Row: {
           ai_analysis: Json | null
@@ -169,11 +220,14 @@ export type Database = {
       calls: {
         Row: {
           ai_feedback: string | null
+          business_type: string | null
+          call_objective: string | null
           call_status: string
           clarity_score: number | null
           closing_score: number | null
           confidence_score: number | null
           created_at: string
+          custom_instructions: string | null
           difficulty_level: number
           duration_seconds: number | null
           id: string
@@ -181,6 +235,8 @@ export type Database = {
           overall_pitch_score: number | null
           overall_score: number | null
           persuasiveness_score: number | null
+          prospect_role: string | null
+          scenario_data: Json | null
           successful_sale: boolean | null
           tone_score: number | null
           transcript: string | null
@@ -188,11 +244,14 @@ export type Database = {
         }
         Insert: {
           ai_feedback?: string | null
+          business_type?: string | null
+          call_objective?: string | null
           call_status?: string
           clarity_score?: number | null
           closing_score?: number | null
           confidence_score?: number | null
           created_at?: string
+          custom_instructions?: string | null
           difficulty_level: number
           duration_seconds?: number | null
           id?: string
@@ -200,6 +259,8 @@ export type Database = {
           overall_pitch_score?: number | null
           overall_score?: number | null
           persuasiveness_score?: number | null
+          prospect_role?: string | null
+          scenario_data?: Json | null
           successful_sale?: boolean | null
           tone_score?: number | null
           transcript?: string | null
@@ -207,11 +268,14 @@ export type Database = {
         }
         Update: {
           ai_feedback?: string | null
+          business_type?: string | null
+          call_objective?: string | null
           call_status?: string
           clarity_score?: number | null
           closing_score?: number | null
           confidence_score?: number | null
           created_at?: string
+          custom_instructions?: string | null
           difficulty_level?: number
           duration_seconds?: number | null
           id?: string
@@ -219,6 +283,8 @@ export type Database = {
           overall_pitch_score?: number | null
           overall_score?: number | null
           persuasiveness_score?: number | null
+          prospect_role?: string | null
+          scenario_data?: Json | null
           successful_sale?: boolean | null
           tone_score?: number | null
           transcript?: string | null
