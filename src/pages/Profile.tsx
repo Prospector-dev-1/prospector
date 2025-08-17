@@ -10,7 +10,11 @@ import { useToast } from '@/hooks/use-toast';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Separator } from '@/components/ui/separator';
 import { Badge } from '@/components/ui/badge';
-import { User, Phone, CreditCard, History, Settings, LogOut, Edit, Save, X, Loader2, Shield } from 'lucide-react';
+import { Avatar, AvatarFallback } from '@/components/ui/avatar';
+import { Progress } from '@/components/ui/progress';
+import { StatsCard } from '@/components/ui/stats-card';
+import MobileLayout from '@/components/MobileLayout';
+import { User, Phone, CreditCard, History, Settings, LogOut, Edit, Save, X, Loader2, Shield, Trophy, Target, Calendar, CheckCircle } from 'lucide-react';
 import SEO from '@/components/SEO';
 interface Profile {
   id: string;
@@ -367,83 +371,162 @@ const Profile = () => {
     if (level <= 8) return 'bg-orange-500';
     return 'bg-red-500';
   };
-  if (loading) {
-    return <div className="min-h-screen flex items-center justify-center">
-        <div className="text-center">
-          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto"></div>
-          <p className="mt-2">Loading profile...</p>
-        </div>
-      </div>;
-  }
-  if (!profile) {
-    return <div className="min-h-screen flex items-center justify-center">
-        <p>Profile not found</p>
-      </div>;
-  }
-  return <>
-      <SEO title="Profile & Settings | Prospector" description="Manage your account, credits, subscription, and call history." canonicalPath="/profile" />
-      <div className="min-h-screen bg-gradient-to-br from-primary/5 to-secondary/5">
-        <div className="px-3 sm:px-4 lg:px-8 py-4 sm:py-6">
-        {/* Header */}
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between mb-6 space-y-3 sm:space-y-0">
-          <div>
-            <h1 className="text-xl sm:text-2xl lg:text-3xl font-bold">Profile & Settings</h1>
-            <p className="text-sm sm:text-base text-muted-foreground">Manage your account and view your progress</p>
-          </div>
-          <div className="flex gap-2">
-            <Button variant="outline" size="sm" onClick={() => navigate('/')}>
-              <span className="hidden sm:inline">Back to Dashboard</span>
-              <span className="sm:hidden">Dashboard</span>
-            </Button>
-            <Button variant="destructive" size="sm" onClick={handleLogout}>
-              <LogOut className="h-4 w-4 sm:mr-2" />
-              <span className="hidden sm:inline">Logout</span>
-            </Button>
-          </div>
-        </div>
+  // Calculate profile completion
+  const getProfileCompletion = () => {
+    const fields = [profile?.first_name, profile?.last_name, profile?.phone_number];
+    const completed = fields.filter(field => field && field.trim() !== '').length;
+    return Math.round((completed / fields.length) * 100);
+  };
 
-        <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-4 sm:space-y-6">
-          <TabsList className="grid w-full grid-cols-2 sm:grid-cols-4 h-auto">
-            <TabsTrigger value="profile" className="flex items-center gap-1 sm:gap-2 text-xs sm:text-sm py-2">
-              <User className="h-3 w-3 sm:h-4 sm:w-4" />
+  // Calculate stats
+  const totalCalls = callHistory.length;
+  const successfulCalls = callHistory.filter(call => call.successful_sale).length;
+  const averageScore = callHistory.length > 0 
+    ? Math.round(callHistory.reduce((acc, call) => acc + (call.overall_score || 0), 0) / callHistory.length)
+    : 0;
+
+  if (loading) {
+    return (
+      <MobileLayout>
+        <div className="flex items-center justify-center min-h-[50vh]">
+          <div className="text-center">
+            <Loader2 className="h-8 w-8 animate-spin mx-auto mb-4 text-primary" />
+            <p className="text-muted-foreground">Loading profile...</p>
+          </div>
+        </div>
+      </MobileLayout>
+    );
+  }
+
+  if (!profile) {
+    return (
+      <MobileLayout>
+        <div className="flex items-center justify-center min-h-[50vh]">
+          <p className="text-muted-foreground">Profile not found</p>
+        </div>
+      </MobileLayout>
+    );
+  }
+
+  const fullName = [profile.first_name, profile.last_name].filter(Boolean).join(' ') || 'User';
+  const initials = fullName.split(' ').map(n => n[0]).join('').toUpperCase();
+
+  return (
+    <>
+      <SEO title="Profile & Settings | Prospector" description="Manage your account, credits, subscription, and call history." canonicalPath="/profile" />
+      <MobileLayout>
+        <div className="space-y-6">
+          {/* Enhanced Header with Avatar and Quick Stats */}
+          <div className="glass-card p-6 rounded-lg">
+            <div className="flex flex-col sm:flex-row items-start sm:items-center gap-4 mb-6">
+              <Avatar className="h-16 w-16 border-2 border-primary/20">
+                <AvatarFallback className="bg-primary text-primary-foreground text-lg font-bold">
+                  {initials}
+                </AvatarFallback>
+              </Avatar>
+              
+              <div className="flex-1">
+                <h1 className="text-2xl font-bold">{fullName}</h1>
+                <p className="text-muted-foreground">{profile.email}</p>
+                <Badge variant="secondary" className="mt-2">
+                  {profile.subscription_type || 'Free'} Member
+                </Badge>
+              </div>
+              
+              <Button variant="outline" onClick={handleLogout} className="self-start">
+                <LogOut className="h-4 w-4 mr-2" />
+                Logout
+              </Button>
+            </div>
+
+            {/* Profile Completion */}
+            <div className="mb-6">
+              <div className="flex items-center justify-between mb-2">
+                <span className="text-sm font-medium">Profile Completion</span>
+                <span className="text-sm text-muted-foreground">{getProfileCompletion()}%</span>
+              </div>
+              <Progress value={getProfileCompletion()} className="h-2" />
+            </div>
+
+            {/* Quick Stats */}
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
+              <StatsCard
+                label="Credits"
+                value={Math.round(profile.credits)}
+                icon={CreditCard}
+                variant="success"
+              />
+              <StatsCard
+                label="Total Calls"
+                value={totalCalls}
+                icon={Phone}
+                variant="info"
+              />
+              <StatsCard
+                label="Success Rate"
+                value={totalCalls > 0 ? `${Math.round((successfulCalls / totalCalls) * 100)}%` : '0%'}
+                icon={Trophy}
+                variant="warning"
+              />
+              <StatsCard
+                label="Avg Score"
+                value={averageScore}
+                icon={Target}
+                variant="default"
+              />
+            </div>
+          </div>
+
+        <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
+          <TabsList className="glass-card grid w-full grid-cols-2 sm:grid-cols-4 h-auto p-1">
+            <TabsTrigger 
+              value="profile" 
+              className="flex items-center gap-2 py-3 px-4 text-sm font-medium transition-all data-[state=active]:bg-primary data-[state=active]:text-primary-foreground"
+            >
+              <User className="h-4 w-4" />
               <span className="hidden sm:inline">Profile</span>
-              <span className="sm:hidden">Profile</span>
             </TabsTrigger>
-            <TabsTrigger value="history" className="flex items-center gap-1 sm:gap-2 text-xs sm:text-sm py-2">
-              <History className="h-3 w-3 sm:h-4 sm:w-4" />
-              <span className="hidden sm:inline">Call History</span>
-              <span className="sm:hidden">History</span>
+            <TabsTrigger 
+              value="history" 
+              className="flex items-center gap-2 py-3 px-4 text-sm font-medium transition-all data-[state=active]:bg-primary data-[state=active]:text-primary-foreground"
+            >
+              <History className="h-4 w-4" />
+              <span className="hidden sm:inline">History</span>
             </TabsTrigger>
-            <TabsTrigger value="subscription" className="flex items-center gap-1 sm:gap-2 text-xs sm:text-sm py-2">
-              <CreditCard className="h-3 w-3 sm:h-4 sm:w-4" />
-              <span className="hidden sm:inline">Subscription</span>
-              <span className="sm:hidden">Plan</span>
+            <TabsTrigger 
+              value="subscription" 
+              className="flex items-center gap-2 py-3 px-4 text-sm font-medium transition-all data-[state=active]:bg-primary data-[state=active]:text-primary-foreground"
+            >
+              <CreditCard className="h-4 w-4" />
+              <span className="hidden sm:inline">Plan</span>
             </TabsTrigger>
-            <TabsTrigger value="settings" className="flex items-center gap-1 sm:gap-2 text-xs sm:text-sm py-2">
-              <Settings className="h-3 w-3 sm:h-4 sm:w-4" />
+            <TabsTrigger 
+              value="settings" 
+              className="flex items-center gap-2 py-3 px-4 text-sm font-medium transition-all data-[state=active]:bg-primary data-[state=active]:text-primary-foreground"
+            >
+              <Settings className="h-4 w-4" />
               <span className="hidden sm:inline">Settings</span>
-              <span className="sm:hidden">Settings</span>
             </TabsTrigger>
           </TabsList>
 
           {/* Profile Tab */}
           <TabsContent value="profile" className="space-y-6">
-            <Card>
+            <Card className="glass-card">
               <CardHeader>
-                <div className="flex items-center justify-between">
+                <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
                   <div>
                     <CardTitle>Personal Information</CardTitle>
                     <CardDescription>Manage your personal details and contact information</CardDescription>
                   </div>
-                  {!isEditing ? <Button variant="outline" onClick={() => setIsEditing(true)}>
+                  {!isEditing ? <Button variant="outline" onClick={() => setIsEditing(true)} className="w-full sm:w-auto">
                       <Edit className="h-4 w-4 mr-2" />
                       Edit
-                    </Button> : <div className="flex gap-2">
-                      <Button variant="outline" onClick={() => setIsEditing(false)}>
+                    </Button> : <div className="flex flex-col sm:flex-row gap-2 w-full sm:w-auto">
+                      <Button variant="outline" onClick={() => setIsEditing(false)} className="w-full sm:w-auto">
                         <X className="h-4 w-4 mr-2" />
                         Cancel
                       </Button>
-                      <Button onClick={handleUpdateProfile}>
+                      <Button onClick={handleUpdateProfile} className="w-full sm:w-auto">
                         <Save className="h-4 w-4 mr-2" />
                         Save
                       </Button>
@@ -498,7 +581,7 @@ const Profile = () => {
 
           {/* Call History Tab */}
           <TabsContent value="history" className="space-y-6">
-            <Card>
+            <Card className="glass-card">
               <CardHeader>
                 <CardTitle>Recent Practice Calls</CardTitle>
                 <CardDescription>Your last 10 practice sessions</CardDescription>
@@ -510,11 +593,12 @@ const Profile = () => {
                       Start Your First Call
                     </Button>
                   </div> : <div className="space-y-4">
-                    {callHistory.map(call => <div key={call.id} className="flex items-center justify-between p-4 border rounded-lg">
-                        <div className="flex items-center gap-4">
-                          <Badge variant="outline" className={`${getDifficultyColor(call.difficulty_level)} text-white`}>
-                            Level {call.difficulty_level}
-                          </Badge>
+                    {callHistory.map(call => <div key={call.id} className="glass-card p-4 rounded-lg hover:shadow-elevated transition-all duration-200">
+                        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+                          <div className="flex items-center gap-4">
+                            <Badge variant="outline" className={`${getDifficultyColor(call.difficulty_level)} text-white border-0`}>
+                              Level {call.difficulty_level}
+                            </Badge>
                           <div>
                             <p className="font-medium">
                               Score: {call.overall_score ? `${call.overall_score}/10` : 'N/A'}
@@ -523,14 +607,15 @@ const Profile = () => {
                               Duration: {formatDuration(call.duration_seconds)}
                             </p>
                           </div>
-                        </div>
-                        <div className="text-right">
-                          <p className="text-sm text-muted-foreground">
-                            {formatDate(call.created_at)}
-                          </p>
-                          <Badge variant={call.successful_sale ? "default" : "secondary"}>
-                            {call.successful_sale ? "Sale Made" : "No Sale"}
-                          </Badge>
+                          </div>
+                          <div className="text-right">
+                            <p className="text-sm text-muted-foreground">
+                              {formatDate(call.created_at)}
+                            </p>
+                            <Badge variant={call.successful_sale ? "default" : "secondary"} className="mt-1">
+                              {call.successful_sale ? "Sale Made" : "No Sale"}
+                            </Badge>
+                          </div>
                         </div>
                       </div>)}
                   </div>}
@@ -540,7 +625,7 @@ const Profile = () => {
 
           {/* Subscription Tab */}
           <TabsContent value="subscription" className="space-y-6">
-            <Card>
+            <Card className="glass-card">
               <CardHeader>
                 <CardTitle>Subscriptions & Credits</CardTitle>
                 <CardDescription>Manage your subscription and credit balance</CardDescription>
@@ -574,7 +659,7 @@ const Profile = () => {
           {/* Settings Tab */}
           <TabsContent value="settings" className="space-y-3 sm:space-y-6">
             {/* Email Change Section */}
-            <Card>
+            <Card className="glass-card">
               <CardHeader className="p-3 sm:p-6 pb-2 sm:pb-6">
                 <CardTitle className="text-base sm:text-lg">Change Email Address</CardTitle>
                 <CardDescription className="text-sm">Update your email address. You'll need to confirm the change via email.</CardDescription>
@@ -616,22 +701,21 @@ const Profile = () => {
             </Card>
 
             {/* Password Change Section */}
-            <Card>
+            <Card className="glass-card">
               <CardHeader className="p-3 sm:p-6 pb-2 sm:pb-6">
                 <CardTitle className="text-base sm:text-lg">Change Password</CardTitle>
                 <CardDescription className="text-sm">Update your account password. Use a strong password for better security.</CardDescription>
               </CardHeader>
               <CardContent className="space-y-3 p-3 sm:p-6 sm:space-y-4">
-                <div className="flex items-center justify-between px-[90px]">
+                <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 sm:gap-0">
                   <div>
-                    <p className="font-medium">
-                  </p>
-                    
+                    <p className="font-medium">Password Security</p>
+                    <p className="text-sm text-muted-foreground">Keep your account secure with a strong password</p>
                   </div>
-                  {!showPasswordForm ? <Button variant="outline" onClick={() => setShowPasswordForm(true)} className="my-0">
+                  {!showPasswordForm ? <Button variant="outline" onClick={() => setShowPasswordForm(true)} className="w-full sm:w-auto">
                       Change Password
-                    </Button> : <div className="flex gap-2">
-                      <Button variant="outline" onClick={() => {
+                    </Button> : <div className="flex flex-col sm:flex-row gap-2 w-full sm:w-auto">
+                      <Button variant="outline" className="w-full sm:w-auto" onClick={() => {
                       setShowPasswordForm(false);
                       setPasswordForm({
                         currentPassword: '',
@@ -641,7 +725,7 @@ const Profile = () => {
                     }}>
                         Cancel
                       </Button>
-                      <Button onClick={handlePasswordChange}>
+                      <Button className="w-full sm:w-auto" onClick={handlePasswordChange}>
                         Update Password
                       </Button>
                     </div>}
@@ -676,13 +760,13 @@ const Profile = () => {
             <Separator />
             
             {/* Privacy Section */}
-            <Card>
+            <Card className="glass-card">
               <CardHeader className="p-3 sm:p-6 pb-2 sm:pb-6">
                 <CardTitle className="text-base sm:text-lg">Privacy</CardTitle>
                 <CardDescription className="text-sm">View our privacy policy and how we handle your data</CardDescription>
               </CardHeader>
               <CardContent className="space-y-3 p-3 sm:p-6 sm:space-y-4">
-                <Button variant="outline" onClick={() => navigate('/privacy')}>
+                <Button variant="outline" onClick={() => navigate('/privacy')} className="w-full sm:w-auto">
                   <Shield className="h-4 w-4 mr-2" />
                   View Privacy Policy
                 </Button>
@@ -690,33 +774,36 @@ const Profile = () => {
             </Card>
 
             {/* Data Export Section */}
-            <Card>
+            <Card className="glass-card">
               <CardHeader className="p-3 sm:p-6 pb-2 sm:pb-6">
                 <CardTitle className="text-base sm:text-lg">Data Export</CardTitle>
                 <CardDescription className="text-sm">Download your personal data and call history</CardDescription>
               </CardHeader>
               <CardContent className="space-y-3 p-3 sm:p-6 sm:space-y-4">
-                <Button variant="outline" onClick={handleDataExport}>
+                <Button variant="outline" onClick={handleDataExport} className="w-full sm:w-auto">
                   Download My Data
                 </Button>
               </CardContent>
             </Card>
+            
             {/* Danger Zone */}
-            <Card>
+            <Card className="glass-card border-destructive/20">
               <CardHeader className="p-3 sm:p-6 pb-2 sm:pb-6">
-                <CardTitle className="text-base sm:text-lg text-red-600">Danger Zone</CardTitle>
+                <CardTitle className="text-base sm:text-lg text-destructive">Danger Zone</CardTitle>
                 <CardDescription className="text-sm">Irreversible account actions</CardDescription>
               </CardHeader>
               <CardContent className="space-y-3 p-3 sm:p-6 sm:space-y-4">
-                <Button variant="destructive" onClick={handleDeleteAccount}>
+                <Button variant="destructive" onClick={handleDeleteAccount} className="w-full sm:w-auto">
                   Delete Account
                 </Button>
               </CardContent>
             </Card>
           </TabsContent>
         </Tabs>
-      </div>
-    </div>
-  </>;
+        </div>
+      </MobileLayout>
+    </>
+  );
 };
+
 export default Profile;
