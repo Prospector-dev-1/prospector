@@ -286,7 +286,7 @@ const Progress = () => {
               
               <Button 
                 onClick={() => navigate('/call-upload')}
-                className="bg-primary hover:bg-primary/90 text-primary-foreground font-medium px-6 py-2 rounded-lg shadow-md hover:shadow-lg transition-all duration-200"
+                className="bg-primary hover:bg-primary/90 text-primary-foreground text-sm font-medium px-4 py-2 rounded-lg shadow-md hover:shadow-lg transition-all duration-200"
               >
                 Upload New Call
               </Button>
