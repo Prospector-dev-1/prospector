@@ -407,9 +407,7 @@ const Progress = () => {
                       <XAxis dataKey="date" />
                       <YAxis domain={[0, 100]} />
                       <Tooltip formatter={value => [`${value}%`, 'Success Rate']} />
-                      <Line type="monotone" dataKey="successRate" stroke="hsl(var(--accent))" strokeWidth={2} dot={{
-                    fill: "hsl(var(--accent))"
-                  }} />
+                       <Line type="monotone" dataKey="successRate" stroke="hsl(var(--accent))" strokeWidth={2} dot={false} />
                     </LineChart>
                   </ResponsiveContainer>}
               </CardContent>
