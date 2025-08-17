@@ -375,6 +375,42 @@ export type Database = {
           },
         ]
       }
+      user_daily_stats: {
+        Row: {
+          calls_completed: number | null
+          consecutive_days: number | null
+          created_at: string
+          date: string
+          highest_score: number | null
+          id: string
+          successful_closes: number | null
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          calls_completed?: number | null
+          consecutive_days?: number | null
+          created_at?: string
+          date?: string
+          highest_score?: number | null
+          id?: string
+          successful_closes?: number | null
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          calls_completed?: number | null
+          consecutive_days?: number | null
+          created_at?: string
+          date?: string
+          highest_score?: number | null
+          id?: string
+          successful_closes?: number | null
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
@@ -389,6 +425,10 @@ export type Database = {
         Returns: undefined
       }
       reset_monthly_limits: {
+        Args: Record<PropertyKey, never>
+        Returns: undefined
+      }
+      update_consecutive_days: {
         Args: Record<PropertyKey, never>
         Returns: undefined
       }
