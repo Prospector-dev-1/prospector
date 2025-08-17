@@ -50,6 +50,11 @@ const Profile = () => {
   const [activeTab, setActiveTab] = useState(searchParams.get('tab') || 'profile');
   const [profile, setProfile] = useState<Profile | null>(null);
   const [callHistory, setCallHistory] = useState<CallHistory[]>([]);
+  const [callStats, setCallStats] = useState({
+    totalCalls: 0,
+    successfulCalls: 0,
+    averageScore: 0
+  });
   const [loading, setLoading] = useState(true);
   const [isEditing, setIsEditing] = useState(false);
   const [showPasswordForm, setShowPasswordForm] = useState(false);
@@ -75,6 +80,7 @@ const Profile = () => {
       navigate('/auth');
       return;
     }
+    fetchCallStats();
     fetchProfile();
     fetchCallHistory();
   }, [user, navigate]);
@@ -114,6 +120,46 @@ const Profile = () => {
       setCallHistory(data || []);
     } catch (error) {
       console.error('Error fetching call history:', error);
+    }
+  };
+
+  const fetchCallStats = async () => {
+    try {
+      // Get total call count
+      const { count: totalCalls } = await supabase
+        .from('calls')
+        .select('*', { count: 'exact', head: true })
+        .eq('user_id', user?.id);
+
+      // Get successful calls count
+      const { count: successfulCalls } = await supabase
+        .from('calls')
+        .select('*', { count: 'exact', head: true })
+        .eq('user_id', user?.id)
+        .eq('successful_sale', true);
+
+      // Get average score
+      const { data: scoreData } = await supabase
+        .from('calls')
+        .select('overall_score')
+        .eq('user_id', user?.id)
+        .not('overall_score', 'is', null);
+
+      let averageScore = 0;
+      if (scoreData && scoreData.length > 0) {
+        const totalScore = scoreData.reduce((sum, call) => sum + (call.overall_score || 0), 0);
+        averageScore = Math.round(totalScore / scoreData.length);
+      }
+
+      setCallStats({
+        totalCalls: totalCalls || 0,
+        successfulCalls: successfulCalls || 0,
+        averageScore
+      });
+
+      console.log('Call stats fetched:', { totalCalls, successfulCalls, averageScore });
+    } catch (error) {
+      console.error('Error fetching call stats:', error);
     }
   };
   const handleUpdateProfile = async () => {
@@ -409,12 +455,10 @@ const Profile = () => {
     );
   };
 
-  // Calculate stats
-  const totalCalls = callHistory.length;
-  const successfulCalls = callHistory.filter(call => call.successful_sale).length;
-  const averageScore = callHistory.length > 0 
-    ? Math.round(callHistory.reduce((acc, call) => acc + (call.overall_score || 0), 0) / callHistory.length)
-    : 0;
+  // Calculate stats from fetched data
+  const totalCalls = callStats.totalCalls;
+  const successfulCalls = callStats.successfulCalls;
+  const averageScore = callStats.averageScore;
 
   if (loading) {
     return (
