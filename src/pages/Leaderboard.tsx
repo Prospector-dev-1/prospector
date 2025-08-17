@@ -11,7 +11,7 @@ import { useNavigate } from 'react-router-dom';
 
 interface LeaderboardEntry {
   user_id: string;
-  score: number;
+  total_score: number;
   rank: number;
   profile: {
     first_name: string;
@@ -166,7 +166,7 @@ const Leaderboard = () => {
                       </div>
                     </div>
                     <div className="text-right">
-                      <span className="text-lg font-bold text-primary">{entry.score}</span>
+                      <span className="text-lg font-bold text-primary">{entry.total_score}</span>
                       <p className="text-xs text-muted-foreground">points</p>
                     </div>
                   </div>

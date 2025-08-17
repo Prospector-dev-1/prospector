@@ -242,7 +242,7 @@ const Dashboard = () => {
                           <Badge variant="outline" className="text-xs">You</Badge>
                         )}
                       </div>
-                      <span className="text-sm font-bold text-primary">{entry.score}</span>
+                      <span className="text-sm font-bold text-primary">{entry.total_score}</span>
                     </div>
                   ))}
                   {userRank && userRank > 3 && (
