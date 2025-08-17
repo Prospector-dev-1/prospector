@@ -520,7 +520,7 @@ const Progress = () => {
               </CardTitle>
             </CardHeader>
             <CardContent>
-              <div className="flex flex-col sm:flex-row gap-4 items-center justify-between">
+              <div className="space-y-4">
                 <div>
                   <p className="text-sm text-muted-foreground mb-2">
                     Upload more calls to get better insights and track your improvement
@@ -530,15 +530,15 @@ const Progress = () => {
                   </p>
                 </div>
                 
-                <div className="flex gap-2">
-                  <Button variant="outline" onClick={() => navigate('/challenges')}>
+                <div className="flex flex-col sm:flex-row gap-3">
+                  <Button variant="outline" onClick={() => navigate('/challenges')} className="flex-1 sm:flex-none">
                     View Challenges
                   </Button>
-                  <Button variant="outline" onClick={() => navigate('/call-simulation')}>
+                  <Button variant="outline" onClick={() => navigate('/call-simulation')} className="flex-1 sm:flex-none">
                     <Zap className="h-4 w-4 mr-2" />
                     Live Practice
                   </Button>
-                  <Button onClick={() => navigate('/call-upload')}>
+                  <Button onClick={() => navigate('/call-upload')} className="flex-1 sm:flex-none">
                     Upload Call
                   </Button>
                 </div>
