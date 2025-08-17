@@ -176,7 +176,7 @@ const CallCoaching = () => {
         </div>
 
         <div className="max-w-4xl mx-auto px-3 sm:px-6 lg:px-8 py-4 sm:py-8">
-          <Tabs defaultValue="overview" className="w-full">
+          <Tabs defaultValue="coaching" className="w-full">
             <TabsList className="grid w-full grid-cols-1 sm:grid-cols-3 h-auto sm:h-10 gap-1 sm:gap-0 p-1">
               <TabsTrigger value="overview" className="flex items-center gap-2 min-h-[48px] sm:min-h-[40px] text-sm">
                 <TrendingUp className="h-4 w-4" />
@@ -259,15 +259,15 @@ const CallCoaching = () => {
             {/* Detailed Coaching Tab */}
             <TabsContent value="coaching" className="mt-4 sm:mt-6">
               {Array.isArray(coachingData.coaching) && coachingData.coaching.length > 0 ? (
-                <Accordion type="single" collapsible className="w-full space-y-2 sm:space-y-0">
+                <div className="w-full space-y-4">
                   {coachingData.coaching.map((item, idx) => {
                     const CategoryIcon = getCategoryIcon(item.category);
                     const severityVariant = getSeverityColor(item.issue);
                     const isReviewed = reviewedItems.has(idx);
                     
                     return (
-                      <AccordionItem key={idx} value={`item-${idx}`} className="border border-border rounded-lg overflow-hidden">
-                        <AccordionTrigger className="hover:no-underline px-3 sm:px-6 py-4 sm:py-4">
+                      <Card key={idx} className="border border-border">
+                        <CardHeader className="px-3 sm:px-6 py-4">
                           <div className="flex items-center gap-3 w-full min-w-0">
                             <CategoryIcon className="h-5 w-5 text-primary flex-shrink-0" />
                             <div className="flex-1 text-left min-w-0">
@@ -282,13 +282,13 @@ const CallCoaching = () => {
                                   )}
                                 </div>
                               </div>
-                              <p className="text-xs sm:text-sm text-muted-foreground mt-1 truncate">
+                              <p className="text-xs sm:text-sm text-muted-foreground mt-1">
                                 {item.issue}
                               </p>
                             </div>
                           </div>
-                        </AccordionTrigger>
-                        <AccordionContent className="px-3 sm:px-6 pb-4">
+                        </CardHeader>
+                        <CardContent className="px-3 sm:px-6 pb-4">
                           <div className="space-y-4 sm:space-y-6">
                             {/* Conversation Context */}
                             <div className="space-y-3 sm:space-y-4">
@@ -366,11 +366,11 @@ const CallCoaching = () => {
                               </Button>
                             </div>
                           </div>
-                        </AccordionContent>
-                      </AccordionItem>
+                        </CardContent>
+                      </Card>
                     );
                   })}
-                </Accordion>
+                </div>
               ) : (
                 <Card>
                   <CardContent className="text-center py-6 sm:py-8">
