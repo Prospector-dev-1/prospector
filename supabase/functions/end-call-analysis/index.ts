@@ -58,36 +58,98 @@ serve(async (req) => {
     // Clean up transcript to remove duplicates and repetitive text
     function cleanTranscript(rawTranscript: string): string {
       if (!rawTranscript) return '';
-      
-      // Split into lines and clean each line
       const lines = rawTranscript.split('\n').map(line => line.trim()).filter(Boolean);
       const cleanedLines: string[] = [];
-      
       for (const line of lines) {
-        // Remove duplicate consecutive words/phrases within the same line
-        const words = line.split(' ');
+        const words = line.split(/\s+/);
         const cleanedWords: string[] = [];
-        
         for (let i = 0; i < words.length; i++) {
           const word = words[i];
-          // Skip if this word is the same as the previous word (avoiding duplicates like "Hello? Hello?")
-          if (i === 0 || word !== words[i - 1]) {
-            cleanedWords.push(word);
-          }
+          if (i === 0 || word !== words[i - 1]) cleanedWords.push(word);
         }
-        
         const cleanedLine = cleanedWords.join(' ');
-        
-        // Only add if this line is different from the previous line
         if (cleanedLines.length === 0 || cleanedLines[cleanedLines.length - 1] !== cleanedLine) {
           cleanedLines.push(cleanedLine);
         }
       }
-      
       return cleanedLines.join(' ');
     }
 
-    const cleanedTranscript = cleanTranscript(transcript);
+    // Advanced normalization: rebuild turns and collapse repeated phrases
+    function collapseRepeatedPhrases(text: string): string {
+      const words = text.split(/\s+/).filter(Boolean);
+      const out: string[] = [];
+      let i = 0;
+      while (i < words.length) {
+        let collapsed = false;
+        for (let n = 6; n >= 2; n--) {
+          if (i + 2 * n <= words.length) {
+            const a = words.slice(i, i + n).join(' ');
+            const b = words.slice(i + n, i + 2 * n).join(' ');
+            if (a === b) {
+              out.push(...words.slice(i, i + n));
+              i += n * 2;
+              while (i + n <= words.length && words.slice(i, i + n).join(' ') === a) {
+                i += n;
+              }
+              collapsed = true;
+              break;
+            }
+          }
+        }
+        if (!collapsed) {
+          const w = words[i];
+          if (out.length === 0 || out[out.length - 1] !== w) out.push(w);
+          i++;
+        }
+      }
+      return out.join(' ').replace(/\s+([,.!?;:])/g, '$1');
+    }
+
+    function rebuildTurns(raw: string): string {
+      const normalized = raw
+        .replace(/\r/g, '')
+        .replace(/Assistant:\s*Assistant:/g, 'Assistant:')
+        .replace(/User:\s*User:/g, 'User:')
+        .replace(/\s*(Assistant:)/g, '\n$1')
+        .replace(/\s*(User:)/g, '\n$1')
+        .trim();
+
+      const lines = normalized.split('\n').map(l => l.trim()).filter(Boolean);
+      type Turn = { speaker: 'Assistant' | 'User'; text: string };
+      const turns: Turn[] = [];
+
+      for (const l of lines) {
+        let speaker: 'Assistant' | 'User' | null = null;
+        if (l.startsWith('Assistant:')) speaker = 'Assistant';
+        else if (l.startsWith('User:')) speaker = 'User';
+        const content = speaker ? l.replace(/^(Assistant:|User:)\s*/, '') : l;
+        if (speaker) {
+          if (turns.length && turns[turns.length - 1].speaker === speaker) {
+            turns[turns.length - 1].text += (turns[turns.length - 1].text ? ' ' : '') + content;
+          } else {
+            turns.push({ speaker, text: content });
+          }
+        } else if (turns.length) {
+          turns[turns.length - 1].text += (turns[turns.length - 1].text ? ' ' : '') + content;
+        }
+      }
+
+      const out: string[] = [];
+      let prevLine = '';
+      for (const t of turns) {
+        const text = collapseRepeatedPhrases(t.text).trim();
+        const line = `${t.speaker}: ${text}`.trim();
+        if (text && line !== prevLine) {
+          out.push(line);
+          prevLine = line;
+        }
+      }
+      return out.join('\n');
+    }
+
+    const initialClean = cleanTranscript(transcript);
+    const cleanedTranscript = rebuildTurns(initialClean);
     console.log('Cleaned transcript:', cleanedTranscript);
 
     // Check if the transcript shows meaningful caller participation
