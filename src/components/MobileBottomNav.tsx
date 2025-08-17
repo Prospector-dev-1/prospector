@@ -1,6 +1,6 @@
 import React from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
-import { Home, Upload, TrendingUp, Trophy, User } from 'lucide-react';
+import { Home, Target, TrendingUp, Trophy, User } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { useAuth } from '@/contexts/AuthContext';
 import { cn } from '@/lib/utils';
@@ -19,10 +19,10 @@ const MobileBottomNav = () => {
       badge: null,
     },
     {
-      id: 'upload',
-      label: 'Upload',
-      icon: Upload,
-      path: '/call-upload',
+      id: 'challenges',
+      label: 'Challenges',
+      icon: Target,
+      path: '/challenges',
       badge: null,
     },
     {
