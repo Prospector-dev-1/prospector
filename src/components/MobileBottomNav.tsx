@@ -1,9 +1,10 @@
 import React from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
-import { Home, Target, TrendingUp, Trophy, User } from 'lucide-react';
+import { Home, Target, TrendingUp, Trophy, User, Settings } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { useAuth } from '@/contexts/AuthContext';
 import { useUnclaimedChallenges } from '@/hooks/useUnclaimedChallenges';
+import { useIsAdmin } from '@/hooks/useIsAdmin';
 import { cn } from '@/lib/utils';
 
 const MobileBottomNav = () => {
@@ -11,8 +12,9 @@ const MobileBottomNav = () => {
   const location = useLocation();
   const { profile } = useAuth();
   const { unclaimedCount, loading } = useUnclaimedChallenges();
+  const { isAdmin } = useIsAdmin();
 
-  const navItems = [
+  const baseNavItems = [
     {
       id: 'dashboard',
       label: 'Dashboard',
@@ -49,6 +51,18 @@ const MobileBottomNav = () => {
       badge: null,
     },
   ];
+
+  const adminNavItems = isAdmin ? [
+    {
+      id: 'admin',
+      label: 'Admin',
+      icon: Settings,
+      path: '/admin/users',
+      badge: null,
+    },
+  ] : [];
+
+  const navItems = [...baseNavItems, ...adminNavItems];
 
   const isActive = (path: string) => {
     if (path === '/') {
