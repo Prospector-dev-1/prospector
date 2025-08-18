@@ -22,6 +22,14 @@ export interface ConversationState {
   transcript: string;
 }
 
+interface FinalAnalysis {
+  score: number;
+  feedback: string;
+  strengths: string[];
+  improvements: string[];
+  recommendations: string[];
+}
+
 export const useRealtimeAIChat = () => {
   const [conversationState, setConversationState] = useState<ConversationState>({
     isActive: false,
@@ -31,6 +39,8 @@ export const useRealtimeAIChat = () => {
     hints: [],
     transcript: ''
   });
+
+  const [finalAnalysis, setFinalAnalysis] = useState<FinalAnalysis | null>(null);
 
   const vapiRef = useRef<any>(null);
   const transcriptRef = useRef<string>('');
@@ -244,6 +254,14 @@ export const useRealtimeAIChat = () => {
             ...prev,
             currentScore: data.score
           }));
+
+          setFinalAnalysis({
+            score: data.score,
+            feedback: data.feedback || '',
+            strengths: data.strengths || [],
+            improvements: data.improvements || [],
+            recommendations: data.recommendations || []
+          });
           
           addCoachingHint(
             `Session complete! Your score: ${data.score}/100. ${data.feedback}`, 
@@ -268,6 +286,7 @@ export const useRealtimeAIChat = () => {
     startConversation,
     endConversation,
     addCoachingHint,
-    clearHints
+    clearHints,
+    finalAnalysis
   };
 };

@@ -53,55 +53,39 @@ const CallAnalysis = () => {
       try {
         setLoading(true);
         
-        // If we have state from navigation, use it
-        if (location.state) {
-          const mockAnalysis: AnalysisData = {
-            score: location.state.score || 85,
-            feedback: "Great job on building rapport and handling objections effectively. Your closing technique showed confidence.",
-            strengths: [
-              "Excellent rapport building",
-              "Clear value proposition",
-              "Confident closing approach",
-              "Good listening skills"
-            ],
-            improvements: [
-              "Could probe deeper on pain points",
-              "More specific benefit examples",
-              "Better handling of price objections"
-            ],
-            recommendations: [
-              "Practice the SPIN selling technique",
-              "Prepare more case studies",
-              "Work on pricing confidence",
-              "Focus on trial closing"
-            ],
-            exchanges: [
-              {
-                id: 1,
-                user_message: "Hi there, I wanted to talk about our new software solution...",
-                ai_response: "I appreciate you reaching out. What specific problem does this solve?",
-                score: 8,
-                feedback: "Good opening, but could be more specific about benefits"
-              },
-              {
-                id: 2,
-                user_message: "It helps streamline your workflow and saves time...",
-                ai_response: "That sounds interesting. How much time are we talking about?",
-                score: 9,
-                feedback: "Excellent follow-up question technique"
-              }
-            ],
-            duration: location.state.duration || 300,
-            sessionConfig: location.state.sessionConfig || {}
+        // If we have analysis data from navigation state, use it (real results from edge function)
+        if ((location.state as any)?.analysis) {
+          const state = location.state as any;
+          const a = state.analysis;
+          const realAnalysis: AnalysisData = {
+            score: a.score,
+            feedback: a.feedback,
+            strengths: Array.isArray(a.strengths) ? a.strengths : [],
+            improvements: Array.isArray(a.improvements) ? a.improvements : [],
+            recommendations: Array.isArray(a.recommendations) ? a.recommendations : [],
+            exchanges: [],
+            duration: state.duration || 0,
+            sessionConfig: state.sessionConfig || {}
           };
-          
-          setAnalysisData(mockAnalysis);
+          setAnalysisData(realAnalysis);
+        } else if (location.state) {
+          // Minimal fallback when only basic state is available
+          const state = location.state as any;
+          setAnalysisData({
+            score: state.score ?? 0,
+            feedback: 'Analysis details were not captured. Please finish the call to generate a full analysis.',
+            strengths: [],
+            improvements: [],
+            recommendations: [],
+            exchanges: [],
+            duration: state.duration || 0,
+            sessionConfig: state.sessionConfig || {}
+          });
         } else {
-          // Fetch from database if no state
-          // TODO: Implement actual database fetch
+          // No state: show a message (could fetch from DB in the future)
           toast({
-            title: "Loading Analysis",
-            description: "Fetching your call analysis...",
+            title: 'Loading Analysis',
+            description: 'No analysis found for this session.',
           });
         }
       } catch (error) {

@@ -34,7 +34,8 @@ const LiveCall = () => {
     startConversation,
     endConversation,
     addCoachingHint,
-    clearHints
+    clearHints,
+    finalAnalysis
   } = useRealtimeAIChat();
 
   const [callStartTime] = useState(Date.now());
@@ -103,7 +104,8 @@ const LiveCall = () => {
           sessionConfig,
           duration: Math.floor((currentTime - callStartTime) / 1000),
           score: conversationState.currentScore,
-          exchanges: conversationState.exchangeCount
+          exchanges: conversationState.exchangeCount,
+          analysis: finalAnalysis || null
         }
       });
     } catch (error) {
