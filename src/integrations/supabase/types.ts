@@ -41,6 +41,105 @@ export type Database = {
         }
         Relationships: []
       }
+      ai_prospect_interactions: {
+        Row: {
+          conversation_context: Json | null
+          created_at: string
+          failed_responses: string[] | null
+          id: string
+          interaction_summary: string | null
+          objection_types_encountered: string[] | null
+          personality_state: Json
+          prospect_personality: string
+          successful_responses: string[] | null
+          updated_at: string
+          user_id: string
+          user_strengths: Json | null
+          user_weaknesses: Json | null
+        }
+        Insert: {
+          conversation_context?: Json | null
+          created_at?: string
+          failed_responses?: string[] | null
+          id?: string
+          interaction_summary?: string | null
+          objection_types_encountered?: string[] | null
+          personality_state?: Json
+          prospect_personality: string
+          successful_responses?: string[] | null
+          updated_at?: string
+          user_id: string
+          user_strengths?: Json | null
+          user_weaknesses?: Json | null
+        }
+        Update: {
+          conversation_context?: Json | null
+          created_at?: string
+          failed_responses?: string[] | null
+          id?: string
+          interaction_summary?: string | null
+          objection_types_encountered?: string[] | null
+          personality_state?: Json
+          prospect_personality?: string
+          successful_responses?: string[] | null
+          updated_at?: string
+          user_id?: string
+          user_strengths?: Json | null
+          user_weaknesses?: Json | null
+        }
+        Relationships: []
+      }
+      ai_prospect_profiles: {
+        Row: {
+          avatar_config: Json | null
+          base_personality: string
+          buying_signals: Json
+          conversation_style: Json
+          created_at: string
+          created_by: string | null
+          difficulty_level: number
+          id: string
+          industry_context: string | null
+          is_public: boolean | null
+          name: string
+          objection_patterns: Json
+          personality_traits: Json
+          updated_at: string
+        }
+        Insert: {
+          avatar_config?: Json | null
+          base_personality: string
+          buying_signals?: Json
+          conversation_style?: Json
+          created_at?: string
+          created_by?: string | null
+          difficulty_level?: number
+          id?: string
+          industry_context?: string | null
+          is_public?: boolean | null
+          name: string
+          objection_patterns?: Json
+          personality_traits?: Json
+          updated_at?: string
+        }
+        Update: {
+          avatar_config?: Json | null
+          base_personality?: string
+          buying_signals?: Json
+          conversation_style?: Json
+          created_at?: string
+          created_by?: string | null
+          difficulty_level?: number
+          id?: string
+          industry_context?: string | null
+          is_public?: boolean | null
+          name?: string
+          objection_patterns?: Json
+          personality_traits?: Json
+          updated_at?: string
+        }
+        Relationships: []
+      }
       ai_replays: {
         Row: {
           created_at: string
@@ -364,6 +463,42 @@ export type Database = {
           reward_credits?: number
           start_date?: string
           target_value?: number
+        }
+        Relationships: []
+      }
+      conversation_analytics: {
+        Row: {
+          buying_signal_responses: Json | null
+          conversation_flow: Json
+          created_at: string
+          id: string
+          objection_handling_patterns: Json | null
+          performance_metrics: Json | null
+          personality_transitions: Json | null
+          session_id: string
+          user_id: string
+        }
+        Insert: {
+          buying_signal_responses?: Json | null
+          conversation_flow?: Json
+          created_at?: string
+          id?: string
+          objection_handling_patterns?: Json | null
+          performance_metrics?: Json | null
+          personality_transitions?: Json | null
+          session_id: string
+          user_id: string
+        }
+        Update: {
+          buying_signal_responses?: Json | null
+          conversation_flow?: Json
+          created_at?: string
+          id?: string
+          objection_handling_patterns?: Json | null
+          performance_metrics?: Json | null
+          personality_transitions?: Json | null
+          session_id?: string
+          user_id?: string
         }
         Relationships: []
       }

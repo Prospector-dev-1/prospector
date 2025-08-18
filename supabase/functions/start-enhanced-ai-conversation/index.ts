@@ -1,0 +1,329 @@
+import "https://deno.land/x/xhr@0.1.0/mod.ts";
+import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
+import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.7.1';
+
+const corsHeaders = {
+  'Access-Control-Allow-Origin': '*',
+  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
+};
+
+const supabase = createClient(
+  Deno.env.get('SUPABASE_URL') ?? '',
+  Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
+);
+
+serve(async (req) => {
+  if (req.method === 'OPTIONS') {
+    return new Response(null, { headers: corsHeaders });
+  }
+
+  try {
+    const { 
+      sessionId, 
+      originalMoment, 
+      replayMode, 
+      prospectPersonality, 
+      gamificationMode,
+      customProspectId 
+    } = await req.json();
+
+    console.log('Enhanced AI conversation start:', { 
+      sessionId, 
+      replayMode, 
+      prospectPersonality, 
+      gamificationMode,
+      customProspectId 
+    });
+
+    const vapiApiKey = Deno.env.get('VAPI_API_KEY');
+    if (!vapiApiKey) {
+      throw new Error('VAPI_API_KEY not found');
+    }
+
+    // Get user ID from auth
+    const authHeader = req.headers.get('Authorization');
+    const { data: { user }, error: authError } = await supabase.auth.getUser(
+      authHeader?.replace('Bearer ', '') || ''
+    );
+
+    if (authError || !user) {
+      throw new Error('User not authenticated');
+    }
+
+    // Get AI prospect profile (custom or default)
+    let prospectProfile = null;
+    if (customProspectId) {
+      const { data: customProfile } = await supabase
+        .from('ai_prospect_profiles')
+        .select('*')
+        .eq('id', customProspectId)
+        .single();
+      
+      prospectProfile = customProfile;
+    } else {
+      // Get default profile based on personality
+      const { data: defaultProfile } = await supabase
+        .from('ai_prospect_profiles')
+        .select('*')
+        .eq('base_personality', prospectPersonality)
+        .eq('is_public', true)
+        .order('difficulty_level', { ascending: true })
+        .limit(1)
+        .single();
+      
+      prospectProfile = defaultProfile;
+    }
+
+    // Get user's interaction history for this personality
+    const { data: interactionHistory } = await supabase
+      .from('ai_prospect_interactions')
+      .select('*')
+      .eq('user_id', user.id)
+      .eq('prospect_personality', prospectPersonality)
+      .order('created_at', { ascending: false })
+      .limit(5);
+
+    // Generate enhanced system prompt
+    const systemPrompt = generateEnhancedSystemPrompt({
+      originalMoment,
+      replayMode,
+      prospectPersonality,
+      gamificationMode,
+      prospectProfile,
+      interactionHistory: interactionHistory || []
+    });
+
+    // Get voice for personality
+    const voiceId = getVoiceForPersonality(prospectPersonality);
+
+    // Create VAPI assistant with enhanced configuration
+    const assistantConfig = {
+      model: {
+        provider: "openai",
+        model: "gpt-4o-mini",
+        systemMessage: systemPrompt,
+        maxTokens: 250,
+        temperature: 0.8
+      },
+      voice: {
+        provider: "11labs",
+        voiceId: voiceId
+      },
+      firstMessage: generateContextualFirstMessage(originalMoment, prospectProfile),
+      recordingEnabled: false,
+      endCallMessage: "Thank you for the practice session. Your performance will be analyzed shortly.",
+      metadata: {
+        sessionId,
+        prospectPersonality,
+        replayMode,
+        gamificationMode,
+        customProspectId,
+        prospectProfileId: prospectProfile?.id
+      }
+    };
+
+    const response = await fetch('https://api.vapi.ai/assistant', {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${vapiApiKey}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(assistantConfig),
+    });
+
+    if (!response.ok) {
+      const errorData = await response.text();
+      console.error('VAPI API error:', errorData);
+      throw new Error(`VAPI API error: ${response.status}`);
+    }
+
+    const assistantData = await response.json();
+
+    // Store conversation analytics initialization
+    await supabase
+      .from('conversation_analytics')
+      .insert({
+        user_id: user.id,
+        session_id: sessionId,
+        conversation_flow: [],
+        objection_handling_patterns: {},
+        personality_transitions: [],
+        buying_signal_responses: {},
+        performance_metrics: {
+          start_time: new Date().toISOString(),
+          prospect_profile_id: prospectProfile?.id,
+          custom_prospect_used: !!customProspectId
+        }
+      });
+
+    return new Response(JSON.stringify({
+      assistantId: assistantData.id,
+      sessionConfig: {
+        replayMode,
+        prospectPersonality,
+        gamificationMode,
+        prospectProfile: prospectProfile ? {
+          id: prospectProfile.id,
+          name: prospectProfile.name,
+          difficulty_level: prospectProfile.difficulty_level,
+          personality_traits: prospectProfile.personality_traits
+        } : null
+      }
+    }), {
+      headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+    });
+
+  } catch (error) {
+    console.error('Error in start-enhanced-ai-conversation:', error);
+    return new Response(JSON.stringify({ error: error.message }), {
+      status: 500,
+      headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+    });
+  }
+});
+
+function generateEnhancedSystemPrompt({ originalMoment, replayMode, prospectPersonality, gamificationMode, prospectProfile, interactionHistory }) {
+  const basePersonality = getPersonalityTraits(prospectPersonality);
+  const profileTraits = prospectProfile?.personality_traits || {};
+  const objectionPatterns = prospectProfile?.objection_patterns || [];
+  const buyingSignals = prospectProfile?.buying_signals || [];
+  
+  // Analyze interaction history for personality evolution
+  const personalityState = analyzePersonalityEvolution(interactionHistory);
+  
+  let prompt = `You are an AI prospect in a sales training simulation. Your role is to provide realistic sales practice.
+
+CORE PERSONALITY: ${prospectPersonality.toUpperCase()}
+${basePersonality}
+
+ENHANCED PROFILE TRAITS:
+${Object.entries(profileTraits).map(([key, value]) => `- ${key}: ${value}`).join('\n')}
+
+CURRENT PERSONALITY STATE: ${personalityState.current}
+${personalityState.description}
+
+OBJECTION PATTERNS:
+${objectionPatterns.map(pattern => 
+  `- ${pattern.type} (${pattern.intensity}): Triggered by ${pattern.triggers.join(', ')}`
+).join('\n')}
+
+BUYING SIGNALS TO SHOW:
+${buyingSignals.map(signal => 
+  `- ${signal.signal} (${signal.probability * 100}% chance when appropriate)`
+).join('\n')}
+
+CONVERSATION CONTEXT:
+We're discussing a ${originalMoment.type} moment from a previous call: "${originalMoment.context}"
+
+BEHAVIORAL INSTRUCTIONS:
+1. Start with your current personality state but be ready to transition based on the user's approach
+2. Show objections according to your patterns, but allow them to be overcome with good responses
+3. Display buying signals when the user demonstrates competence
+4. Remember and reference previous interactions if this isn't your first conversation with this user
+5. Gradually warm up if the user shows expertise and builds trust
+6. Challenge the user appropriately for their skill level
+
+REALISM GUIDELINES:
+- Use industry-appropriate language for ${prospectProfile?.industry_context || 'general business'}
+- Maintain ${profileTraits.formality || 'medium'} formality level
+- Show ${profileTraits.directness || 'medium'} directness in communication
+- Demonstrate ${profileTraits.technical_depth || 'medium'} technical understanding
+
+GAMIFICATION MODE: ${gamificationMode.toUpperCase()}
+${getGamificationInstructions(gamificationMode)}
+
+Remember: You're here to help the user practice and improve. Be challenging but fair, and provide realistic responses that help them develop real sales skills.`;
+
+  return prompt;
+}
+
+function analyzePersonalityEvolution(interactionHistory) {
+  if (!interactionHistory.length) {
+    return {
+      current: 'initial',
+      description: 'This is our first interaction. Start with base personality settings.'
+    };
+  }
+
+  const latestInteraction = interactionHistory[0];
+  const personalityState = latestInteraction.personality_state;
+  
+  if (personalityState?.current === 'warmed_up') {
+    return {
+      current: 'returning_warm',
+      description: 'You remember this person positively from previous conversations. Start somewhat warmer but still maintain your core personality.'
+    };
+  } else if (personalityState?.current === 'frustrated') {
+    return {
+      current: 'returning_skeptical',
+      description: 'You had a challenging previous conversation with this person. Start more guarded and require extra effort to warm up.'
+    };
+  }
+
+  return {
+    current: 'returning_neutral',
+    description: 'You have some history with this person but previous conversations were mixed. Start with slight recognition.'
+  };
+}
+
+function getPersonalityTraits(personality) {
+  const traits = {
+    skeptical: "You are naturally doubtful and require strong evidence. You question claims, ask for proof, and are slow to trust. However, you can be won over with data, references, and logical arguments.",
+    enthusiastic: "You are excited about new solutions but also busy and easily distracted. You appreciate innovation but need quick, clear value propositions. You make decisions quickly when convinced.",
+    professional: "You are formal, process-oriented, and thorough. You value proper procedures, documentation, and risk management. You prefer detailed discussions and careful evaluation.",
+    aggressive: "You are direct, challenging, and demanding. You push back hard on everything, test the salesperson's knowledge, and don't accept weak answers. You respect strength and expertise.",
+    analytical: "You are data-driven, detail-oriented, and methodical. You want numbers, charts, and technical specifications. You ask probing questions and need comprehensive information."
+  };
+  
+  return traits[personality] || traits.professional;
+}
+
+function getGamificationInstructions(mode) {
+  const instructions = {
+    speed: "Focus on quick responses and rapid-fire objections. Test the user's ability to think fast and respond efficiently.",
+    difficulty: "Present complex, multi-layered objections. Combine several concerns into single responses and require sophisticated handling.",
+    empathy: "Pay special attention to emotional intelligence. Respond positively to empathetic approaches and negatively to purely logical ones."
+  };
+  
+  return instructions[mode] || '';
+}
+
+function getVoiceForPersonality(personality) {
+  const voiceMap = {
+    skeptical: 'CwhRBWXzGAHq8TQ4Fs17', // Roger - Authoritative
+    enthusiastic: 'EXAVITQu4vr4xnSDxMaL', // Sarah - Energetic
+    professional: 'JBFqnCBsd6RMkjVDRZzb', // George - Professional
+    aggressive: 'TX3LPaxmHKxFdv7VOQHJ', // Liam - Strong
+    analytical: 'nPczCjzI2devNBz1zQrb'  // Brian - Thoughtful
+  };
+  
+  return voiceMap[personality] || voiceMap.professional;
+}
+
+function generateContextualFirstMessage(originalMoment, prospectProfile) {
+  const contextualMessages = {
+    objection: [
+      "I have to say, I'm still not convinced about what we discussed before...",
+      "Look, I've been thinking about our last conversation, and I still have concerns...",
+      "Before we continue, I need to address some issues from last time..."
+    ],
+    question: [
+      "I still have some questions about what you mentioned before...",
+      "Can we dive deeper into that topic we were discussing?",
+      "I've been thinking about your proposal, but I need more details..."
+    ],
+    closing: [
+      "Alright, let's talk next steps. What exactly are you proposing?",
+      "I'm ready to hear your recommendation, but I need to understand the details...",
+      "Walk me through what you're suggesting we do here..."
+    ],
+    discovery: [
+      "Tell me more about how this would work for someone in my situation...",
+      "I'm curious about your approach. What makes you different?",
+      "Help me understand how this fits with what we're trying to accomplish..."
+    ]
+  };
+  
+  const messages = contextualMessages[originalMoment.type] || contextualMessages.discovery;
+  return messages[Math.floor(Math.random() * messages.length)];
+}
