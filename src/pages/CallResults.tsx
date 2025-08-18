@@ -184,6 +184,69 @@ const CallResults = () => {
     if (level <= 8) return "Hard";
     return "Expert";
   };
+
+  // Outcome inference based on transcript for nuanced statuses (UI-only)
+  const inferOutcomeFromTranscript = (transcript?: string) => {
+    if (!transcript) return null;
+    const t = transcript.toLowerCase();
+
+    // Email follow-up agreed
+    const emailPhrases = [
+      /send (me|us) (an )?email/,
+      /email (me|us)/,
+      /send (the )?(details|info|information|proposal|quote|deck|testimonials)/,
+      /shoot (me|us) an email/,
+      /i'll look (it|this) over (when|later)/,
+      /send me the testimonials/,
+    ];
+    if (emailPhrases.some((re) => re.test(t))) {
+      return "Email follow-up agreed";
+    }
+
+    // Callback or meeting scheduled
+    const meetingPhrases = [
+      /schedule (a )?(call|meeting)/,
+      /(tomorrow|next week|monday|tuesday|wednesday|thursday|friday) at \d{1,2}(:\d{2})?\s?(am|pm)?/,
+      /let's talk (later|then)/,
+      /book (a )?time/,
+    ];
+    if (meetingPhrases.some((re) => re.test(t))) {
+      return "Callback/meeting agreed";
+    }
+
+    // Requested more info (general interest)
+    const infoPhrases = [
+      /send (me|us) more (info|information|details)/,
+      /i'll think about it/,
+      /not committing/,
+    ];
+    if (infoPhrases.some((re) => re.test(t))) {
+      return "More info requested";
+    }
+
+    // Explicit rejection
+    const rejectPhrases = [
+      /not interested/,
+      /no thanks/,
+      /i'll pass/,
+    ];
+    if (rejectPhrases.some((re) => re.test(t))) {
+      return "Not interested";
+    }
+
+    return null;
+  };
+
+  const getCallOutcome = (record: CallRecord) => {
+    if (record.successful_sale) {
+      return { text: "Successful Sale", variant: "default" as const };
+    }
+    const inferred = inferOutcomeFromTranscript(record.transcript);
+    if (inferred) {
+      return { text: inferred, variant: "default" as const };
+    }
+    return { text: "No Sale", variant: "secondary" as const };
+  };
   if (loading) {
     return <div className="min-h-screen flex items-center justify-center bg-background">
         <div className="text-center">
@@ -290,10 +353,15 @@ const CallResults = () => {
               <CardContent>
                 <div className="mb-6 text-center">
                   <div className="inline-flex items-center space-x-2">
-                    <span className="text-sm text-muted-foreground">Sale Result:</span>
-                    <Badge variant={callRecord.successful_sale ? "default" : "secondary"} className="ml-2">
-                      {callRecord.successful_sale ? "✅ Successful Sale" : "❌ No Sale"}
-                    </Badge>
+                    <span className="text-sm text-muted-foreground">Outcome:</span>
+                    {(() => {
+                      const outcome = getCallOutcome(callRecord);
+                      return (
+                        <Badge variant={outcome.variant} className="ml-2">
+                          {outcome.text}
+                        </Badge>
+                      );
+                    })()}
                   </div>
                 </div>
                 <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-center">
