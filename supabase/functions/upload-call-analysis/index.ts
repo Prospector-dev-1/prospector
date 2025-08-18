@@ -72,15 +72,42 @@ serve(async (req) => {
 
     console.log('Created upload record:', uploadRecord.id);
 
-    // Convert base64 to binary for audio processing
-    const binaryAudio = Uint8Array.from(atob(file), c => c.charCodeAt(0));
+    // Convert base64 to binary for audio processing (chunked to reduce memory usage)
+    function processBase64Chunks(base64String: string, chunkSize = 32768) {
+      const chunks: Uint8Array[] = [];
+      let position = 0;
+      while (position < base64String.length) {
+        const slice = base64String.slice(position, position + chunkSize);
+        const binary = atob(slice);
+        const bytes = new Uint8Array(binary.length);
+        for (let i = 0; i < binary.length; i++) bytes[i] = binary.charCodeAt(i);
+        chunks.push(bytes);
+        position += chunkSize;
+      }
+      const totalLength = chunks.reduce((acc, c) => acc + c.length, 0);
+      const result = new Uint8Array(totalLength);
+      let offset = 0;
+      for (const c of chunks) { result.set(c, offset); offset += c.length; }
+      return result;
+    }
+
+    const binaryAudio = processBase64Chunks(file);
     
     // Step 1: Transcribe the audio
     console.log('Starting transcription...');
     const formData = new FormData();
-    const audioBlob = new Blob([binaryAudio], { 
-      type: fileType === 'video' ? 'video/mp4' : 'audio/mpeg' 
-    });
+
+    // Determine best content type from filename
+    const lowerName = (originalFilename || '').toLowerCase();
+    let contentType = 'audio/mpeg';
+    if (lowerName.endsWith('.wav')) contentType = 'audio/wav';
+    else if (lowerName.endsWith('.m4a')) contentType = 'audio/mp4';
+    else if (lowerName.endsWith('.mp3')) contentType = 'audio/mpeg';
+    else if (lowerName.endsWith('.mov')) contentType = 'video/quicktime';
+    else if (lowerName.endsWith('.mp4')) contentType = 'video/mp4';
+    else if (fileType === 'video') contentType = 'video/mp4';
+
+    const audioBlob = new Blob([binaryAudio], { type: contentType });
     formData.append('file', audioBlob, originalFilename);
     formData.append('model', 'whisper-1');
 
