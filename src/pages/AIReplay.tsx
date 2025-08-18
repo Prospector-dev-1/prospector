@@ -12,6 +12,11 @@ import SEO from '@/components/SEO';
 import MobileLayout from '@/components/MobileLayout';
 import SmartBackButton from '@/components/SmartBackButton';
 import MomentsTimeline, { type Moment } from '@/components/MomentsTimeline';
+import ReplayModeControls from '@/components/ReplayModeControls';
+import CoachingHints from '@/components/CoachingHints';
+import ConversationPanel from '@/components/ConversationPanel';
+import { useRealtimeAIChat, type ReplayMode, type ProspectPersonality, type GamificationMode } from '@/hooks/useRealtimeAIChat';
+import { useIsMobile } from '@/hooks/use-mobile';
 
 interface CallUpload {
   id: string;
@@ -35,36 +40,39 @@ const AIReplay = () => {
   const { uploadId } = useParams();
   const navigate = useNavigate();
   const { user } = useAuth();
+  const isMobile = useIsMobile();
+  
+  // State management
   const [originalCall, setOriginalCall] = useState<CallUpload | null>(null);
   const [moments, setMoments] = useState<Moment[]>([]);
   const [selectedMoment, setSelectedMoment] = useState<string | null>(null);
-  const [replaySession, setReplaySession] = useState<ReplaySession>({
-    isRecording: false,
-    transcript: '',
-    duration: 0,
-    newScore: null,
-    improvement: null
-  });
   const [loading, setLoading] = useState(true);
   const [loadingMoments, setLoadingMoments] = useState(false);
-  const [processing, setProcessing] = useState(false);
-  const intervalRef = useRef<NodeJS.Timeout | null>(null);
-  const mediaRecorderRef = useRef<MediaRecorder | null>(null);
-  const chunksRef = useRef<Blob[]>([]);
+  
+  // Replay mode configuration
+  const [replayMode, setReplayMode] = useState<ReplayMode>('exact');
+  const [prospectPersonality, setProspectPersonality] = useState<ProspectPersonality>('professional');
+  const [gamificationMode, setGamificationMode] = useState<GamificationMode>('practice');
+  
+  // AI conversation hook
+  const { 
+    conversationState, 
+    startConversation, 
+    endConversation,
+    clearHints
+  } = useRealtimeAIChat();
 
   useEffect(() => {
     if (!uploadId || !user) return;
     fetchOriginalCall();
   }, [uploadId, user]);
 
+  // Component cleanup
   useEffect(() => {
     return () => {
-      if (intervalRef.current) {
-        clearInterval(intervalRef.current);
-      }
-      stopRecording();
+      endConversation();
     };
-  }, []);
+  }, [endConversation]);
 
   const fetchOriginalCall = async () => {
     try {
@@ -119,127 +127,27 @@ const AIReplay = () => {
     }
   };
 
-  const startRecording = async () => {
-    try {
-      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-      const mediaRecorder = new MediaRecorder(stream);
-      mediaRecorderRef.current = mediaRecorder;
-      chunksRef.current = [];
-
-      mediaRecorder.ondataavailable = (event) => {
-        if (event.data.size > 0) {
-          chunksRef.current.push(event.data);
-        }
-      };
-
-      mediaRecorder.start();
-      
-      setReplaySession(prev => ({ ...prev, isRecording: true, duration: 0 }));
-      
-      // Start timer
-      intervalRef.current = setInterval(() => {
-        setReplaySession(prev => ({ ...prev, duration: prev.duration + 1 }));
-      }, 1000);
-
-      toast.success('Recording started! Practice your call with the AI prospect.');
-      
-    } catch (error) {
-      console.error('Error starting recording:', error);
-      toast.error('Failed to start recording. Please check microphone permissions.');
-    }
-  };
-
-  const stopRecording = () => {
-    if (mediaRecorderRef.current && replaySession.isRecording) {
-      mediaRecorderRef.current.stop();
-      mediaRecorderRef.current.stream.getTracks().forEach(track => track.stop());
-      
-      setReplaySession(prev => ({ ...prev, isRecording: false }));
-      
-      if (intervalRef.current) {
-        clearInterval(intervalRef.current);
-      }
-    }
-  };
-
-  const processReplay = async () => {
-    if (!originalCall || chunksRef.current.length === 0) return;
-
-    setProcessing(true);
+  const handleStartConversation = async () => {
+    if (!selectedMoment || !originalCall) return;
     
+    const moment = moments.find(m => m.id === selectedMoment);
+    if (!moment) return;
+
     try {
-      // Convert recorded audio to base64
-      const audioBlob = new Blob(chunksRef.current, { type: 'audio/webm' });
-      const reader = new FileReader();
-      
-      reader.onload = async () => {
-        try {
-          const base64Audio = (reader.result as string).split(',')[1];
-          
-          // Call the upload analysis function for the replay
-          const { data, error } = await supabase.functions.invoke('upload-call-analysis', {
-            body: {
-              file: base64Audio,
-              originalFilename: `replay_${originalCall.original_filename}`,
-              fileType: 'audio'
-            }
-          });
-
-          if (error) throw error;
-
-          // Get the new analysis
-          const { data: newAnalysis, error: analysisError } = await supabase
-            .from('call_uploads')
-            .select('confidence_score, objection_handling_scores')
-            .eq('id', data.uploadId)
-            .single();
-
-          if (analysisError) throw analysisError;
-
-          const improvement = newAnalysis.confidence_score - originalCall.confidence_score;
-
-          // Save the replay comparison
-          const { error: replayError } = await supabase
-            .from('ai_replays')
-            .insert({
-              user_id: user?.id,
-              original_call_id: originalCall.id,
-              original_score: originalCall.confidence_score,
-              new_score: newAnalysis.confidence_score,
-              transcript: 'Replay transcript would be here' // In a real app, you'd get this from the analysis
-            });
-
-          if (replayError) throw replayError;
-
-          setReplaySession(prev => ({
-            ...prev,
-            newScore: newAnalysis.confidence_score,
-            improvement: improvement
-          }));
-
-          toast.success('Replay analyzed successfully!');
-          
-        } catch (error) {
-          console.error('Processing error:', error);
-          toast.error('Failed to analyze replay');
-        }
-      };
-
-      reader.readAsDataURL(audioBlob);
-      
+      clearHints();
+      await startConversation(replayMode, prospectPersonality, gamificationMode, moment);
+      toast.success('AI conversation started! Practice your objection handling.');
     } catch (error) {
-      console.error('Error processing replay:', error);
-      toast.error('Failed to process replay');
-    } finally {
-      setProcessing(false);
+      console.error('Error starting conversation:', error);
+      toast.error('Failed to start AI conversation. Please try again.');
     }
   };
 
-  const formatDuration = (seconds: number) => {
-    const mins = Math.floor(seconds / 60);
-    const secs = seconds % 60;
-    return `${mins}:${secs.toString().padStart(2, '0')}`;
+  const handleEndConversation = () => {
+    endConversation();
+    toast.info('Conversation ended. Check your score and feedback!');
   };
+
 
   if (loading) {
     return (
@@ -302,7 +210,7 @@ const AIReplay = () => {
                   Original Call: {originalCall.original_filename}
                 </CardTitle>
                 <CardDescription>
-                  Original Score: {originalCall.confidence_score}/100 • Practice individual moments to improve your performance
+                  Original Score: {originalCall.confidence_score}/100 • Practice with AI conversations and real-time coaching
                 </CardDescription>
               </CardHeader>
               <CardContent>
@@ -317,21 +225,34 @@ const AIReplay = () => {
                   </div>
                   <div className="flex items-center gap-2">
                     <Target className="h-4 w-4 text-muted-foreground" />
-                    <span className="text-sm">Ready to Practice</span>
+                    <span className="text-sm">AI Practice Ready</span>
                   </div>
                 </div>
               </CardContent>
             </Card>
 
-            {/* Moments Section */}
-            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+            {/* Replay Mode Controls */}
+            <div className="mb-6">
+              <ReplayModeControls
+                replayMode={replayMode}
+                setReplayMode={setReplayMode}
+                prospectPersonality={prospectPersonality}
+                setProspectPersonality={setProspectPersonality}
+                gamificationMode={gamificationMode}
+                setGamificationMode={setGamificationMode}
+                disabled={conversationState.isActive || conversationState.isConnecting}
+              />
+            </div>
+
+            {/* Main Content Grid */}
+            <div className={`grid gap-6 ${isMobile ? 'grid-cols-1' : 'grid-cols-1 lg:grid-cols-3'}`}>
               {/* Moments Timeline */}
-              <div className="lg:col-span-2">
+              <div className={isMobile ? 'order-2' : 'lg:col-span-2'}>
                 <Card>
                   <CardHeader>
                     <CardTitle>Call Moments</CardTitle>
                     <CardDescription>
-                      Select a moment below to practice that specific part of your call
+                      Select a moment below to start an AI conversation practice
                     </CardDescription>
                   </CardHeader>
                   <CardContent>
@@ -364,98 +285,23 @@ const AIReplay = () => {
                 </Card>
               </div>
 
-              {/* Practice Panel */}
-              <div>
-                <Card>
-                  <CardHeader>
-                    <CardTitle>Practice Session</CardTitle>
-                    <CardDescription>
-                      {selectedMoment ? 'Practice the selected moment' : 'Select a moment to practice'}
-                    </CardDescription>
-                  </CardHeader>
-                  <CardContent>
-                    {selectedMoment ? (
-                      <div className="space-y-4">
-                        {(() => {
-                          const moment = moments.find(m => m.id === selectedMoment);
-                          if (!moment) return null;
-                          
-                          return (
-                            <>
-                              <div className="p-4 bg-muted rounded-lg">
-                                <h4 className="font-semibold mb-2">{moment.label}</h4>
-                                <p className="text-sm text-muted-foreground mb-2">{moment.summary}</p>
-                                {moment.coaching_tip && (
-                                  <div className="mt-3 p-3 bg-primary/10 rounded-md">
-                                    <p className="text-sm font-medium text-primary">Coaching Tip:</p>
-                                    <p className="text-sm text-primary/80">{moment.coaching_tip}</p>
-                                  </div>
-                                )}
-                              </div>
-                              
-                              <div className="text-center space-y-3">
-                                {!replaySession.isRecording ? (
-                                  <Button 
-                                    size="lg" 
-                                    onClick={startRecording}
-                                    className="w-full"
-                                  >
-                                    <Mic className="h-4 w-4 mr-2" />
-                                    Start Practicing This Moment
-                                  </Button>
-                                ) : (
-                                  <div className="space-y-3">
-                                    <div className="flex items-center justify-center gap-2 text-red-500">
-                                      <div className="h-3 w-3 bg-red-500 rounded-full animate-pulse" />
-                                      Recording: {formatDuration(replaySession.duration)}
-                                    </div>
-                                    <Button 
-                                      variant="outline" 
-                                      size="lg"
-                                      onClick={stopRecording}
-                                      className="w-full"
-                                    >
-                                      <Square className="h-4 w-4 mr-2" />
-                                      Stop & Analyze
-                                    </Button>
-                                  </div>
-                                )}
-                                
-                                {replaySession.newScore !== null && (
-                                  <div className="p-4 bg-accent/10 rounded-lg">
-                                    <div className="flex items-center justify-between mb-2">
-                                      <span className="text-sm font-medium">Your Score</span>
-                                      <span className="text-lg font-bold">{replaySession.newScore}/100</span>
-                                    </div>
-                                    <div className="flex items-center gap-2">
-                                      {replaySession.improvement! > 0 ? (
-                                        <TrendingUp className="h-4 w-4 text-green-500" />
-                                      ) : (
-                                        <TrendingDown className="h-4 w-4 text-red-500" />
-                                      )}
-                                      <span className={replaySession.improvement! > 0 ? 'text-green-500' : 'text-red-500'}>
-                                        {replaySession.improvement! > 0 ? '+' : ''}{replaySession.improvement} improvement
-                                      </span>
-                                    </div>
-                                  </div>
-                                )}
-                              </div>
-                            </>
-                          );
-                        })()}
-                      </div>
-                    ) : (
-                      <div className="text-center py-8">
-                        <Target className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
-                        <p className="text-muted-foreground">
-                          Choose a moment from the timeline to start practicing
-                        </p>
-                      </div>
-                    )}
-                  </CardContent>
-                </Card>
+              {/* AI Conversation Panel */}
+              <div className={isMobile ? 'order-1' : ''}>
+                <ConversationPanel
+                  conversationState={conversationState}
+                  selectedMoment={selectedMoment ? moments.find(m => m.id === selectedMoment) : null}
+                  onStartConversation={handleStartConversation}
+                  onEndConversation={handleEndConversation}
+                  disabled={!selectedMoment}
+                />
               </div>
             </div>
+
+            {/* Coaching Hints Overlay */}
+            <CoachingHints 
+              hints={conversationState.hints}
+              onClearHints={clearHints}
+            />
           </div>
         </div>
       </MobileLayout>
