@@ -10,6 +10,7 @@ import { ArrowLeft, Trophy, HelpCircle, Brain, Target, Lightbulb, Ear, DollarSig
 import SEO from '@/components/SEO';
 import { useToast } from '@/hooks/use-toast';
 import MobileLayout from '@/components/MobileLayout';
+import SmartBackButton from '@/components/SmartBackButton';
 interface CallRecord {
   id: string;
   difficulty_level: number;
@@ -202,9 +203,7 @@ const CallResults = () => {
             <Button onClick={retryAnalysis} variant="default">
               Retry Analysis
             </Button>
-            <Button onClick={() => navigate('/')} variant="outline" className="w-full">
-              Return to Dashboard
-            </Button>
+            <SmartBackButton variant="outline" className="w-full" />
           </div>
         </div>
       </div>;
@@ -213,9 +212,7 @@ const CallResults = () => {
     return <div className="min-h-screen flex items-center justify-center bg-background">
         <div className="text-center">
           <p className="text-muted-foreground">Call record not found.</p>
-          <Button onClick={() => navigate('/')} className="mt-4">
-            Return to Dashboard
-          </Button>
+          <SmartBackButton className="mt-4" />
         </div>
       </div>;
   }
@@ -265,9 +262,7 @@ const CallResults = () => {
             <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
               <div className="flex justify-between items-center py-4">
                 <div className="flex items-center space-x-3">
-                  <Button variant="ghost" size="icon" aria-label="Back to dashboard" onClick={() => navigate('/')}> 
-                    <ArrowLeft className="h-4 w-4" />
-                  </Button>
+                  <SmartBackButton variant="ghost" size="icon" />
                   <h1 className="text-2xl font-bold text-primary">Call Results</h1>
                 </div>
               </div>
@@ -461,9 +456,7 @@ const CallResults = () => {
               <Button onClick={() => navigate('/call-simulation')} className="flex-1">
                 Practice Again
               </Button>
-              <Button variant="outline" onClick={() => navigate('/')} className="flex-1">
-                Back to Dashboard
-              </Button>
+              <SmartBackButton variant="outline" className="flex-1" />
             </div>
           </div>
         </div>

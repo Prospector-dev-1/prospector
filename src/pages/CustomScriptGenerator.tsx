@@ -11,6 +11,7 @@ import { useToast } from '@/hooks/use-toast';
 import { Loader2, FileText, ArrowLeft, Clipboard, Sparkles, Building, Target, Users, MessageSquare } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import SEO from '@/components/SEO';
+import SmartBackButton from '@/components/SmartBackButton';
 
 interface ScriptFormData {
   businessType: string;
@@ -157,16 +158,11 @@ const CustomScriptGenerator = () => {
         {/* Header */}
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
           <div className="space-y-2">
-            <Button
+            <SmartBackButton
               variant="ghost"
               size="sm"
-              onClick={() => navigate('/')}
               className="flex items-center gap-2 self-start"
-            >
-              <ArrowLeft className="h-4 w-4" />
-              <span className="hidden sm:inline">Back to Dashboard</span>
-              <span className="sm:hidden">Back</span>
-            </Button>
+            />
             <div>
               <h1 className="text-xl sm:text-2xl lg:text-3xl font-bold text-foreground flex items-center gap-2">
                 <Sparkles className="h-6 w-6 sm:h-8 sm:w-8 text-primary" />

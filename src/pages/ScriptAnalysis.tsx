@@ -10,6 +10,7 @@ import { useToast } from '@/hooks/use-toast';
 import { Loader2, FileText, Target, TrendingUp, MessageSquare, Star, CheckCircle, AlertCircle, ArrowLeft, Clipboard, Maximize2, Minimize2 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import SEO from '@/components/SEO';
+import SmartBackButton from '@/components/SmartBackButton';
 
 interface ScriptAnalysis {
   overall_score: number;
@@ -217,16 +218,11 @@ const ScriptAnalysis = () => {
         {/* Header */}
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
           <div className="space-y-2">
-            <Button
+            <SmartBackButton
               variant="ghost"
               size="sm"
-              onClick={() => navigate('/')}
               className="flex items-center gap-2 self-start"
-            >
-              <ArrowLeft className="h-4 w-4" />
-              <span className="hidden sm:inline">Back to Dashboard</span>
-              <span className="sm:hidden">Back</span>
-            </Button>
+            />
             <div>
               <h1 className="text-xl sm:text-2xl lg:text-3xl font-bold text-foreground">Script Analysis</h1>
               <p className="text-sm sm:text-base text-muted-foreground">Get professional AI feedback on your sales script</p>

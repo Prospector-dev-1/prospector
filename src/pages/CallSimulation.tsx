@@ -12,6 +12,7 @@ import Vapi from '@vapi-ai/web';
 import SEO from '@/components/SEO';
 import CallCustomization from '@/components/CallCustomization';
 import MobileLayout from '@/components/MobileLayout';
+import SmartBackButton from '@/components/SmartBackButton';
 
 const CallSimulation = () => {
   const navigate = useNavigate();
@@ -362,9 +363,7 @@ const CallSimulation = () => {
         <div className="px-3 sm:px-4 lg:px-8">
           <div className="flex justify-between items-center py-3">
             <div className="flex items-center space-x-2">
-              <Button variant="ghost" size="icon" aria-label="Back to dashboard" onClick={() => navigate('/')}> 
-                <ArrowLeft className="h-4 w-4" />
-              </Button>
+              <SmartBackButton variant="ghost" size="icon" />
               <h1 className="text-lg sm:text-xl font-bold text-primary">Practice Call</h1>
             </div>
             <div className="text-right">

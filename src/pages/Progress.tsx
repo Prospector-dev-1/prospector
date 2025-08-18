@@ -10,6 +10,7 @@ import { toast } from 'sonner';
 import { supabase } from '@/integrations/supabase/client';
 import SEO from '@/components/SEO';
 import MobileLayout from '@/components/MobileLayout';
+import SmartBackButton from '@/components/SmartBackButton';
 interface ProgressData {
   confidence_trend: Array<{
     date: string;
@@ -248,10 +249,7 @@ const Progress = () => {
         <div className="max-w-6xl mx-auto">
           {/* Header */}
           <div className="mb-6">
-            <Button variant="outline" onClick={() => navigate('/')} className="flex items-center gap-2 mb-4">
-              <ArrowLeft className="h-4 w-4" />
-              Back to Dashboard
-            </Button>
+            <SmartBackButton className="flex items-center gap-2 mb-4" />
             
             <div className="flex items-center justify-between">
               <div>
