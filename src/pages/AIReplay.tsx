@@ -128,19 +128,21 @@ const AIReplay = () => {
   };
 
   const handleStartConversation = async () => {
-    if (!selectedMoment || !originalCall) return;
+    if (!selectedMoment) return;
     
     const moment = moments.find(m => m.id === selectedMoment);
     if (!moment) return;
-
-    try {
-      clearHints();
-      await startConversation(replayMode, prospectPersonality, gamificationMode, moment);
-      toast.success('AI conversation started! Practice your objection handling.');
-    } catch (error) {
-      console.error('Error starting conversation:', error);
-      toast.error('Failed to start AI conversation. Please try again.');
-    }
+    
+    // Generate session ID and navigate to live call page
+    const sessionId = `session_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+    const queryParams = new URLSearchParams({
+      mode: replayMode,
+      personality: prospectPersonality,
+      gamification: gamificationMode,
+      moment: JSON.stringify(moment)
+    });
+    
+    navigate(`/live-call/${sessionId}?${queryParams.toString()}`);
   };
 
   const handleEndConversation = () => {

@@ -12,6 +12,8 @@ import CallCoaching from "./pages/CallCoaching";
 import CallUpload from "./pages/CallUpload";
 import CallReview from "./pages/CallReview";
 import AIReplay from "./pages/AIReplay";
+import LiveCall from "./pages/LiveCall";
+import CallAnalysis from "./pages/CallAnalysis";
 import Progress from "./pages/Progress";
 import Challenges from "./pages/Challenges";
 import Leaderboard from "./pages/Leaderboard";
@@ -43,6 +45,8 @@ const App = () => (
             <Route path="/call-upload" element={<ProtectedRoute><CallUpload /></ProtectedRoute>} />
             <Route path="/call-review/:uploadId" element={<ProtectedRoute><CallReview /></ProtectedRoute>} />
             <Route path="/ai-replay/:uploadId" element={<ProtectedRoute><AIReplay /></ProtectedRoute>} />
+            <Route path="/live-call/:sessionId" element={<ProtectedRoute><LiveCall /></ProtectedRoute>} />
+            <Route path="/call-analysis/:sessionId" element={<ProtectedRoute><CallAnalysis /></ProtectedRoute>} />
             <Route path="/progress" element={<ProtectedRoute><Progress /></ProtectedRoute>} />
             <Route path="/challenges" element={<ProtectedRoute><Challenges /></ProtectedRoute>} />
             <Route path="/leaderboard" element={<ProtectedRoute><Leaderboard /></ProtectedRoute>} />
