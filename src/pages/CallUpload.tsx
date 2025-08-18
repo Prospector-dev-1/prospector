@@ -5,11 +5,12 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Button } from '@/components/ui/button';
 import { Progress } from '@/components/ui/progress';
 import { Badge } from '@/components/ui/badge';
-import { Upload, FileAudio, FileVideo, CreditCard, ArrowLeft } from 'lucide-react';
+import { Upload, FileAudio, FileVideo, CreditCard, ArrowLeft, RotateCcw } from 'lucide-react';
 import { toast } from 'sonner';
 import { supabase } from '@/integrations/supabase/client';
 import SEO from '@/components/SEO';
 import MobileLayout from '@/components/MobileLayout';
+import RecentCallUploads from '@/components/RecentCallUploads';
 
 const CallUpload = () => {
   const { user, profile } = useAuth();
@@ -201,18 +202,21 @@ const CallUpload = () => {
             </div>
           </div>
 
+          {/* Recent Call Uploads */}
+          <RecentCallUploads />
+
           {/* Upload Area */}
-          <Card className="mb-8">
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <Upload className="h-5 w-5" />
+          <Card className="mb-6">
+            <CardHeader className="pb-4">
+              <CardTitle className="flex items-center gap-2 text-lg">
+                <Upload className="h-4 w-4" />
                 Upload Your Call
               </CardTitle>
-              <CardDescription>
-                Upload audio or video files of your sales calls for detailed AI analysis
+              <CardDescription className="text-sm">
+                Upload audio or video files for AI analysis
               </CardDescription>
             </CardHeader>
-            <CardContent>
+            <CardContent className="pt-0">
               {uploading ? (
                 <div className="space-y-4">
                   <div className="text-center">
@@ -225,7 +229,7 @@ const CallUpload = () => {
                 </div>
               ) : (
                 <div
-                  className={`border-2 border-dashed rounded-lg p-8 text-center transition-colors ${
+                  className={`border-2 border-dashed rounded-lg p-6 text-center transition-colors ${
                     dragActive 
                       ? 'border-primary bg-primary/5' 
                       : 'border-border hover:border-primary/50'
@@ -235,23 +239,23 @@ const CallUpload = () => {
                   onDragEnter={() => setDragActive(true)}
                   onDragLeave={() => setDragActive(false)}
                 >
-                  <div className="flex flex-col items-center gap-4">
-                    <div className="flex gap-4">
-                      <FileAudio className="h-12 w-12 text-muted-foreground" />
-                      <FileVideo className="h-12 w-12 text-muted-foreground" />
+                  <div className="flex flex-col items-center gap-3">
+                    <div className="flex gap-3">
+                      <FileAudio className="h-8 w-8 text-muted-foreground" />
+                      <FileVideo className="h-8 w-8 text-muted-foreground" />
                     </div>
                     
                     <div>
-                      <h3 className="text-lg font-semibold mb-2">
+                      <h3 className="text-base font-semibold mb-1">
                         Drag & drop your call file here
                       </h3>
-                      <p className="text-sm text-muted-foreground mb-4">
-                        Supported formats: MP3, WAV, M4A, MP4, MOV (max 100MB)
+                      <p className="text-xs text-muted-foreground mb-3">
+                        MP3, WAV, M4A, MP4, MOV (max 100MB)
                       </p>
                     </div>
 
-                    <div className="flex flex-col sm:flex-row gap-4">
-                      <Button asChild>
+                    <div className="flex flex-col sm:flex-row gap-3">
+                      <Button asChild size="sm">
                         <label className="cursor-pointer">
                           <Upload className="h-4 w-4 mr-2" />
                           Choose File
@@ -264,9 +268,9 @@ const CallUpload = () => {
                         </label>
                       </Button>
                       
-                      <Button variant="outline" onClick={() => navigate('/buy-credits')}>
+                      <Button variant="outline" size="sm" onClick={() => navigate('/buy-credits')}>
                         <CreditCard className="h-4 w-4 mr-2" />
-                        Buy More Credits
+                        Buy Credits
                       </Button>
                     </div>
                   </div>
@@ -277,38 +281,45 @@ const CallUpload = () => {
 
           {/* What You'll Get */}
           <Card>
-            <CardHeader>
-              <CardTitle>What You'll Get in Your AI Review</CardTitle>
+            <CardHeader className="pb-4">
+              <CardTitle className="text-lg">What You'll Get in Your AI Review</CardTitle>
             </CardHeader>
-            <CardContent>
-              <div className="grid md:grid-cols-2 gap-6">
-                <div className="space-y-4">
+            <CardContent className="pt-0">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 md:gap-6">
+                <div className="space-y-3 md:space-y-4">
                   <div>
-                    <h4 className="font-semibold text-primary mb-2">✅ What You Did Well</h4>
-                    <p className="text-sm text-muted-foreground">
+                    <h4 className="font-semibold text-primary mb-1 md:mb-2">✅ What You Did Well</h4>
+                    <p className="text-xs md:text-sm text-muted-foreground">
                       Specific strengths and effective techniques you used
                     </p>
                   </div>
                   
                   <div>
-                    <h4 className="font-semibold text-destructive mb-2">❌ Areas for Improvement</h4>
-                    <p className="text-sm text-muted-foreground">
+                    <h4 className="font-semibold text-destructive mb-1 md:mb-2">❌ Areas for Improvement</h4>
+                    <p className="text-xs md:text-sm text-muted-foreground">
                       Clear feedback on what could be done better
+                    </p>
+                  </div>
+                  
+                  <div>
+                    <h4 className="font-semibold text-primary mb-1 md:mb-2">🔄 AI-Powered Moment Replay</h4>
+                    <p className="text-xs md:text-sm text-muted-foreground">
+                      Practice challenging moments from your call with AI. Replay specific objections or difficult parts to improve your responses through interactive coaching sessions.
                     </p>
                   </div>
                 </div>
                 
-                <div className="space-y-4">
+                <div className="space-y-3 md:space-y-4">
                   <div>
-                    <h4 className="font-semibold text-accent mb-2">📊 Objection Handling Scores</h4>
-                    <p className="text-sm text-muted-foreground">
+                    <h4 className="font-semibold text-accent mb-1 md:mb-2">📊 Objection Handling Scores</h4>
+                    <p className="text-xs md:text-sm text-muted-foreground">
                       Grades for Price, Timing, Trust, and Competitor objections
                     </p>
                   </div>
                   
                   <div>
-                    <h4 className="font-semibold text-info mb-2">🧠 Psychological Insights</h4>
-                    <p className="text-sm text-muted-foreground">
+                    <h4 className="font-semibold text-info mb-1 md:mb-2">🧠 Psychological Insights</h4>
+                    <p className="text-xs md:text-sm text-muted-foreground">
                       Why certain responses were weak and how to improve
                     </p>
                   </div>
