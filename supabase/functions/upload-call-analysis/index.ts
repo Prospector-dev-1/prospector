@@ -107,7 +107,7 @@ serve(async (req) => {
     const lowerName = (originalFilename || '').toLowerCase();
     let contentType = 'audio/mpeg';
     if (lowerName.endsWith('.wav')) contentType = 'audio/wav';
-    else if (lowerName.endsWith('.m4a')) contentType = 'audio/mp4';
+    else if (lowerName.endsWith('.m4a')) contentType = 'audio/m4a';
     else if (lowerName.endsWith('.mp3')) contentType = 'audio/mpeg';
     else if (lowerName.endsWith('.mov')) contentType = 'video/quicktime';
     else if (lowerName.endsWith('.mp4')) contentType = 'video/mp4';
@@ -129,20 +129,20 @@ serve(async (req) => {
       const errorText = await transcriptionResponse.text();
       console.error('Transcription error:', errorText);
       
-      // Parse OpenAI error for user-friendly messages
+      // Try to parse OpenAI error for user-friendly message
       try {
         const errorData = JSON.parse(errorText);
         if (errorData.error?.code === 'insufficient_quota') {
-          throw new Error('AI transcription service is temporarily unavailable due to quota limits. Please try again later or contact support.');
+          throw new Error('Transcription failed (quota): Please check OpenAI billing/limits.');
         } else if (errorData.error?.message) {
-          throw new Error(`Transcription failed: ${errorData.error.message}`);
+          throw new Error(`Transcription failed (${transcriptionResponse.status}): ${errorData.error.message}`);
         }
       } catch (parseError) {
-        // If we can't parse the error, use a generic message
         console.error('Could not parse OpenAI error:', parseError);
       }
       
-      throw new Error('Transcription service is temporarily unavailable. Please try again later.');
+      const snippet = (errorText || '').slice(0, 200);
+      throw new Error(`Transcription failed (${transcriptionResponse.status}). Details: ${snippet}`);
     }
 
     const transcriptionResult = await transcriptionResponse.json();
@@ -218,15 +218,16 @@ Provide your response in this JSON format:
       try {
         const errorData = JSON.parse(errorText);
         if (errorData.error?.code === 'insufficient_quota') {
-          throw new Error('AI analysis service is temporarily unavailable due to quota limits. Please try again later or contact support.');
+          throw new Error('Analysis failed (quota): Please check OpenAI billing/limits.');
         } else if (errorData.error?.message) {
-          throw new Error(`Analysis failed: ${errorData.error.message}`);
+          throw new Error(`Analysis failed (${analysisResponse.status}): ${errorData.error.message}`);
         }
       } catch (parseError) {
         console.error('Could not parse OpenAI error:', parseError);
       }
       
-      throw new Error('Analysis service is temporarily unavailable. Please try again later.');
+      const snippet = (errorText || '').slice(0, 200);
+      throw new Error(`Analysis failed (${analysisResponse.status}). Details: ${snippet}`);
     }
 
     const analysisResult = await analysisResponse.json();
