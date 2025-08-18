@@ -218,7 +218,41 @@ Provide your response in this JSON format:
     }
 
     const analysisResult = await analysisResponse.json();
-    const analysis = JSON.parse(analysisResult.choices[0].message.content);
+    let analysis: any;
+    try {
+      const content = analysisResult?.choices?.[0]?.message?.content ?? '';
+      if (typeof content === 'string') {
+        try {
+          analysis = JSON.parse(content);
+        } catch (e) {
+          // Try to salvage JSON by extracting the first valid JSON object substring
+          const start = content.indexOf('{');
+          const end = content.lastIndexOf('}');
+          if (start !== -1 && end !== -1 && end > start) {
+            analysis = JSON.parse(content.slice(start, end + 1));
+          } else {
+            throw e;
+          }
+        }
+      } else if (content && typeof content === 'object') {
+        analysis = content;
+      } else {
+        throw new Error('Empty analysis content from AI');
+      }
+    } catch (e) {
+      console.error('JSON parse failed, using manual analysis', e);
+      analysis = {
+        confidence_score: 50,
+        objection_handling_scores: { price: 50, timing: 50, trust: 50, competitor: 50 },
+        strengths: ['Demonstrated effort in engaging the prospect'],
+        weaknesses: ['AI could not reliably parse analysis; using fallback insights'],
+        better_responses: {
+          price_objection: "I hear you on price—can we look at the ROI and outcomes this enables over the next quarter?",
+          timing_concern: "What milestones would make the timing feel right, and how can we align the rollout?",
+        },
+        psychological_insights: 'Fallback generated due to parsing issues. Focus on curiosity, validation, and value linking when objections arise.',
+      };
+    }
 
     console.log('Analysis completed, updating database...');
 
