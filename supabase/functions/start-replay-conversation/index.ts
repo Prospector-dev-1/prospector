@@ -14,9 +14,9 @@ serve(async (req) => {
   try {
     const { replayMode, prospectPersonality, gamificationMode, originalMoment } = await req.json();
     
-    const VAPI_PRIVATE_KEY = Deno.env.get('VAPI_PRIVATE_KEY');
-    if (!VAPI_PRIVATE_KEY) {
-      throw new Error('VAPI_PRIVATE_KEY not configured');
+    const VAPI_API_KEY = Deno.env.get('VAPI_API_KEY');
+    if (!VAPI_API_KEY) {
+      throw new Error('VAPI_API_KEY not configured');
     }
 
     // Generate enhanced system prompt based on configuration
@@ -49,7 +49,7 @@ serve(async (req) => {
     const response = await fetch('https://api.vapi.ai/assistant', {
       method: 'POST',
       headers: {
-        'Authorization': `Bearer ${VAPI_PRIVATE_KEY}`,
+        'Authorization': `Bearer ${VAPI_API_KEY}`,
         'Content-Type': 'application/json',
       },
       body: JSON.stringify(assistantConfig),
