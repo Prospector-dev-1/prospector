@@ -30,15 +30,31 @@ const SmartBackButton: React.FC<SmartBackButtonProps> = ({
 
   const previousPageName = getPreviousPageName();
 
+  // Handle size variants for responsive text
+  if (size === 'icon') {
+    return (
+      <Button 
+        variant={variant} 
+        size={size}
+        onClick={handleBack}
+        className={className}
+        aria-label={`Back to ${previousPageName}`}
+      >
+        <ArrowLeft className="h-4 w-4" />
+      </Button>
+    );
+  }
+
   return (
     <Button 
       variant={variant} 
       size={size}
       onClick={handleBack}
-      className={className}
+      className={`flex items-center gap-2 ${className || ''}`}
     >
-      <ArrowLeft className="h-4 w-4 mr-2" />
-      Back to {previousPageName}
+      <ArrowLeft className="h-4 w-4 flex-shrink-0" />
+      <span className="hidden sm:inline truncate">Back to {previousPageName}</span>
+      <span className="sm:hidden truncate">Back</span>
     </Button>
   );
 };
