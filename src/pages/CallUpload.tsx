@@ -55,7 +55,7 @@ const CallUpload = () => {
           const fileType = file.type.includes('video') ? 'video' : 'audio';
           
           // Call the upload analysis function
-          const { data, error } = await supabase.functions.invoke('upload-call-analysis', {
+          const response = await supabase.functions.invoke('upload-call-analysis', {
             body: {
               file: base64,
               originalFilename: file.name,
@@ -65,22 +65,33 @@ const CallUpload = () => {
 
           setProgress(90);
 
-          if (error) {
-            console.error('Edge function error:', error);
-            const ctx: any = (error as any)?.context;
-            const serverMessage = ctx && typeof ctx === 'object' ? (ctx.error || ctx.message) : undefined;
-            throw new Error(serverMessage || (error as any)?.message || 'Upload failed');
+          console.log('Full response:', response);
+
+          if (response.error) {
+            console.error('Edge function error details:', response.error);
+            // Try to get actual error message from context
+            let errorMessage = 'Upload failed';
+            if (response.error.context?.error) {
+              errorMessage = response.error.context.error;
+            } else if (response.error.message) {
+              errorMessage = response.error.message;
+            }
+            throw new Error(errorMessage);
           }
 
-          if ((data as any)?.error) {
-            throw new Error((data as any).error);
+          if (response.data?.error) {
+            throw new Error(response.data.error);
+          }
+
+          if (!response.data?.success) {
+            throw new Error('Upload failed - no success response');
           }
 
           setProgress(100);
           toast.success('Call analyzed successfully!');
           
           // Navigate to the review page
-          navigate(`/call-review/${(data as any).uploadId}`);
+          navigate(`/call-review/${response.data.uploadId}`);
           
         } catch (error) {
           console.error('Upload error:', error);
