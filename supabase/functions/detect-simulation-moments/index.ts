@@ -99,6 +99,7 @@ async function extractMomentsFromTranscript(transcript: string) {
         start_char: Math.max(0, transcript.indexOf(line)),
         end_char: Math.max(0, transcript.indexOf(line)) + line.length,
         summary: `Objection: "${line.substring(0, 80)}${line.length > 80 ? '...' : ''}"`,
+        full_text: context,
         difficulty: calculateDifficulty(line, nextLines) <= 2 ? 'easy' : calculateDifficulty(line, nextLines) <= 3 ? 'medium' : 'hard'
       });
     }
@@ -112,6 +113,7 @@ async function extractMomentsFromTranscript(transcript: string) {
         start_char: Math.max(0, transcript.indexOf(line)),
         end_char: Math.max(0, transcript.indexOf(line)) + line.length,
         summary: `Question: "${line.substring(0, 80)}${line.length > 80 ? '...' : ''}"`,
+        full_text: context,
         difficulty: calculateDifficulty(line, nextLines) <= 2 ? 'easy' : calculateDifficulty(line, nextLines) <= 3 ? 'medium' : 'hard'
       });
     }
@@ -125,6 +127,7 @@ async function extractMomentsFromTranscript(transcript: string) {
         start_char: Math.max(0, transcript.indexOf(line)),
         end_char: Math.max(0, transcript.indexOf(line)) + line.length,
         summary: `Closing opportunity: "${line.substring(0, 80)}${line.length > 80 ? '...' : ''}"`,
+        full_text: context,
         difficulty: calculateDifficulty(line, nextLines) <= 2 ? 'easy' : calculateDifficulty(line, nextLines) <= 3 ? 'medium' : 'hard'
       });
     }
@@ -143,6 +146,7 @@ async function extractMomentsFromTranscript(transcript: string) {
         start_char: i * 100,
         end_char: (i + 1) * 100,
         summary: `Practice moment: "${section.substring(0, 80)}${section.length > 80 ? '...' : ''}"`,
+        full_text: section,
         difficulty: Math.floor(Math.random() * 3) === 0 ? 'easy' : Math.floor(Math.random() * 3) === 1 ? 'medium' : 'hard'
       });
     }

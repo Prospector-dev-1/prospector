@@ -104,6 +104,7 @@ const AIReplaySetup = () => {
       start_char: index * 100,
       end_char: (index + 1) * 100,
       summary: section.trim().substring(0, 100) + '...',
+      full_text: section.trim(),
       difficulty: Math.floor(Math.random() * 3) === 0 ? 'easy' : Math.floor(Math.random() * 3) === 1 ? 'medium' : 'hard'
     }));
     setMoments(fallbackMoments);
@@ -278,6 +279,7 @@ const AIReplaySetup = () => {
                     moments={moments}
                     selectedId={selectedMoment}
                     onSelect={setSelectedMoment}
+                    onSelectMoment={setSelectedMoment}
                   />
                 ) : (
                   <div className="text-center py-8">
