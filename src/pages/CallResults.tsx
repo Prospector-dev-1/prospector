@@ -457,9 +457,9 @@ const CallResults = () => {
                 <Target className="h-4 w-4" />
                 Practice Again
               </Button>
-              <Button variant="outline" onClick={() => navigate('/ai-replay')} className="flex items-center justify-center gap-2">
+              <Button variant="outline" onClick={() => navigate(`/ai-replay-setup/${callId}`)} className="flex items-center justify-center gap-2">
                 <MessageSquare className="h-4 w-4" />
-                Replay Mode
+                Replay Moments with AI
               </Button>
               <SmartBackButton variant="outline" className="flex items-center justify-center gap-2" />
             </div>
