@@ -7,8 +7,8 @@ import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/integrations/supabase/client';
-import { useToast } from '@/hooks/use-toast';
-import { Loader2, FileText, ArrowLeft, Clipboard, Sparkles, Building, Target, Users, MessageSquare } from 'lucide-react';
+  import { useToast } from '@/hooks/use-toast';
+  import { Loader2, FileText, ArrowLeft, Clipboard, Sparkles, Building, Target, Users, MessageSquare, Shield, ChevronDown, ChevronUp } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import SEO from '@/components/SEO';
 import SmartBackButton from '@/components/SmartBackButton';
@@ -36,6 +36,13 @@ const CustomScriptGenerator = () => {
   const [loading, setLoading] = useState(false);
   const [generatedScript, setGeneratedScript] = useState<string | null>(null);
   const [creditsRemaining, setCreditsRemaining] = useState<number | null>(null);
+  
+  // Objections state
+  const [initialObjections, setInitialObjections] = useState<Array<{objection: string, response: string}>>([]);
+  const [additionalObjections, setAdditionalObjections] = useState<Array<{objection: string, response: string}>>([]);
+  const [loadingObjections, setLoadingObjections] = useState(false);
+  const [objectionsGenerated, setObjectionsGenerated] = useState(false);
+  const [additionalObjectionsGenerated, setAdditionalObjectionsGenerated] = useState(false);
   const {
     user,
     profile,
@@ -96,6 +103,10 @@ const CustomScriptGenerator = () => {
       setGeneratedScript(data.custom_script);
       setCreditsRemaining(data.credits_remaining);
       await refreshProfile();
+      
+      // Generate initial objections automatically
+      await generateInitialObjections();
+      
       toast({
         title: "Script Generated",
         description: "Your custom script has been generated successfully!"
@@ -109,6 +120,79 @@ const CustomScriptGenerator = () => {
       });
     } finally {
       setLoading(false);
+    }
+  };
+
+  const generateInitialObjections = async () => {
+    setLoadingObjections(true);
+    try {
+      const { data, error } = await supabase.functions.invoke('generate-script-objections', {
+        body: { ...formData, type: 'initial' }
+      });
+      
+      if (error) throw error;
+      if (data.error) throw new Error(data.error);
+      
+      setInitialObjections(data.objections);
+      setObjectionsGenerated(true);
+    } catch (error: any) {
+      console.error('Error generating initial objections:', error);
+      toast({
+        title: "Objections Generation Failed",
+        description: error.message || "Failed to generate objections.",
+        variant: "destructive"
+      });
+    } finally {
+      setLoadingObjections(false);
+    }
+  };
+
+  const handleGenerateMoreObjections = async () => {
+    if (!user) {
+      toast({
+        title: "Authentication Required",
+        description: "Please log in to generate additional objections.",
+        variant: "destructive"
+      });
+      return;
+    }
+    
+    if (profile && profile.credits < 0.5) {
+      toast({
+        title: "Insufficient Credits",
+        description: "You need at least 0.5 credits to generate additional objections.",
+        variant: "destructive"
+      });
+      return;
+    }
+
+    setLoadingObjections(true);
+    try {
+      const { data, error } = await supabase.functions.invoke('generate-script-objections', {
+        body: { ...formData, type: 'additional' }
+      });
+      
+      if (error) throw error;
+      if (data.error) throw new Error(data.error);
+      
+      setAdditionalObjections(data.objections);
+      setAdditionalObjectionsGenerated(true);
+      setCreditsRemaining(data.remainingCredits);
+      await refreshProfile();
+      
+      toast({
+        title: "Additional Objections Generated",
+        description: "10 more objections have been generated successfully!"
+      });
+    } catch (error: any) {
+      console.error('Error generating additional objections:', error);
+      toast({
+        title: "Generation Failed",
+        description: error.message || "Failed to generate additional objections.",
+        variant: "destructive"
+      });
+    } finally {
+      setLoadingObjections(false);
     }
   };
   const copyToClipboard = async (text: string) => {
@@ -139,6 +223,10 @@ const CustomScriptGenerator = () => {
     });
     setGeneratedScript(null);
     setCreditsRemaining(null);
+    setInitialObjections([]);
+    setAdditionalObjections([]);
+    setObjectionsGenerated(false);
+    setAdditionalObjectionsGenerated(false);
   };
   return <>
     <SEO title="Custom Script Generator | Prospector" description="Generate personalized cold call scripts tailored to your business." canonicalPath="/custom-script" />
@@ -324,6 +412,82 @@ const CustomScriptGenerator = () => {
                 </div>
               </CardContent>
             </Card>
+
+            {/* Recommended Objections Section */}
+            {objectionsGenerated && (
+              <Card>
+                <CardHeader className="pb-3 sm:pb-6">
+                  <CardTitle className="flex items-center gap-2 text-base sm:text-lg">
+                    <Shield className="h-4 w-4 sm:h-5 sm:w-5 text-primary" />
+                    Recommended Objections
+                  </CardTitle>
+                  <CardDescription className="text-sm">
+                    Common objections you might encounter and effective responses
+                  </CardDescription>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  {/* Initial 3 Objections */}
+                  <div className="space-y-3">
+                    {initialObjections.map((item, index) => (
+                      <div key={`initial-${index}`} className="p-3 sm:p-4 border rounded-lg space-y-2">
+                        <h4 className="text-sm font-semibold text-foreground flex items-start gap-2">
+                          <span className="text-primary">#{index + 1}</span>
+                          <span className="text-red-600">"{item.objection}"</span>
+                        </h4>
+                        <div className="pl-6">
+                          <p className="text-xs sm:text-sm text-muted-foreground font-medium mb-1">Recommended Response:</p>
+                          <p className="text-xs sm:text-sm text-foreground leading-relaxed">{item.response}</p>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+
+                  {/* Generate More Objections Button */}
+                  {!additionalObjectionsGenerated && (
+                    <div className="pt-4 border-t">
+                      <Button 
+                        onClick={handleGenerateMoreObjections}
+                        disabled={loadingObjections || (profile && profile.credits < 0.5)}
+                        variant="outline"
+                        className="w-full flex items-center gap-2"
+                        size="lg"
+                      >
+                        {loadingObjections ? (
+                          <>
+                            <Loader2 className="h-4 w-4 animate-spin" />
+                            <span className="text-sm">Generating More Objections...</span>
+                          </>
+                        ) : (
+                          <>
+                            <Sparkles className="h-4 w-4" />
+                            <span className="text-sm">Generate 10 More Objections (0.5 credits)</span>
+                          </>
+                        )}
+                      </Button>
+                    </div>
+                  )}
+
+                  {/* Additional 10 Objections */}
+                  {additionalObjectionsGenerated && additionalObjections.length > 0 && (
+                    <div className="pt-4 border-t space-y-3">
+                      <h4 className="text-sm font-semibold text-foreground">Additional Objections</h4>
+                      {additionalObjections.map((item, index) => (
+                        <div key={`additional-${index}`} className="p-3 sm:p-4 border rounded-lg space-y-2">
+                          <h4 className="text-sm font-semibold text-foreground flex items-start gap-2">
+                            <span className="text-primary">#{index + 4}</span>
+                            <span className="text-red-600">"{item.objection}"</span>
+                          </h4>
+                          <div className="pl-6">
+                            <p className="text-xs sm:text-sm text-muted-foreground font-medium mb-1">Recommended Response:</p>
+                            <p className="text-xs sm:text-sm text-foreground leading-relaxed">{item.response}</p>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </CardContent>
+              </Card>
+            )}
 
             {/* Credits Info */}
             {creditsRemaining !== null && <Card>
