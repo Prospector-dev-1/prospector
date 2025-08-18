@@ -1,4 +1,5 @@
 import React from 'react';
+import { useLocation } from 'react-router-dom';
 import MobileBottomNav from './MobileBottomNav';
 import { cn } from '@/lib/utils';
 
@@ -13,16 +14,22 @@ const MobileLayout: React.FC<MobileLayoutProps> = ({
   className,
   showBottomNav = true 
 }) => {
+  const location = useLocation();
+  
+  // Hide navigation on call-related routes
+  const isCallPage = location.pathname.includes('/live-call');
+  const shouldShowNav = showBottomNav && !isCallPage;
+  
   return (
     <div className="min-h-screen bg-background">
       <main className={cn(
         "flex-1",
-        showBottomNav && "pb-20", // Add padding for bottom nav
+        shouldShowNav && "pb-20", // Add padding for bottom nav
         className
       )}>
         {children}
       </main>
-      {showBottomNav && <MobileBottomNav />}
+      {shouldShowNav && <MobileBottomNav />}
     </div>
   );
 };
