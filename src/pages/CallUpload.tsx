@@ -9,6 +9,7 @@ import { Upload, FileAudio, FileVideo, CreditCard, ArrowLeft } from 'lucide-reac
 import { toast } from 'sonner';
 import { supabase } from '@/integrations/supabase/client';
 import SEO from '@/components/SEO';
+import MobileLayout from '@/components/MobileLayout';
 
 const CallUpload = () => {
   const { user, profile } = useAuth();
@@ -167,9 +168,9 @@ const CallUpload = () => {
         description="Upload your sales calls for AI-powered analysis and feedback. Get insights on objection handling, closing techniques, and more."
         canonicalPath="/call-upload"
       />
-      
-      <div className="min-h-screen bg-background px-4 py-8">
-        <div className="max-w-4xl mx-auto">
+      <MobileLayout>
+        <div className="min-h-screen bg-background px-4 py-8">
+          <div className="max-w-4xl mx-auto">
           {/* Header */}
           <div className="mb-6">
             <Button 
@@ -317,6 +318,7 @@ const CallUpload = () => {
           </Card>
         </div>
       </div>
+      </MobileLayout>
     </>
   );
 };

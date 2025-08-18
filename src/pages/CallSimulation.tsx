@@ -551,10 +551,12 @@ const CallSimulation = () => {
               </CardContent>
             </Card>
           </div>
-        )}
+          )}
+        </div>
       </div>
-    </div>
-  </>);
+      </MobileLayout>
+    </>
+  );
 };
 
 export default CallSimulation;
