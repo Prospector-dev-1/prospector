@@ -275,12 +275,11 @@ const AIReplaySetup = () => {
                     <p className="mt-4 text-muted-foreground">Analyzing call moments...</p>
                   </div>
                 ) : moments.length > 0 ? (
-                  <MomentsTimeline
-                    moments={moments}
-                    selectedId={selectedMoment}
-                    onSelect={setSelectedMoment}
-                    onSelectMoment={setSelectedMoment}
-                  />
+              <MomentsTimeline 
+                moments={moments} 
+                selectedMomentId={selectedMoment}
+                onSelectMoment={setSelectedMoment}
+              />
                 ) : (
                   <div className="text-center py-8">
                     <p className="text-muted-foreground mb-4">

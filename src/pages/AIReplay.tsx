@@ -226,7 +226,7 @@ const AIReplay = () => {
                   {loadingMoments ? <div className="text-center py-8">
                       <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto"></div>
                       <p className="mt-4 text-muted-foreground">Analyzing call moments...</p>
-                    </div> : moments.length > 0 ? <MomentsTimeline moments={moments} selectedId={selectedMoment} onSelect={setSelectedMoment} /> : <div className="text-center py-8">
+                    </div> : moments.length > 0 ? <MomentsTimeline moments={moments} selectedMomentId={selectedMoment} onSelectMoment={setSelectedMoment} /> : <div className="text-center py-8">
                       <p className="text-muted-foreground mb-4">
                         No transcript available for moment analysis
                       </p>

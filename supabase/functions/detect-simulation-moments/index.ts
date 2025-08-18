@@ -92,42 +92,51 @@ async function extractMomentsFromTranscript(transcript: string) {
 
     // Check for objections
     if (objectionPatterns.some(pattern => pattern.test(line))) {
+      const responseLines = lines.slice(i + 1, i + 3).filter(l => l.trim().length > 10);
+      const response = responseLines.length > 0 ? responseLines[0] : '';
+      
       moments.push({
         id: `moment_${momentCounter++}`,
         type: 'objection',
         label: 'Objection Handling',
         start_char: Math.max(0, transcript.indexOf(line)),
         end_char: Math.max(0, transcript.indexOf(line)) + line.length,
-        summary: `Objection: "${line.substring(0, 80)}${line.length > 80 ? '...' : ''}"`,
-        full_text: context,
+        summary: line.length > 60 ? line.substring(0, 60) + '...' : line,
+        full_text: response ? `${line}\n\nResponse: ${response}` : context,
         difficulty: calculateDifficulty(line, nextLines) <= 2 ? 'easy' : calculateDifficulty(line, nextLines) <= 3 ? 'medium' : 'hard'
       });
     }
     
     // Check for questions
     else if (questionPatterns.some(pattern => pattern.test(line))) {
+      const responseLines = lines.slice(i + 1, i + 3).filter(l => l.trim().length > 10);
+      const response = responseLines.length > 0 ? responseLines[0] : '';
+      
       moments.push({
         id: `moment_${momentCounter++}`,
         type: 'question',
         label: 'Question Handling',
         start_char: Math.max(0, transcript.indexOf(line)),
         end_char: Math.max(0, transcript.indexOf(line)) + line.length,
-        summary: `Question: "${line.substring(0, 80)}${line.length > 80 ? '...' : ''}"`,
-        full_text: context,
+        summary: line.length > 60 ? line.substring(0, 60) + '...' : line,
+        full_text: response ? `${line}\n\nResponse: ${response}` : context,
         difficulty: calculateDifficulty(line, nextLines) <= 2 ? 'easy' : calculateDifficulty(line, nextLines) <= 3 ? 'medium' : 'hard'
       });
     }
     
     // Check for closing opportunities
     else if (closingPatterns.some(pattern => pattern.test(line))) {
+      const responseLines = lines.slice(i + 1, i + 3).filter(l => l.trim().length > 10);
+      const response = responseLines.length > 0 ? responseLines[0] : '';
+      
       moments.push({
         id: `moment_${momentCounter++}`,
         type: 'closing',
         label: 'Closing Opportunity',
         start_char: Math.max(0, transcript.indexOf(line)),
         end_char: Math.max(0, transcript.indexOf(line)) + line.length,
-        summary: `Closing opportunity: "${line.substring(0, 80)}${line.length > 80 ? '...' : ''}"`,
-        full_text: context,
+        summary: line.length > 60 ? line.substring(0, 60) + '...' : line,
+        full_text: response ? `${line}\n\nResponse: ${response}` : context,
         difficulty: calculateDifficulty(line, nextLines) <= 2 ? 'easy' : calculateDifficulty(line, nextLines) <= 3 ? 'medium' : 'hard'
       });
     }

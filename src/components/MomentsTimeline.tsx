@@ -21,8 +21,7 @@ export type Moment = {
 
 interface MomentsTimelineProps {
   moments: Moment[];
-  selectedId?: string | null;
-  onSelect?: (id: string) => void;
+  selectedMomentId?: string | null;
   onSelectMoment?: (id: string) => void;
 }
 
@@ -41,14 +40,13 @@ const typeColors: Record<string, string> = {
   other: 'bg-muted text-muted-foreground',
 };
 
-const MomentsTimeline: React.FC<MomentsTimelineProps> = ({ moments, selectedId, onSelect, onSelectMoment }) => {
+const MomentsTimeline: React.FC<MomentsTimelineProps> = ({ moments, selectedMomentId, onSelectMoment }) => {
   const [expandedId, setExpandedId] = useState<string | null>(null);
 
   if (!moments?.length) return null;
 
   const handleCardClick = (momentId: string) => {
     setExpandedId(expandedId === momentId ? null : momentId);
-    onSelect?.(momentId);
   };
 
   const handleSelectMoment = (momentId: string, e: React.MouseEvent) => {
@@ -66,7 +64,7 @@ const MomentsTimeline: React.FC<MomentsTimelineProps> = ({ moments, selectedId, 
       <div className="space-y-3">
         {moments.map((m) => {
           const isExpanded = expandedId === m.id;
-          const isSelected = selectedId === m.id;
+          const isSelected = selectedMomentId === m.id;
           
           return (
             <Collapsible key={m.id} open={isExpanded}>
@@ -142,9 +140,13 @@ const MomentsTimeline: React.FC<MomentsTimelineProps> = ({ moments, selectedId, 
                         <Button 
                           size="sm"
                           onClick={(e) => handleSelectMoment(m.id, e)}
-                          className="bg-primary hover:bg-primary/90"
+                          className={cn(
+                            isSelected 
+                              ? "bg-green-600 hover:bg-green-700 text-white" 
+                              : "bg-primary hover:bg-primary/90"
+                          )}
                         >
-                          Select This Moment
+                          {isSelected ? "Moment Selected" : "Select This Moment"}
                         </Button>
                       </div>
                     </div>
