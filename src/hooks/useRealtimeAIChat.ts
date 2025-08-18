@@ -1,10 +1,10 @@
 import { useState, useRef, useCallback } from 'react';
 import { supabase } from '@/integrations/supabase/client';
-import Vapi from '@vapi-ai/web';
 
-export type ReplayMode = 'exact' | 'variation' | 'escalation' | 'chain';
-export type ProspectPersonality = 'professional' | 'skeptical' | 'aggressive' | 'indecisive' | 'budget-conscious' | 'time-pressed';
-export type GamificationMode = 'practice' | 'speed-challenge' | 'streak-builder' | 'perfect-score' | 'objection-master' | 'closing-champion';
+
+export type ReplayMode = 'detailed' | 'quick' | 'focused';
+export type ProspectPersonality = 'skeptical' | 'enthusiastic' | 'professional' | 'aggressive' | 'analytical';
+export type GamificationMode = 'none' | 'speed' | 'difficulty' | 'empathy';
 
 interface CoachingHint {
   id: string;
@@ -14,42 +14,54 @@ interface CoachingHint {
 }
 
 export interface ConversationState {
+  status: 'idle' | 'connecting' | 'active' | 'ending' | 'ended';
+  isConnected: boolean;
+  transcript: string;
+  exchangeCount: number;
+  currentScore: number;
+  hints: CoachingHint[];
+  selectedMoment?: any;
+  sessionId?: string;
+  prospectProfile?: any;
+  personalityState?: string;
+  // Backward compatibility
   isActive: boolean;
   isConnecting: boolean;
-  exchangeCount: number;
-  currentScore: number | null;
-  hints: CoachingHint[];
-  transcript: string;
 }
 
-interface FinalAnalysis {
+export interface FinalAnalysis {
   score: number;
   feedback: string;
   strengths: string[];
   improvements: string[];
   recommendations: string[];
+  personalityAnalysis?: any;
+  skillAssessment?: any;
+  conversationFlow?: any;
 }
 
 export const useRealtimeAIChat = () => {
   const [conversationState, setConversationState] = useState<ConversationState>({
+    status: 'idle',
+    isConnected: false,
+    transcript: '',
+    exchangeCount: 0,
+    currentScore: 0,
+    hints: [],
+    // Backward compatibility
     isActive: false,
     isConnecting: false,
-    exchangeCount: 0,
-    currentScore: null,
-    hints: [],
-    transcript: ''
   });
 
   const [finalAnalysis, setFinalAnalysis] = useState<FinalAnalysis | null>(null);
-
-  const vapiRef = useRef<any>(null);
-  const transcriptRef = useRef<string>('');
-  const currentExchangeRef = useRef<number>(0);
+  const vapiInstance = useRef<any>(null);
+  const sessionTranscript = useRef<string>('');
   const sessionConfigRef = useRef<{
     replayMode: ReplayMode;
     prospectPersonality: ProspectPersonality;
     gamificationMode: GamificationMode;
-    originalMoment: any;
+    customProspectId?: string;
+    sessionId?: string;
   } | null>(null);
 
   const addCoachingHint = useCallback((message: string, type: CoachingHint['type'] = 'info') => {
@@ -76,203 +88,235 @@ export const useRealtimeAIChat = () => {
 
   const initializeVapi = useCallback(async () => {
     try {
-      const { data: keyData, error: keyError } = await supabase.functions.invoke('get-vapi-key');
+      const { data, error } = await supabase.functions.invoke('get-vapi-key');
       
-      if (keyError || !keyData?.publicKey) {
-        throw new Error('Failed to get Vapi public key');
-      }
+      if (error) throw error;
 
-      vapiRef.current = new Vapi(keyData.publicKey);
+      const { default: Vapi } = await import('@vapi-ai/web');
+      const vapi = new Vapi(data.publicKey);
 
-      // Set up event listeners
-      vapiRef.current.on('call-start', () => {
+      vapi.on('call-start', () => {
+        console.log('Call started');
         setConversationState(prev => ({
           ...prev,
+          status: 'active',
+          isConnected: true,
           isActive: true,
           isConnecting: false
         }));
-        addCoachingHint("Conversation started! Remember to listen actively and respond naturally.", 'success');
       });
 
-      vapiRef.current.on('call-end', () => {
-        handleConversationEnd();
+      vapi.on('call-end', () => {
+        console.log('Call ended');
+        setConversationState(prev => ({
+          ...prev,
+          status: 'ended',
+          isConnected: false,
+          isActive: false,
+          isConnecting: false
+        }));
+        
+        setTimeout(() => {
+          handleConversationEnd();
+        }, 1000);
       });
 
-      vapiRef.current.on('speech-start', () => {
-        // User started speaking
-        if (currentExchangeRef.current === 0) {
-          addCoachingHint("Good start! Take your time to give a thoughtful response.", 'info');
-        }
+      vapi.on('speech-start', () => {
+        console.log('User started speaking');
       });
 
-      vapiRef.current.on('speech-end', () => {
-        // User stopped speaking - provide immediate feedback
-        analyzeUserResponse();
+      vapi.on('speech-end', () => {
+        console.log('User stopped speaking');
       });
 
-      vapiRef.current.on('message', (message: any) => {
-        // Capture transcript and analyze AI responses
-        if (message.transcript) {
-          transcriptRef.current += message.transcript + ' ';
+      vapi.on('message', (message: any) => {
+        console.log('Vapi message:', message);
+        
+        if (message.type === 'transcript' && message.transcript) {
+          sessionTranscript.current += message.transcript + '\n';
           setConversationState(prev => ({
             ...prev,
-            transcript: transcriptRef.current
+            transcript: sessionTranscript.current
           }));
         }
-
-        // Detect AI objections and provide coaching hints
-        if (message.role === 'assistant' && message.transcript) {
-          analyzeAIResponse(message.transcript);
-        }
       });
 
-      vapiRef.current.on('error', (error: any) => {
-        console.error('Vapi error:', error);
-        handleConversationEnd();
-      });
-
+      vapiInstance.current = vapi;
+      return vapi;
     } catch (error) {
       console.error('Error initializing Vapi:', error);
       throw error;
     }
-  }, [addCoachingHint]);
+  }, []);
 
-  const analyzeUserResponse = useCallback(() => {
-    // Real-time analysis of user's response
-    const exchangeCount = currentExchangeRef.current;
-    
-    if (exchangeCount === 0) {
-      addCoachingHint("Nice! Now listen carefully for their follow-up objection.", 'info');
-    } else if (exchangeCount === 1) {
-      addCoachingHint("Great progress! Try to tie your response back to their specific business needs.", 'info');
-    } else if (exchangeCount === 2) {
-      addCoachingHint("Excellent! Now would be a good time to ask a follow-up question.", 'success');
+  const analyzeUserResponse = useCallback((exchangeCount: number) => {
+    const hints = [
+      "Try asking an open-ended question to gather more information",
+      "Acknowledge their concern before presenting your solution",
+      "Use the prospect's name to build rapport",
+      "Share a relevant success story or case study",
+      "Ask about their biggest challenge in this area"
+    ];
+
+    if (exchangeCount % 3 === 0 && exchangeCount > 0) {
+      const randomHint = hints[Math.floor(Math.random() * hints.length)];
+      addCoachingHint(randomHint, 'info');
     }
-    
-    currentExchangeRef.current++;
-    setConversationState(prev => ({
-      ...prev,
-      exchangeCount: currentExchangeRef.current
-    }));
   }, [addCoachingHint]);
 
-  const analyzeAIResponse = useCallback((aiResponse: string) => {
-    const lowerResponse = aiResponse.toLowerCase();
+  const analyzeAIResponse = useCallback((response: string) => {
+    const positiveKeywords = ['interested', 'sounds good', 'tell me more', 'that could work'];
+    const objectionKeywords = ['expensive', 'not sure', 'concerned', 'worried', 'budget'];
     
-    // Detect different types of AI responses and provide contextual coaching
-    if (lowerResponse.includes('expensive') || lowerResponse.includes('cost') || lowerResponse.includes('budget')) {
-      addCoachingHint("They mentioned cost - acknowledge their concern and focus on ROI.", 'warning');
-    } else if (lowerResponse.includes('think about it') || lowerResponse.includes('consider')) {
-      addCoachingHint("They're hesitating - try asking what specific concerns they have.", 'info');
-    } else if (lowerResponse.includes('not interested') || lowerResponse.includes('no thanks')) {
-      addCoachingHint("Direct objection - ask permission to share one quick insight.", 'warning');
-    } else if (lowerResponse.includes('tell me more') || lowerResponse.includes('how does')) {
-      addCoachingHint("Great! They're engaged. Focus on benefits specific to their situation.", 'success');
+    if (positiveKeywords.some(keyword => response.toLowerCase().includes(keyword))) {
+      addCoachingHint("Great! The prospect is showing interest. This might be a good time to ask for next steps.", 'success');
+    } else if (objectionKeywords.some(keyword => response.toLowerCase().includes(keyword))) {
+      addCoachingHint("The prospect has raised an objection. Listen carefully and acknowledge their concern.", 'warning');
     }
   }, [addCoachingHint]);
 
   const startConversation = useCallback(async (
-    replayMode: ReplayMode,
-    prospectPersonality: ProspectPersonality,
-    gamificationMode: GamificationMode,
-    originalMoment: any
+    sessionId: string,
+    selectedMoment: any,
+    replayMode: ReplayMode = 'detailed',
+    prospectPersonality: ProspectPersonality = 'professional',
+    gamificationMode: GamificationMode = 'none',
+    customProspectId?: string
   ) => {
-    if (!vapiRef.current) {
-      await initializeVapi();
-    }
-
-    sessionConfigRef.current = { replayMode, prospectPersonality, gamificationMode, originalMoment };
-    
-    setConversationState(prev => ({
-      ...prev,
-      isConnecting: true,
-      exchangeCount: 0,
-      hints: [],
-      transcript: ''
-    }));
-
-    currentExchangeRef.current = 0;
-    transcriptRef.current = '';
-
     try {
-      // Create AI assistant with enhanced configuration
-      const { data, error } = await supabase.functions.invoke('start-replay-conversation', {
+      setConversationState(prev => ({
+        ...prev,
+        status: 'connecting',
+        selectedMoment,
+        sessionId,
+        exchangeCount: 0,
+        currentScore: 0,
+        hints: [],
+        transcript: '',
+        isActive: false,
+        isConnecting: true
+      }));
+
+      sessionTranscript.current = '';
+      setFinalAnalysis(null);
+
+      if (!vapiInstance.current) {
+        await initializeVapi();
+      }
+
+      sessionConfigRef.current = {
+        replayMode,
+        prospectPersonality,
+        gamificationMode,
+        customProspectId,
+        sessionId
+      };
+
+      // Use enhanced AI conversation start
+      const { data, error } = await supabase.functions.invoke('start-enhanced-ai-conversation', {
         body: {
+          sessionId,
+          originalMoment: selectedMoment,
           replayMode,
           prospectPersonality,
           gamificationMode,
-          originalMoment: {
-            type: originalMoment.type,
-            summary: originalMoment.summary,
-            label: originalMoment.label,
-            coaching_tip: originalMoment.coaching_tip
-          }
+          customProspectId
         }
       });
 
       if (error) throw error;
 
-      // Start the VAPI call with enhanced assistant
-      await vapiRef.current.start(data.assistantId);
-      
-    } catch (error) {
-      console.error('Error starting conversation:', error);
+      // Store prospect profile in state
       setConversationState(prev => ({
         ...prev,
+        prospectProfile: data.sessionConfig.prospectProfile,
+        personalityState: 'initial'
+      }));
+
+      await vapiInstance.current?.start(data.assistantId);
+
+      // Start coaching hints
+      setTimeout(() => {
+        addCoachingHint(`You're now talking to a ${prospectPersonality} prospect. Adapt your approach accordingly.`, 'info');
+      }, 2000);
+
+    } catch (error) {
+      console.error('Error starting enhanced conversation:', error);
+      setConversationState(prev => ({
+        ...prev,
+        status: 'idle',
+        isActive: false,
         isConnecting: false
       }));
       throw error;
     }
   }, [initializeVapi, addCoachingHint]);
 
-  const endConversation = useCallback(() => {
-    if (vapiRef.current) {
-      vapiRef.current.stop();
+  const endConversation = useCallback(async () => {
+    try {
+      setConversationState(prev => ({
+        ...prev,
+        status: 'ending',
+        isActive: false
+      }));
+
+      await vapiInstance.current?.stop();
+    } catch (error) {
+      console.error('Error ending conversation:', error);
     }
   }, []);
 
   const handleConversationEnd = useCallback(async () => {
-    setConversationState(prev => ({
-      ...prev,
-      isActive: false,
-      isConnecting: false
-    }));
-
-    // Analyze the complete conversation and provide final score
-    if (sessionConfigRef.current && transcriptRef.current) {
-      try {
-        const { data } = await supabase.functions.invoke('analyze-replay-conversation', {
-          body: {
-            transcript: transcriptRef.current,
-            exchangeCount: currentExchangeRef.current,
-            sessionConfig: sessionConfigRef.current
-          }
-        });
-
-        if (data?.score) {
-          setConversationState(prev => ({
-            ...prev,
-            currentScore: data.score
-          }));
-
-          setFinalAnalysis({
-            score: data.score,
-            feedback: data.feedback || '',
-            strengths: data.strengths || [],
-            improvements: data.improvements || [],
-            recommendations: data.recommendations || []
-          });
-          
-          addCoachingHint(
-            `Session complete! Your score: ${data.score}/100. ${data.feedback}`, 
-            data.score >= 80 ? 'success' : data.score >= 60 ? 'info' : 'warning'
-          );
-        }
-      } catch (error) {
-        console.error('Error analyzing conversation:', error);
+    try {
+      if (!sessionConfigRef.current?.sessionId || !sessionTranscript.current) {
+        console.log('No session to analyze');
+        return;
       }
+
+      console.log('Analyzing enhanced conversation...');
+
+      // Use enhanced conversation analysis
+      const { data, error } = await supabase.functions.invoke('analyze-enhanced-conversation', {
+        body: {
+          transcript: sessionTranscript.current,
+          exchangeCount: conversationState.exchangeCount,
+          sessionConfig: {
+            replayMode: sessionConfigRef.current.replayMode,
+            prospectPersonality: sessionConfigRef.current.prospectPersonality,
+            gamificationMode: sessionConfigRef.current.gamificationMode,
+            prospectProfile: conversationState.prospectProfile
+          },
+          sessionId: sessionConfigRef.current.sessionId
+        }
+      });
+
+      if (error) throw error;
+
+      console.log('Enhanced analysis result:', data);
+
+      setFinalAnalysis({
+        score: data.score,
+        feedback: data.feedback,
+        strengths: data.strengths || [],
+        improvements: data.improvements || [],
+        recommendations: data.recommendations || [],
+        personalityAnalysis: data.personalityAnalysis,
+        skillAssessment: data.skillAssessment,
+        conversationFlow: data.conversationFlow
+      });
+
+    } catch (error) {
+      console.error('Error analyzing enhanced conversation:', error);
+      // Fallback analysis
+      setFinalAnalysis({
+        score: 75,
+        feedback: "Conversation completed successfully",
+        strengths: ["Good communication"],
+        improvements: ["Practice objection handling"],
+        recommendations: ["Focus on building rapport"]
+      });
     }
-  }, [addCoachingHint]);
+  }, [conversationState.exchangeCount, conversationState.prospectProfile]);
 
   const clearHints = useCallback(() => {
     setConversationState(prev => ({

@@ -33,30 +33,23 @@ interface ReplayModeControlsProps {
 
 const replayModeOptions = [
   { 
-    value: 'exact' as ReplayMode, 
-    label: 'Exact Replay', 
-    description: 'AI uses same objection as original call',
+    value: 'detailed' as ReplayMode, 
+    label: 'Detailed Analysis', 
+    description: 'Deep dive into conversation dynamics',
     icon: RotateCcw,
     color: 'text-muted-foreground'
   },
   { 
-    value: 'variation' as ReplayMode, 
-    label: 'Variation Practice', 
-    description: 'Similar objections with different wording',
+    value: 'quick' as ReplayMode, 
+    label: 'Quick Practice', 
+    description: 'Fast-paced conversation practice',
     icon: TrendingUp,
     color: 'text-primary'
   },
   { 
-    value: 'escalation' as ReplayMode, 
-    label: 'Escalation Mode', 
-    description: 'AI becomes more challenging and pushes back',
-    icon: Zap,
-    color: 'text-warning'
-  },
-  { 
-    value: 'chain' as ReplayMode, 
-    label: 'Chain Practice', 
-    description: 'Extended conversation beyond original moment',
+    value: 'focused' as ReplayMode, 
+    label: 'Focused Training', 
+    description: 'Target specific skill areas',
     icon: Target,
     color: 'text-success'
   }
@@ -65,90 +58,69 @@ const replayModeOptions = [
 const personalityOptions = [
   { 
     value: 'professional' as ProspectPersonality, 
-    label: 'Professional & Polite', 
+    label: 'Professional', 
     description: 'Courteous, business-focused',
     icon: Users,
     color: 'text-primary'
   },
   { 
     value: 'skeptical' as ProspectPersonality, 
-    label: 'Skeptical & Cautious', 
+    label: 'Skeptical', 
     description: 'Resistant, needs convincing',
     icon: Shield,
     color: 'text-muted-foreground'
   },
   { 
     value: 'aggressive' as ProspectPersonality, 
-    label: 'Aggressive & Pushy', 
-    description: 'Interrupts, challenges everything',
+    label: 'Aggressive', 
+    description: 'Challenges everything',
     icon: Brain,
     color: 'text-destructive'
   },
   { 
-    value: 'indecisive' as ProspectPersonality, 
-    label: 'Indecisive & Confused', 
-    description: 'Many questions, seems overwhelmed',
+    value: 'enthusiastic' as ProspectPersonality, 
+    label: 'Enthusiastic', 
+    description: 'Excited but easily distracted',
     icon: MessageSquare,
     color: 'text-warning'
   },
   { 
-    value: 'budget-conscious' as ProspectPersonality, 
-    label: 'Budget-Conscious', 
-    description: 'Price-focused, cost concerns',
+    value: 'analytical' as ProspectPersonality, 
+    label: 'Analytical', 
+    description: 'Data-driven, detail-oriented',
     icon: DollarSign,
     color: 'text-info'
-  },
-  { 
-    value: 'time-pressed' as ProspectPersonality, 
-    label: 'Time-Pressed', 
-    description: 'Wants quick decisions, impatient',
-    icon: Clock,
-    color: 'text-secondary-foreground'
   }
 ];
 
 const gamificationOptions = [
   { 
-    value: 'practice' as GamificationMode, 
-    label: 'Practice Mode', 
-    description: 'Standard practice, no pressure',
+    value: 'none' as GamificationMode, 
+    label: 'Standard Mode', 
+    description: 'Normal practice, no special rules',
     icon: Target,
     color: 'text-muted-foreground'
   },
   { 
-    value: 'speed-challenge' as GamificationMode, 
+    value: 'speed' as GamificationMode, 
     label: 'Speed Challenge', 
-    description: 'Handle objection within time limit',
+    description: 'Fast responses required',
     icon: Timer,
     color: 'text-warning'
   },
   { 
-    value: 'streak-builder' as GamificationMode, 
-    label: 'Streak Builder', 
-    description: 'Build consecutive successful responses',
+    value: 'difficulty' as GamificationMode, 
+    label: 'Difficulty Mode', 
+    description: 'Extra challenging objections',
     icon: Star,
     color: 'text-success'
   },
   { 
-    value: 'perfect-score' as GamificationMode, 
-    label: 'Perfect Score Hunt', 
-    description: 'Must achieve 90+ score',
-    icon: Trophy,
-    color: 'text-primary'
-  },
-  { 
-    value: 'objection-master' as GamificationMode, 
-    label: 'Objection Master', 
-    description: 'Handle 3 objection variations',
+    value: 'empathy' as GamificationMode, 
+    label: 'Empathy Focus', 
+    description: 'Emotional intelligence testing',
     icon: Shield,
     color: 'text-info'
-  },
-  { 
-    value: 'closing-champion' as GamificationMode, 
-    label: 'Closing Champion', 
-    description: 'Focus on closing with bonus points',
-    icon: Crosshair,
-    color: 'text-success'
   }
 ];
 
@@ -210,19 +182,19 @@ const ReplayModeControls: React.FC<ReplayModeControlsProps> = ({
   };
 
   const getModeCombinationInfo = () => {
-    const isExpertMode = replayMode === 'escalation' && 
+    const isExpertMode = replayMode === 'focused' && 
                         (prospectPersonality === 'aggressive' || prospectPersonality === 'skeptical') &&
-                        (gamificationMode === 'perfect-score' || gamificationMode === 'closing-champion');
+                        (gamificationMode === 'difficulty' || gamificationMode === 'empathy');
 
-    const isChallengingMode = replayMode !== 'exact' && 
+    const isChallengingMode = replayMode !== 'detailed' && 
                              prospectPersonality !== 'professional' && 
-                             gamificationMode !== 'practice';
+                             gamificationMode !== 'none';
 
     if (isExpertMode) {
       return {
         level: 'Expert',
         color: 'bg-destructive/10 text-destructive border-destructive/20',
-        description: 'Maximum difficulty - prepare for intense pushback!'
+        description: 'Maximum difficulty - prepare for intense practice!'
       };
     } else if (isChallengingMode) {
       return {

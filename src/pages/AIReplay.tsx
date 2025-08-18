@@ -51,9 +51,9 @@ const AIReplay = () => {
   const [loadingMoments, setLoadingMoments] = useState(false);
 
   // Replay mode configuration
-  const [replayMode, setReplayMode] = useState<ReplayMode>('exact');
+  const [replayMode, setReplayMode] = useState<ReplayMode>('detailed');
   const [prospectPersonality, setProspectPersonality] = useState<ProspectPersonality>('professional');
-  const [gamificationMode, setGamificationMode] = useState<GamificationMode>('practice');
+  const [gamificationMode, setGamificationMode] = useState<GamificationMode>('none');
 
   // AI conversation hook
   const {
