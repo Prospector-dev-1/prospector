@@ -165,16 +165,30 @@ Provide your response in this JSON format:
 
     if (response.ok) {
       const result = await response.json();
-      const content = result?.choices?.[0]?.message?.content;
-      
-      if (content) {
-        const analysis = JSON.parse(content);
-        if (validateAnalysis(analysis)) {
-          console.log('GPT-5 analysis successful and validated');
-          return { analysis, fallbackUsed: false };
+      const message = result?.choices?.[0]?.message;
+
+      let analysis: any | null = null;
+      // Prefer parsed object when using json_schema
+      if (message?.parsed && typeof message.parsed === 'object') {
+        analysis = message.parsed;
+      } else if (typeof message?.content === 'string') {
+        try {
+          analysis = JSON.parse(message.content);
+        } catch (e) {
+          // Try to salvage JSON from any surrounding text
+          const start = message.content.indexOf('{');
+          const end = message.content.lastIndexOf('}');
+          if (start !== -1 && end !== -1 && end > start) {
+            try { analysis = JSON.parse(message.content.slice(start, end + 1)); } catch {}
+          }
         }
-        console.log('GPT-5 analysis failed validation, trying fallback...');
       }
+
+      if (analysis && validateAnalysis(analysis)) {
+        console.log('GPT-5 analysis successful and validated');
+        return { analysis, fallbackUsed: false };
+      }
+      console.log('GPT-5 analysis missing/invalid, trying fallback...');
     } else {
       console.log('GPT-5 request failed, trying fallback...');
     }
@@ -210,16 +224,28 @@ Provide your response in this JSON format:
 
     if (response.ok) {
       const result = await response.json();
-      const content = result?.choices?.[0]?.message?.content;
-      
-      if (content) {
-        const analysis = JSON.parse(content);
-        if (validateAnalysis(analysis)) {
-          console.log('GPT-4.1 fallback analysis successful and validated');
-          return { analysis, fallbackUsed: false };
+      const message = result?.choices?.[0]?.message;
+
+      let analysis: any | null = null;
+      if (message?.parsed && typeof message.parsed === 'object') {
+        analysis = message.parsed;
+      } else if (typeof message?.content === 'string') {
+        try {
+          analysis = JSON.parse(message.content);
+        } catch (e) {
+          const start = message.content.indexOf('{');
+          const end = message.content.lastIndexOf('}');
+          if (start !== -1 && end !== -1 && end > start) {
+            try { analysis = JSON.parse(message.content.slice(start, end + 1)); } catch {}
+          }
         }
-        console.log('GPT-4.1 analysis failed validation, using manual fallback...');
       }
+
+      if (analysis && validateAnalysis(analysis)) {
+        console.log('GPT-4.1 fallback analysis successful and validated');
+        return { analysis, fallbackUsed: false };
+      }
+      console.log('GPT-4.1 analysis missing/invalid, using manual fallback...');
     } else {
       console.log('GPT-4.1 request failed, using manual fallback...');
     }

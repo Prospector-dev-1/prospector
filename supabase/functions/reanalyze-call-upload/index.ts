@@ -165,16 +165,28 @@ Provide your response in this JSON format:
 
     if (response.ok) {
       const result = await response.json();
-      const content = result?.choices?.[0]?.message?.content;
-      
-      if (content) {
-        const analysis = JSON.parse(content);
-        if (validateAnalysis(analysis)) {
-          console.log('GPT-5 re-analysis successful and validated');
-          return { analysis, fallbackUsed: false };
+      const message = result?.choices?.[0]?.message;
+
+      let analysis: any | null = null;
+      if (message?.parsed && typeof message.parsed === 'object') {
+        analysis = message.parsed;
+      } else if (typeof message?.content === 'string') {
+        try {
+          analysis = JSON.parse(message.content);
+        } catch (e) {
+          const start = message.content.indexOf('{');
+          const end = message.content.lastIndexOf('}');
+          if (start !== -1 && end !== -1 && end > start) {
+            try { analysis = JSON.parse(message.content.slice(start, end + 1)); } catch {}
+          }
         }
-        console.log('GPT-5 re-analysis failed validation, trying fallback...');
       }
+
+      if (analysis && validateAnalysis(analysis)) {
+        console.log('GPT-5 re-analysis successful and validated');
+        return { analysis, fallbackUsed: false };
+      }
+      console.log('GPT-5 re-analysis missing/invalid, trying fallback...');
     } else {
       console.log('GPT-5 re-analysis request failed, trying fallback...');
     }
@@ -210,16 +222,28 @@ Provide your response in this JSON format:
 
     if (response.ok) {
       const result = await response.json();
-      const content = result?.choices?.[0]?.message?.content;
-      
-      if (content) {
-        const analysis = JSON.parse(content);
-        if (validateAnalysis(analysis)) {
-          console.log('GPT-4.1 re-analysis successful and validated');
-          return { analysis, fallbackUsed: false };
+      const message = result?.choices?.[0]?.message;
+
+      let analysis: any | null = null;
+      if (message?.parsed && typeof message.parsed === 'object') {
+        analysis = message.parsed;
+      } else if (typeof message?.content === 'string') {
+        try {
+          analysis = JSON.parse(message.content);
+        } catch (e) {
+          const start = message.content.indexOf('{');
+          const end = message.content.lastIndexOf('}');
+          if (start !== -1 && end !== -1 && end > start) {
+            try { analysis = JSON.parse(message.content.slice(start, end + 1)); } catch {}
+          }
         }
-        console.log('GPT-4.1 re-analysis failed validation...');
       }
+
+      if (analysis && validateAnalysis(analysis)) {
+        console.log('GPT-4.1 re-analysis successful and validated');
+        return { analysis, fallbackUsed: false };
+      }
+      console.log('GPT-4.1 re-analysis missing/invalid...');
     } else {
       console.log('GPT-4.1 re-analysis request failed...');
     }
