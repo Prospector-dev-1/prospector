@@ -81,10 +81,11 @@ const LiveCall = () => {
   const handleStartConversation = async () => {
     try {
       await startConversation(
+        sessionId || 'default-session',
+        sessionConfig.originalMoment,
         sessionConfig.replayMode as any,
         sessionConfig.prospectPersonality as any,
-        sessionConfig.gamificationMode as any,
-        sessionConfig.originalMoment
+        sessionConfig.gamificationMode as any
       );
     } catch (error) {
       toast({
