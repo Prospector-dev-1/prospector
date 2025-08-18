@@ -69,14 +69,39 @@ const CallUpload = () => {
 
           if (response.error) {
             console.error('Edge function error details:', response.error);
-            // Try to get actual error message from context
-            let errorMessage = 'Upload failed';
-            if (response.error.context?.error) {
-              errorMessage = response.error.context.error;
-            } else if (response.error.message) {
-              errorMessage = response.error.message;
+            // For debugging - try to extract the actual error from fetch response
+            try {
+              const fetchResponse = await fetch(`https://akcxkwbqeehxvwhmrqbb.supabase.co/functions/v1/upload-call-analysis`, {
+                method: 'POST',
+                headers: {
+                  'Authorization': `Bearer ${(await supabase.auth.getSession()).data.session?.access_token}`,
+                  'Content-Type': 'application/json',
+                  'apikey': 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImFrY3hrd2JxZWVoeHZ3aG1ycWJiIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTQzNTgzMTMsImV4cCI6MjA2OTkzNDMxM30.ix6oVIa0vyWg1R_IoUZyEiadZTvCDa6GitEIqRLoIYk'
+                },
+                body: JSON.stringify({
+                  file: base64,
+                  originalFilename: file.name,
+                  fileType: fileType
+                })
+              });
+              
+              const responseText = await fetchResponse.text();
+              console.log('Raw fetch response:', responseText);
+              
+              if (!fetchResponse.ok) {
+                try {
+                  const errorData = JSON.parse(responseText);
+                  throw new Error(errorData.error || `Server error (${fetchResponse.status})`);
+                } catch {
+                  throw new Error(`Server error (${fetchResponse.status}): ${responseText.slice(0, 200)}`);
+                }
+              }
+            } catch (fetchError) {
+              console.error('Fetch error:', fetchError);
+              throw fetchError;
             }
-            throw new Error(errorMessage);
+            
+            throw new Error('Upload failed - unknown error');
           }
 
           if (response.data?.error) {

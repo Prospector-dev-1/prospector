@@ -282,10 +282,20 @@ Provide your response in this JSON format:
     );
 
   } catch (error) {
-    console.error('Error:', error);
+    console.error('Error in upload-call-analysis:', error);
+    const errorMessage = error instanceof Error ? error.message : 'Unknown error occurred';
+    console.error('Error message:', errorMessage);
+    console.error('Error stack:', error instanceof Error ? error.stack : 'No stack trace');
+    
     return new Response(
-      JSON.stringify({ error: error.message }),
-      { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      JSON.stringify({ 
+        error: errorMessage,
+        details: error instanceof Error ? error.stack : undefined 
+      }),
+      { 
+        status: 500, 
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
+      }
     );
   }
 });
