@@ -9,7 +9,7 @@ const corsHeaders = {
 
 const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
 const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
-const openaiApiKey = Deno.env.get('OPENAI_API_KEY')!;
+const openaiApiKey = Deno.env.get('OPENAI_API_KEY');
 
 serve(async (req) => {
   if (req.method === 'OPTIONS') {
@@ -71,6 +71,12 @@ serve(async (req) => {
     }
 
     console.log('Created upload record:', uploadRecord.id);
+
+    // Ensure OpenAI API key is available
+    if (!openaiApiKey) {
+      console.error('OPENAI_API_KEY is missing in edge function environment');
+      throw new Error('Server configuration error: AI service key missing. Please contact support.');
+    }
 
     // Convert base64 to binary for audio processing (chunked to reduce memory usage)
     function processBase64Chunks(base64String: string, chunkSize = 32768) {
