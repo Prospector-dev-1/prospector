@@ -246,57 +246,54 @@ const AIReplay = () => {
               />
             </div>
 
-            {/* Main Content Grid */}
-            <div className={`grid gap-6 ${isMobile ? 'grid-cols-1' : 'grid-cols-1 lg:grid-cols-3'}`}>
-              {/* Moments Timeline */}
-              <div className={isMobile ? 'order-2' : 'lg:col-span-2'}>
-                <Card>
-                  <CardHeader>
-                    <CardTitle>Call Moments</CardTitle>
-                    <CardDescription>
-                      Select a moment below to start an AI conversation practice
-                    </CardDescription>
-                  </CardHeader>
-                  <CardContent>
-                    {loadingMoments ? (
-                      <div className="text-center py-8">
-                        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto"></div>
-                        <p className="mt-4 text-muted-foreground">Analyzing call moments...</p>
-                      </div>
-                    ) : moments.length > 0 ? (
-                      <MomentsTimeline
-                        moments={moments}
-                        selectedId={selectedMoment}
-                        onSelect={setSelectedMoment}
-                      />
-                    ) : (
-                      <div className="text-center py-8">
-                        <p className="text-muted-foreground mb-4">
-                          No transcript available for moment analysis
-                        </p>
-                        <Button 
-                          variant="outline" 
-                          onClick={() => originalCall && loadMoments(originalCall.id)}
-                        >
-                          <RotateCcw className="h-4 w-4 mr-2" />
-                          Retry Analysis
-                        </Button>
-                      </div>
-                    )}
-                  </CardContent>
-                </Card>
-              </div>
+            {/* Moments Timeline - Full Width */}
+            <div className="mb-6">
+              <Card>
+                <CardHeader>
+                  <CardTitle>Call Moments</CardTitle>
+                  <CardDescription>
+                    Select a moment below to start an AI conversation practice
+                  </CardDescription>
+                </CardHeader>
+                <CardContent>
+                  {loadingMoments ? (
+                    <div className="text-center py-8">
+                      <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto"></div>
+                      <p className="mt-4 text-muted-foreground">Analyzing call moments...</p>
+                    </div>
+                  ) : moments.length > 0 ? (
+                    <MomentsTimeline
+                      moments={moments}
+                      selectedId={selectedMoment}
+                      onSelect={setSelectedMoment}
+                    />
+                  ) : (
+                    <div className="text-center py-8">
+                      <p className="text-muted-foreground mb-4">
+                        No transcript available for moment analysis
+                      </p>
+                      <Button 
+                        variant="outline" 
+                        onClick={() => originalCall && loadMoments(originalCall.id)}
+                      >
+                        <RotateCcw className="h-4 w-4 mr-2" />
+                        Retry Analysis
+                      </Button>
+                    </div>
+                  )}
+                </CardContent>
+              </Card>
+            </div>
 
-              {/* AI Conversation Panel */}
-              <div className={isMobile ? 'order-1' : ''}>
-                <ConversationPanel
-                  conversationState={conversationState}
-                  selectedMoment={selectedMoment ? moments.find(m => m.id === selectedMoment) : null}
-                  onStartConversation={handleStartConversation}
-                  onEndConversation={handleEndConversation}
-                  disabled={!selectedMoment}
-                />
-              </div>
+            {/* AI Conversation Practice - Bottom */}
+            <div>
+              <ConversationPanel
+                conversationState={conversationState}
+                selectedMoment={selectedMoment ? moments.find(m => m.id === selectedMoment) : null}
+                onStartConversation={handleStartConversation}
+                onEndConversation={handleEndConversation}
+                disabled={!selectedMoment}
+              />
             </div>
 
             {/* Coaching Hints Overlay */}
