@@ -2,3 +2,6 @@ project_id = "akcxkwbqeehxvwhmrqbb"
 
 [functions.send-help]
 verify_jwt = false
+
+[functions.upload-call-analysis]
+verify_jwt = true
