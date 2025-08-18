@@ -71,6 +71,16 @@ const LiveCall = () => {
     }
   }, [sessionId, conversationState.isActive, conversationState.isConnecting]);
 
+  // Cleanup on unmount
+  useEffect(() => {
+    return () => {
+      if (conversationState.isActive || conversationState.isConnecting) {
+        console.log('LiveCall unmounting, ending conversation...');
+        endConversation();
+      }
+    };
+  }, [conversationState.isActive, conversationState.isConnecting, endConversation]);
+
   const formatCallDuration = (startTime: number, currentTime: number) => {
     const duration = Math.floor((currentTime - startTime) / 1000);
     const minutes = Math.floor(duration / 60);

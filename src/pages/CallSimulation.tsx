@@ -253,8 +253,28 @@ const CallSimulation = () => {
   };
 
   const endCall = async () => {
-    if (vapiRef.current) {
-      vapiRef.current.stop();
+    console.log('endCall function called');
+    setIsConnecting(true); // Show loading state
+    
+    try {
+      if (vapiRef.current) {
+        console.log('Stopping Vapi call...');
+        await vapiRef.current.stop();
+        console.log('Vapi call stopped successfully');
+      }
+      
+      // Force cleanup if call doesn't end naturally
+      setTimeout(() => {
+        if (isCallActive) {
+          console.log('Forcing call cleanup after timeout');
+          handleCallEnd();
+        }
+      }, 2000);
+      
+    } catch (error) {
+      console.error('Error ending call:', error);
+      // Force cleanup even if stop fails
+      handleCallEnd();
     }
   };
 

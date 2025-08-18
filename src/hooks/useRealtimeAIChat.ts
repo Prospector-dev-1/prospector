@@ -254,17 +254,51 @@ export const useRealtimeAIChat = () => {
 
   const endConversation = useCallback(async () => {
     try {
+      console.log('endConversation called, current status:', conversationState.status);
+      
       setConversationState(prev => ({
         ...prev,
         status: 'ending',
-        isActive: false
+        isActive: false,
+        isConnecting: false
       }));
 
-      await vapiInstance.current?.stop();
+      if (vapiInstance.current) {
+        console.log('Stopping Vapi instance...');
+        await vapiInstance.current.stop();
+        console.log('Vapi instance stopped');
+        
+        // Clear the Vapi instance to prevent further use
+        vapiInstance.current = null;
+      }
+
+      // Force final state update
+      setTimeout(() => {
+        setConversationState(prev => ({
+          ...prev,
+          status: 'ended',
+          isActive: false,
+          isConnecting: false,
+          isConnected: false
+        }));
+      }, 500);
+
     } catch (error) {
       console.error('Error ending conversation:', error);
+      
+      // Ensure state is cleaned up even on error
+      setConversationState(prev => ({
+        ...prev,
+        status: 'ended',
+        isActive: false,
+        isConnecting: false,
+        isConnected: false
+      }));
+      
+      // Clear Vapi instance on error too
+      vapiInstance.current = null;
     }
-  }, []);
+  }, [conversationState.status]);
 
   const handleConversationEnd = useCallback(async () => {
     try {
