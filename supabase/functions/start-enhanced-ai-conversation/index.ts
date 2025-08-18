@@ -101,7 +101,9 @@ serve(async (req) => {
       model: {
         provider: "openai",
         model: "gpt-4o-mini",
-        systemMessage: systemPrompt,
+        messages: [
+          { role: "system", content: systemPrompt }
+        ],
         maxTokens: 250,
         temperature: 0.8
       },
