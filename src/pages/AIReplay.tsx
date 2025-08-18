@@ -217,7 +217,7 @@ const AIReplay = () => {
             <div className="mb-6">
               <Card>
                 <CardHeader>
-                  <CardTitle></CardTitle>
+                  <CardTitle>Practice Moments</CardTitle>
                   <CardDescription>
                     Select a moment below to start an AI conversation practice
                   </CardDescription>
