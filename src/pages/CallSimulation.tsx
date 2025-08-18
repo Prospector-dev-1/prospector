@@ -3,64 +3,40 @@ import { useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { Slider } from '@/components/ui/slider';
-import { Dialog, DialogContent, DialogTrigger } from '@/components/ui/dialog';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
-import { Phone, PhoneOff, Timer, Mic, MicOff, ArrowLeft, User, Bot, Settings } from 'lucide-react';
+import { Phone, PhoneOff, Timer, Mic, MicOff, User } from 'lucide-react';
 import Vapi from '@vapi-ai/web';
 import SEO from '@/components/SEO';
 import CallCustomization from '@/components/CallCustomization';
 import MobileLayout from '@/components/MobileLayout';
 import SmartBackButton from '@/components/SmartBackButton';
-import ReplayModeControls from '@/components/ReplayModeControls';
-import AIProspectLibrary from '@/components/AIProspectLibrary';
-import { useRealtimeAIChat, type ReplayMode, type ProspectPersonality, type GamificationMode } from '@/hooks/useRealtimeAIChat';
-import { cn } from '@/lib/utils';
 
 const CallSimulation = () => {
   const navigate = useNavigate();
   const { user, profile, refreshProfile } = useAuth();
   const { toast } = useToast();
   
-  // AI prospect mode toggle
-  const [useEnhancedMode, setUseEnhancedMode] = useState(false);
-  
-  // Traditional call setup states
+  // Call setup states
   const [difficultyLevel, setDifficultyLevel] = useState([5]);
   const [isCallActive, setIsCallActive] = useState(false);
   const [callStarted, setCallStarted] = useState(false);
   const [isConnecting, setIsConnecting] = useState(false);
   
-  // Traditional customization states
+  // Customization states
   const [businessType, setBusinessType] = useState('');
   const [prospectRole, setProspectRole] = useState('');
   const [callObjective, setCallObjective] = useState('');
   const [customObjective, setCustomObjective] = useState('');
   const [customInstructions, setCustomInstructions] = useState('');
   
-  // Enhanced AI prospect states
-  const [replayMode, setReplayMode] = useState<ReplayMode>('detailed');
-  const [prospectPersonality, setProspectPersonality] = useState<ProspectPersonality>('professional');
-  const [gamificationMode, setGamificationMode] = useState<GamificationMode>('none');
-  const [selectedProspect, setSelectedProspect] = useState<any>(null);
-  
   // Call state tracking
   const [callDuration, setCallDuration] = useState(0);
   const [isMuted, setIsMuted] = useState(false);
   const [callRecordId, setCallRecordId] = useState<string | null>(null);
   
-  // Enhanced AI chat hook
-  const {
-    conversationState,
-    startConversation,
-    endConversation,
-    finalAnalysis
-  } = useRealtimeAIChat();
-  
-  // Vapi instance for traditional mode
+  // Vapi instance
   const vapiRef = useRef<any>(null);
   const timerRef = useRef<NodeJS.Timeout | null>(null);
   const transcriptRef = useRef<string>('');
@@ -245,48 +221,24 @@ const CallSimulation = () => {
     setCallStarted(true);
     
     try {
-      if (useEnhancedMode) {
-        // Use enhanced AI prospect system
-        const sessionId = `practice-${Date.now()}`;
-        const mockMoment = {
-          type: 'discovery',
-          summary: `Practice call with ${selectedProspect?.name || 'AI prospect'}`,
-          context: `${businessType || 'Business'} - ${prospectRole || 'Decision maker'} conversation`,
-          coaching_tip: `Focus on ${callObjective || 'building rapport and understanding needs'}`
-        };
+      const { data, error } = await supabase.functions.invoke('start-call', {
+        body: { 
+          difficulty_level: difficultyLevel[0],
+          business_type: businessType,
+          prospect_role: prospectRole,
+          call_objective: callObjective === 'Custom' ? customObjective : callObjective,
+          custom_instructions: customInstructions
+        }
+      });
 
-        await startConversation(
-          sessionId,
-          mockMoment,
-          replayMode,
-          prospectPersonality,
-          gamificationMode,
-          selectedProspect?.id
-        );
+      if (error) throw new Error(error.message);
+      if (data.error) throw new Error(data.error);
 
-        // Refresh profile to update credits
-        await refreshProfile();
-      } else {
-        // Use traditional call system
-        const { data, error } = await supabase.functions.invoke('start-call', {
-          body: { 
-            difficulty_level: difficultyLevel[0],
-            business_type: businessType,
-            prospect_role: prospectRole,
-            call_objective: callObjective === 'Custom' ? customObjective : callObjective,
-            custom_instructions: customInstructions
-          }
-        });
-
-        if (error) throw new Error(error.message);
-        if (data.error) throw new Error(data.error);
-
-        setCallRecordId(data.callRecordId);
-        callRecordIdRef.current = data.callRecordId;
-        
-        await vapiRef.current.start(data.assistantId);
-        await refreshProfile();
-      }
+      setCallRecordId(data.callRecordId);
+      callRecordIdRef.current = data.callRecordId;
+      
+      await vapiRef.current.start(data.assistantId);
+      await refreshProfile();
 
     } catch (error: any) {
       console.error('Error starting call:', error);
@@ -301,21 +253,8 @@ const CallSimulation = () => {
   };
 
   const endCall = async () => {
-    if (useEnhancedMode) {
-      await endConversation();
-      // Navigate to enhanced analysis when available
-      if (finalAnalysis) {
-        navigate('/call-analysis', { 
-          state: { 
-            analysis: finalAnalysis,
-            mode: 'enhanced-practice'
-          } 
-        });
-      }
-    } else {
-      if (vapiRef.current) {
-        vapiRef.current.stop();
-      }
+    if (vapiRef.current) {
+      vapiRef.current.stop();
     }
   };
 
@@ -394,180 +333,50 @@ const CallSimulation = () => {
       <SEO title="Practice Call | AI Cold Call Simulator" description="Simulate realistic cold calls with AI; choose difficulty and get coaching." canonicalPath="/call-simulation" />
       <MobileLayout>
         <div className="min-h-screen bg-background">
-      {/* Header */}
-      <div className="border-b border-border bg-card">
-        <div className="px-3 sm:px-4 lg:px-8">
-          <div className="flex justify-between items-center py-3">
-            <div className="flex items-center space-x-2">
-              <SmartBackButton variant="ghost" size="icon" />
-              <h1 className="text-lg sm:text-xl font-bold text-primary">Practice Call</h1>
-            </div>
-            <div className="text-right">
-              <p className="text-xs text-muted-foreground">Credits</p>
-              <p className="text-sm font-bold text-primary">{profile.credits}</p>
+          {/* Header */}
+          <div className="border-b border-border bg-card">
+            <div className="px-3 sm:px-4 lg:px-8">
+              <div className="flex justify-between items-center py-3">
+                <div className="flex items-center space-x-2">
+                  <SmartBackButton variant="ghost" size="icon" />
+                  <h1 className="text-lg sm:text-xl font-bold text-primary">Practice Call</h1>
+                </div>
+                <div className="text-right">
+                  <p className="text-xs text-muted-foreground">Credits</p>
+                  <p className="text-sm font-bold text-primary">{profile.credits}</p>
+                </div>
+              </div>
             </div>
           </div>
-        </div>
-      </div>
 
-      <div className="px-3 sm:px-4 lg:px-8 py-4 sm:py-6">
-        {!callStarted ? (
-          // Call Setup - Enhanced with AI Prospect Mode
-          <div className="space-y-6">
-            {/* Mode Selection */}
-            <Card className="border-primary/20">
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <Settings className="h-5 w-5" />
-                  Call Mode
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                <Tabs value={useEnhancedMode ? 'enhanced' : 'traditional'} onValueChange={(value) => setUseEnhancedMode(value === 'enhanced')}>
-                  <TabsList className="grid w-full grid-cols-2">
-                    <TabsTrigger value="traditional" className="gap-2">
-                      <Phone className="h-4 w-4" />
-                      Traditional
-                    </TabsTrigger>
-                    <TabsTrigger value="enhanced" className="gap-2">
-                      <Bot className="h-4 w-4" />
-                      AI Prospect
-                    </TabsTrigger>
-                  </TabsList>
+          <div className="px-3 sm:px-4 lg:px-8 py-4 sm:py-6">
+            {!callStarted ? (
+              // Call Setup
+              <div className="space-y-6">
+                {/* Call Customization */}
+                <CallCustomization
+                  businessType={businessType}
+                  setBusinessType={setBusinessType}
+                  prospectRole={prospectRole}
+                  setProspectRole={setProspectRole}
+                  callObjective={callObjective}
+                  setCallObjective={setCallObjective}
+                  customObjective={customObjective}
+                  setCustomObjective={setCustomObjective}
+                  customInstructions={customInstructions}
+                  setCustomInstructions={setCustomInstructions}
+                  difficultyLevel={difficultyLevel}
+                  setDifficultyLevel={setDifficultyLevel}
+                />
 
-                  <TabsContent value="traditional" className="mt-4">
-                    <p className="text-sm text-muted-foreground mb-4">
-                      Classic practice calls with configurable difficulty levels
-                    </p>
-                    <CallCustomization
-                      businessType={businessType}
-                      setBusinessType={setBusinessType}
-                      prospectRole={prospectRole}
-                      setProspectRole={setProspectRole}
-                      callObjective={callObjective}
-                      setCallObjective={setCallObjective}
-                      customObjective={customObjective}
-                      setCustomObjective={setCustomObjective}
-                      customInstructions={customInstructions}
-                      setCustomInstructions={setCustomInstructions}
-                      difficultyLevel={difficultyLevel}
-                      setDifficultyLevel={setDifficultyLevel}
-                    />
-                  </TabsContent>
-
-                  <TabsContent value="enhanced" className="mt-4 space-y-4">
-                    <p className="text-sm text-muted-foreground">
-                      Practice with intelligent AI prospects that adapt and learn from your conversations
-                    </p>
-                    
-                    <ReplayModeControls
-                      replayMode={replayMode}
-                      setReplayMode={setReplayMode}
-                      prospectPersonality={prospectPersonality}
-                      setProspectPersonality={setProspectPersonality}
-                      gamificationMode={gamificationMode}
-                      setGamificationMode={setGamificationMode}
-                    />
-
-                    <Dialog>
-                      <DialogTrigger asChild>
-                        <Card className="cursor-pointer hover:shadow-md transition-shadow border-2 border-dashed border-primary/30">
-                          <CardContent className="p-4">
-                            <div className="text-center">
-                              {selectedProspect ? (
-                                <div>
-                                  <h4 className="font-medium">{selectedProspect.name}</h4>
-                                  <p className="text-sm text-muted-foreground">
-                                    {selectedProspect.base_personality} • Level {selectedProspect.difficulty_level}
-                                  </p>
-                                  <p className="text-xs text-primary mt-2">Click to change prospect</p>
-                                </div>
-                              ) : (
-                                <div>
-                                  <Bot className="h-8 w-8 mx-auto mb-2 text-muted-foreground" />
-                                  <p className="text-sm font-medium">Select AI Prospect</p>
-                                  <p className="text-xs text-muted-foreground">Choose from library or use default</p>
-                                </div>
-                              )}
-                            </div>
-                          </CardContent>
-                        </Card>
-                      </DialogTrigger>
-                      <DialogContent className="max-w-6xl max-h-[90vh] overflow-y-auto">
-                        <AIProspectLibrary
-                          onProspectSelect={(prospect) => setSelectedProspect(prospect)}
-                          selectedProspectId={selectedProspect?.id}
-                        />
-                      </DialogContent>
-                    </Dialog>
-
-                    {/* Basic context for enhanced mode */}
-                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                      <div>
-                        <label className="text-sm font-medium">Business Context</label>
-                        <input
-                          type="text"
-                          className="w-full mt-1 px-3 py-2 border border-border rounded-md"
-                          placeholder="e.g., SaaS, Manufacturing"
-                          value={businessType}
-                          onChange={(e) => setBusinessType(e.target.value)}
-                        />
-                      </div>
-                      <div>
-                        <label className="text-sm font-medium">Prospect Role</label>
-                        <input
-                          type="text"
-                          className="w-full mt-1 px-3 py-2 border border-border rounded-md"
-                          placeholder="e.g., CEO, Marketing Director"
-                          value={prospectRole}
-                          onChange={(e) => setProspectRole(e.target.value)}
-                        />
-                      </div>
-                      <div>
-                        <label className="text-sm font-medium">Call Objective</label>
-                        <input
-                          type="text"
-                          className="w-full mt-1 px-3 py-2 border border-border rounded-md"
-                          placeholder="e.g., Discovery, Demo"
-                          value={callObjective}
-                          onChange={(e) => setCallObjective(e.target.value)}
-                        />
-                      </div>
-                    </div>
-                  </TabsContent>
-                </Tabs>
-              </CardContent>
-            </Card>
-
-            {/* Scenario Preview */}
-            {(businessType || prospectRole || callObjective || selectedProspect) && (
-              <Card className="border-primary/20 bg-primary/5">
-                <CardHeader>
-                  <CardTitle className="text-primary">Practice Session Preview</CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <div className="space-y-2 text-sm">
-                    {useEnhancedMode ? (
-                      <>
-                        {selectedProspect && (
-                          <div>
-                            <span className="font-medium">AI Prospect:</span> {selectedProspect.name}
-                          </div>
-                        )}
-                        <div>
-                          <span className="font-medium">Personality:</span> {prospectPersonality}
-                        </div>
-                        <div>
-                          <span className="font-medium">Mode:</span> {replayMode}
-                        </div>
-                        {gamificationMode !== 'none' && (
-                          <div>
-                            <span className="font-medium">Challenge:</span> {gamificationMode}
-                          </div>
-                        )}
-                      </>
-                    ) : (
-                      <>
+                {/* Scenario Preview */}
+                {(businessType || prospectRole || callObjective) && (
+                  <Card className="border-primary/20 bg-primary/5">
+                    <CardHeader>
+                      <CardTitle className="text-primary">Practice Session Preview</CardTitle>
+                    </CardHeader>
+                    <CardContent>
+                      <div className="space-y-2 text-sm">
                         {businessType && (
                           <div>
                             <span className="font-medium">Business:</span> {businessType}
@@ -586,154 +395,139 @@ const CallSimulation = () => {
                         <div>
                           <span className="font-medium">Difficulty:</span> Level {difficultyLevel[0]} ({getDifficultyLabel(difficultyLevel[0])})
                         </div>
+                      </div>
+                    </CardContent>
+                  </Card>
+                )}
+
+                {/* Start Call Button */}
+                <div className="space-y-4">
+                  <Button 
+                    onClick={startCall} 
+                    disabled={isConnecting || (profile.subscription_type !== 'premium' && profile.credits <= 0)}
+                    className="w-full"
+                    size="lg"
+                  >
+                    {isConnecting ? (
+                      <>
+                        <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-current mr-2"></div>
+                        Connecting...
+                      </>
+                    ) : (
+                      <>
+                        <Phone className="mr-2 h-4 w-4" />
+                        Start Practice Call {profile.subscription_type !== 'premium' && `(1 Credit)`}
                       </>
                     )}
-                    {businessType && (
-                      <div>
-                        <span className="font-medium">Context:</span> {businessType}
-                      </div>
-                    )}
-                  </div>
-                </CardContent>
-              </Card>
-            )}
+                  </Button>
 
-            {/* Start Call Button */}
-            <div className="space-y-4">
-              <Button 
-                onClick={startCall} 
-                disabled={isConnecting || (profile.subscription_type !== 'premium' && profile.credits <= 0)}
-                className="w-full"
-                size="lg"
-              >
-                {isConnecting ? (
-                  <>
-                    <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-current mr-2"></div>
-                    Connecting...
-                  </>
-                ) : (
-                  <>
-                    <Phone className="mr-2 h-4 w-4" />
-                    Start {useEnhancedMode ? 'AI Prospect' : 'Practice'} Call {profile.subscription_type !== 'premium' && `(1 Credit)`}
-                  </>
-                )}
-              </Button>
-
-              {profile.subscription_type !== 'premium' && profile.credits <= 0 && (
-                <p className="text-center text-sm text-destructive">
-                  You need credits to start a call. Purchase more credits to continue.
-                </p>
-              )}
-            </div>
-          </div>
-        ) : (
-          // Active Call Interface
-          <div className="flex flex-col items-center justify-center space-y-8">
-            <Card className="w-full max-w-md">
-              <CardContent className="p-8 text-center">
-                <div className="space-y-6">
-                  {/* Prospect Avatar */}
-                  <div className="mx-auto w-24 h-24 bg-primary rounded-full flex items-center justify-center">
-                    <User className="h-12 w-12 text-primary-foreground" />
-                  </div>
-
-                  {/* Prospect Name */}
-                  <div>
-                    <h3 className="text-xl font-semibold">
-                      {useEnhancedMode ? (
-                        selectedProspect?.name || `${prospectPersonality} Prospect`
-                      ) : (
-                        prospectRole || 'Business Owner'
-                      )}
-                    </h3>
-                    <p className="text-muted-foreground">
-                      {useEnhancedMode ? (
-                        `${selectedProspect?.base_personality || prospectPersonality} • ${replayMode} mode`
-                      ) : (
-                        `${businessType ? `${businessType} • ` : ''}Level ${difficultyLevel[0]} Prospect`
-                      )}
+                  {profile.subscription_type !== 'premium' && profile.credits <= 0 && (
+                    <p className="text-center text-sm text-destructive">
+                      You need credits to start a call. Purchase more credits to continue.
                     </p>
-                    {callObjective && (
-                      <p className="text-xs text-muted-foreground mt-1">
-                        Goal: {callObjective}
-                      </p>
-                    )}
-                  </div>
-
-                  {/* Call Timer */}
-                  <div className="flex items-center justify-center space-x-2">
-                    <Timer className="h-4 w-4 text-muted-foreground" />
-                    <span className="text-2xl font-mono">{formatTime(callDuration)}</span>
-                  </div>
-
-                  {/* Call Status */}
-                  <div>
-                    {(isConnecting || conversationState.status === 'connecting') && (
-                      <p className="text-muted-foreground">Connecting...</p>
-                    )}
-                    {(isCallActive || conversationState.status === 'active') && (
-                      <div className="flex items-center justify-center space-x-2">
-                        <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse"></div>
-                        <span className="text-green-500 font-medium">Connected</span>
+                  )}
+                </div>
+              </div>
+            ) : (
+              // Active Call Interface
+              <div className="flex flex-col items-center justify-center space-y-8">
+                <Card className="w-full max-w-md">
+                  <CardContent className="p-8 text-center">
+                    <div className="space-y-6">
+                      {/* Prospect Avatar */}
+                      <div className="mx-auto w-24 h-24 bg-primary rounded-full flex items-center justify-center">
+                        <User className="h-12 w-12 text-primary-foreground" />
                       </div>
-                    )}
-                  </div>
 
-                  {/* Call Controls */}
-                  <div className="flex justify-center space-x-4">
-                    <Button
-                      variant="outline"
-                      size="icon"
-                      onClick={toggleMute}
-                      aria-label={isMuted ? 'Unmute microphone' : 'Mute microphone'}
-                      className="rounded-full w-12 h-12"
-                    >
-                      {isMuted ? <MicOff className="h-4 w-4" /> : <Mic className="h-4 w-4" />}
-                    </Button>
-                    
-                    <Button
-                      variant="destructive"
-                      size="icon"
-                      onClick={endCall}
-                      className="rounded-full w-12 h-12"
-                    >
-                      <PhoneOff className="h-4 w-4" />
-                    </Button>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
+                      {/* Prospect Name */}
+                      <div>
+                        <h3 className="text-xl font-semibold">
+                          {prospectRole || 'Business Owner'}
+                        </h3>
+                        <p className="text-muted-foreground">
+                          {`${businessType ? `${businessType} • ` : ''}Level ${difficultyLevel[0]} Prospect`}
+                        </p>
+                        {callObjective && (
+                          <p className="text-xs text-muted-foreground mt-1">
+                            Goal: {callObjective}
+                          </p>
+                        )}
+                      </div>
 
-            {/* Call Tips */}
-            <Card className="w-full max-w-2xl">
-              <CardHeader>
-                <CardTitle className="text-center">💡 Quick Tips</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
-                  <div>
-                    <p className="font-medium text-primary">Build Rapport</p>
-                    <p className="text-muted-foreground">Start with a friendly introduction</p>
-                  </div>
-                  <div>
-                    <p className="font-medium text-primary">Ask Questions</p>
-                    <p className="text-muted-foreground">Understand their business needs</p>
-                  </div>
-                  <div>
-                    <p className="font-medium text-primary">Handle Objections</p>
-                    <p className="text-muted-foreground">Listen and address concerns</p>
-                  </div>
-                  <div>
-                    <p className="font-medium text-primary">Close Strong</p>
-                    <p className="text-muted-foreground">Ask for the next step</p>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
+                      {/* Call Timer */}
+                      <div className="flex items-center justify-center space-x-2">
+                        <Timer className="h-4 w-4 text-muted-foreground" />
+                        <span className="text-2xl font-mono">{formatTime(callDuration)}</span>
+                      </div>
+
+                      {/* Call Status */}
+                      <div>
+                        {isConnecting && (
+                          <p className="text-muted-foreground">Connecting...</p>
+                        )}
+                        {isCallActive && (
+                          <div className="flex items-center justify-center space-x-2">
+                            <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse"></div>
+                            <span className="text-green-500 font-medium">Connected</span>
+                          </div>
+                        )}
+                      </div>
+
+                      {/* Call Controls */}
+                      <div className="flex justify-center space-x-4">
+                        <Button
+                          variant="outline"
+                          size="icon"
+                          onClick={toggleMute}
+                          aria-label={isMuted ? 'Unmute microphone' : 'Mute microphone'}
+                          className="rounded-full w-12 h-12"
+                        >
+                          {isMuted ? <MicOff className="h-4 w-4" /> : <Mic className="h-4 w-4" />}
+                        </Button>
+                        
+                        <Button
+                          variant="destructive"
+                          size="icon"
+                          onClick={endCall}
+                          className="rounded-full w-12 h-12"
+                        >
+                          <PhoneOff className="h-4 w-4" />
+                        </Button>
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+
+                {/* Call Tips */}
+                <Card className="w-full max-w-2xl">
+                  <CardHeader>
+                    <CardTitle className="text-center">💡 Quick Tips</CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
+                      <div>
+                        <p className="font-medium text-primary">Build Rapport</p>
+                        <p className="text-muted-foreground">Start with a friendly introduction</p>
+                      </div>
+                      <div>
+                        <p className="font-medium text-primary">Ask Questions</p>
+                        <p className="text-muted-foreground">Understand their business needs</p>
+                      </div>
+                      <div>
+                        <p className="font-medium text-primary">Handle Objections</p>
+                        <p className="text-muted-foreground">Listen and address concerns</p>
+                      </div>
+                      <div>
+                        <p className="font-medium text-primary">Close Strong</p>
+                        <p className="text-muted-foreground">Ask for the next step</p>
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+              </div>
+            )}
           </div>
-          )}
         </div>
-      </div>
       </MobileLayout>
     </>
   );
