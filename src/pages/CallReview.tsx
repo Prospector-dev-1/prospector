@@ -2,11 +2,12 @@ import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Progress } from '@/components/ui/progress';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { ArrowLeft, TrendingUp, TrendingDown, Mic, BarChart3, Lightbulb, RefreshCw } from 'lucide-react';
+import { ArrowLeft, TrendingUp, TrendingDown, Mic, BarChart3, Lightbulb, RefreshCw, AlertTriangle } from 'lucide-react';
 import { toast } from 'sonner';
 import { supabase } from '@/integrations/supabase/client';
 import SEO from '@/components/SEO';
@@ -26,6 +27,7 @@ interface CallUpload {
   better_responses: any;
   psychological_insights: string;
   created_at: string;
+  fallback_used?: boolean;
 }
 
 const CallReview = () => {
@@ -34,6 +36,7 @@ const CallReview = () => {
   const { user } = useAuth();
   const [callData, setCallData] = useState<CallUpload | null>(null);
   const [loading, setLoading] = useState(true);
+  const [retrying, setRetrying] = useState(false);
 
   useEffect(() => {
     if (!uploadId || !user) return;
@@ -59,6 +62,27 @@ const CallReview = () => {
       navigate('/');
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleRetryAnalysis = async () => {
+    if (!uploadId || !user) return;
+    
+    setRetrying(true);
+    try {
+      const { data, error } = await supabase.functions.invoke('reanalyze-call-upload', {
+        body: { uploadId }
+      });
+
+      if (error) throw error;
+      
+      toast.success('Analysis retried successfully!');
+      await fetchCallData(); // Refresh the data
+    } catch (error) {
+      console.error('Error retrying analysis:', error);
+      toast.error('Failed to retry analysis. Please try again.');
+    } finally {
+      setRetrying(false);
     }
   };
 
@@ -143,6 +167,25 @@ const CallReview = () => {
               </div>
             </div>
           </div>
+
+          {/* Fallback Warning */}
+          {callData.fallback_used && (
+            <Alert className="mb-6 border-warning bg-warning/10">
+              <AlertTriangle className="h-4 w-4" />
+              <AlertDescription>
+                This analysis was generated using a fallback method due to AI parsing issues. 
+                The results may be less detailed than usual.{' '}
+                <Button 
+                  variant="link" 
+                  className="p-0 h-auto font-semibold text-warning-foreground underline"
+                  onClick={handleRetryAnalysis}
+                  disabled={retrying}
+                >
+                  {retrying ? 'Retrying...' : 'Click here to retry analysis'}
+                </Button>
+              </AlertDescription>
+            </Alert>
+          )}
 
           {/* Score Overview */}
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">

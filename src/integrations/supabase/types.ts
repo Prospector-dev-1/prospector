@@ -109,6 +109,39 @@ export type Database = {
         }
         Relationships: []
       }
+      audit_logs: {
+        Row: {
+          action: string
+          created_at: string
+          details: Json
+          id: string
+          ip_address: string | null
+          target_id: string | null
+          user_agent: string | null
+          user_id: string
+        }
+        Insert: {
+          action: string
+          created_at?: string
+          details?: Json
+          id?: string
+          ip_address?: string | null
+          target_id?: string | null
+          user_agent?: string | null
+          user_id: string
+        }
+        Update: {
+          action?: string
+          created_at?: string
+          details?: Json
+          id?: string
+          ip_address?: string | null
+          target_id?: string | null
+          user_agent?: string | null
+          user_id?: string
+        }
+        Relationships: []
+      }
       business_types: {
         Row: {
           category: string
@@ -166,6 +199,7 @@ export type Database = {
           better_responses: Json | null
           confidence_score: number | null
           created_at: string
+          fallback_used: boolean | null
           file_size: number
           file_type: string
           id: string
@@ -184,6 +218,7 @@ export type Database = {
           better_responses?: Json | null
           confidence_score?: number | null
           created_at?: string
+          fallback_used?: boolean | null
           file_size: number
           file_type: string
           id?: string
@@ -202,6 +237,7 @@ export type Database = {
           better_responses?: Json | null
           confidence_score?: number | null
           created_at?: string
+          fallback_used?: boolean | null
           file_size?: number
           file_type?: string
           id?: string
@@ -607,6 +643,10 @@ export type Database = {
         Returns: boolean
       }
       cleanup_old_api_logs: {
+        Args: Record<PropertyKey, never>
+        Returns: undefined
+      }
+      cleanup_old_audit_logs: {
         Args: Record<PropertyKey, never>
         Returns: undefined
       }

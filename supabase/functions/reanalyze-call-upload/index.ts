@@ -132,7 +132,7 @@ Provide your response in this JSON format:
 }`;
 
   // Try GPT-5 with JSON schema first
-  console.log('Attempting analysis with GPT-5...');
+  console.log('Re-analyzing with GPT-5...');
   try {
     const response = await fetch('https://api.openai.com/v1/chat/completions', {
       method: 'POST',
@@ -145,7 +145,7 @@ Provide your response in this JSON format:
         messages: [
           {
             role: 'system',
-            content: 'You are an expert sales coach analyzing call performance. Provide detailed, actionable feedback in the requested JSON format. Be precise and follow the schema exactly.'
+            content: 'You are an expert sales coach re-analyzing call performance. Provide detailed, actionable feedback in the requested JSON format. Be precise and follow the schema exactly.'
           },
           {
             role: 'user',
@@ -170,20 +170,20 @@ Provide your response in this JSON format:
       if (content) {
         const analysis = JSON.parse(content);
         if (validateAnalysis(analysis)) {
-          console.log('GPT-5 analysis successful and validated');
+          console.log('GPT-5 re-analysis successful and validated');
           return { analysis, fallbackUsed: false };
         }
-        console.log('GPT-5 analysis failed validation, trying fallback...');
+        console.log('GPT-5 re-analysis failed validation, trying fallback...');
       }
     } else {
-      console.log('GPT-5 request failed, trying fallback...');
+      console.log('GPT-5 re-analysis request failed, trying fallback...');
     }
   } catch (error) {
-    console.error('GPT-5 analysis error:', error);
+    console.error('GPT-5 re-analysis error:', error);
   }
 
   // Fallback to GPT-4.1
-  console.log('Attempting analysis with GPT-4.1 fallback...');
+  console.log('Re-analyzing with GPT-4.1 fallback...');
   try {
     const response = await fetch('https://api.openai.com/v1/chat/completions', {
       method: 'POST',
@@ -196,7 +196,7 @@ Provide your response in this JSON format:
         messages: [
           {
             role: 'system',
-            content: 'You are an expert sales coach analyzing call performance. Provide detailed, actionable feedback in valid JSON format only. No other text.'
+            content: 'You are an expert sales coach re-analyzing call performance. Provide detailed, actionable feedback in valid JSON format only. No other text.'
           },
           {
             role: 'user',
@@ -215,44 +215,19 @@ Provide your response in this JSON format:
       if (content) {
         const analysis = JSON.parse(content);
         if (validateAnalysis(analysis)) {
-          console.log('GPT-4.1 fallback analysis successful and validated');
+          console.log('GPT-4.1 re-analysis successful and validated');
           return { analysis, fallbackUsed: false };
         }
-        console.log('GPT-4.1 analysis failed validation, using manual fallback...');
+        console.log('GPT-4.1 re-analysis failed validation...');
       }
     } else {
-      console.log('GPT-4.1 request failed, using manual fallback...');
+      console.log('GPT-4.1 re-analysis request failed...');
     }
   } catch (error) {
-    console.error('GPT-4.1 analysis error:', error);
+    console.error('GPT-4.1 re-analysis error:', error);
   }
 
-  // Manual fallback - create structured analysis
-  console.log('Using manual analysis fallback');
-  const fallbackAnalysis = {
-    confidence_score: 50,
-    objection_handling_scores: { 
-      price: 50, 
-      timing: 50, 
-      trust: 50, 
-      competitor: 50 
-    },
-    strengths: [
-      'Demonstrated effort in engaging the prospect',
-      'Showed persistence in the conversation'
-    ],
-    weaknesses: [
-      'AI analysis failed - manual review recommended',
-      'Technical parsing issues prevented detailed feedback'
-    ],
-    better_responses: {
-      price_objection: "I hear you on price—can we look at the ROI and outcomes this enables over the next quarter?",
-      timing_concern: "What milestones would make the timing feel right, and how can we align the rollout?"
-    },
-    psychological_insights: 'Fallback generated due to AI parsing issues. Focus on curiosity, validation, and value linking when objections arise. Consider re-analyzing this call.'
-  };
-
-  return { analysis: fallbackAnalysis, fallbackUsed: true };
+  throw new Error('Re-analysis failed with both GPT-5 and GPT-4.1. Please try again later.');
 }
 
 serve(async (req) => {
@@ -261,7 +236,7 @@ serve(async (req) => {
   }
 
   try {
-    const { file, originalFilename, fileType } = await req.json();
+    const { uploadId } = await req.json();
     
     const authHeader = req.headers.get('Authorization');
     if (!authHeader) {
@@ -277,131 +252,46 @@ serve(async (req) => {
       throw new Error('Authentication failed');
     }
 
-    console.log('Processing file for user:', user.id);
-
-    // Get user profile and check credits
-    const { data: profile, error: profileError } = await supabase
-      .from('profiles')
-      .select('*')
-      .eq('user_id', user.id)
-      .maybeSingle();
-
-    if (profileError || !profile) {
-      throw new Error('Profile not found');
-    }
-
-    if (profile.credits < 1) {
-      return new Response(
-        JSON.stringify({ error: 'Insufficient credits. You need 1 credit to analyze a call.' }),
-        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      );
-    }
-
-    // Create call upload record
-    const { data: uploadRecord, error: uploadError } = await supabase
-      .from('call_uploads')
-      .insert({
-        user_id: user.id,
-        original_filename: originalFilename,
-        file_type: fileType,
-        file_size: file.length,
-        status: 'processing'
-      })
-      .select()
-      .single();
-
-    if (uploadError) {
-      throw new Error('Failed to create upload record');
-    }
-
-    console.log('Created upload record:', uploadRecord.id);
+    console.log('Re-analyzing call for user:', user.id, 'uploadId:', uploadId);
 
     // Ensure OpenAI API key is available
     if (!openaiApiKey) {
-      console.error('OPENAI_API_KEY is missing in edge function environment');
-      throw new Error('Server configuration error: AI service key missing. Please contact support.');
+      console.error('OPENAI_API_KEY is missing');
+      throw new Error('Server configuration error: AI service key missing.');
     }
 
-    // Basic transcript validation - check for minimum length
-    if (!file || file.length < 100) {
-      throw new Error('File too small or empty. Please upload a valid audio/video file with speech content.');
+    // Get existing call upload record
+    const { data: uploadRecord, error: fetchError } = await supabase
+      .from('call_uploads')
+      .select('*')
+      .eq('id', uploadId)
+      .eq('user_id', user.id)
+      .single();
+
+    if (fetchError || !uploadRecord) {
+      throw new Error('Call upload not found');
     }
 
-    // Convert base64 to binary for audio processing
-    const binaryString = atob(file);
-    const binaryAudio = new Uint8Array(binaryString.length);
-    for (let i = 0; i < binaryString.length; i++) {
-      binaryAudio[i] = binaryString.charCodeAt(i);
-    }
-    
-    // Step 1: Transcribe the audio
-    console.log('Starting transcription...');
-    const formData = new FormData();
-
-    // Determine best content type from filename
-    const lowerName = (originalFilename || '').toLowerCase();
-    let contentType = 'audio/mpeg';
-    if (lowerName.endsWith('.wav')) contentType = 'audio/wav';
-    else if (lowerName.endsWith('.m4a')) contentType = 'audio/m4a';
-    else if (lowerName.endsWith('.mp3')) contentType = 'audio/mpeg';
-    else if (lowerName.endsWith('.mov')) contentType = 'video/quicktime';
-    else if (lowerName.endsWith('.mp4')) contentType = 'video/mp4';
-    else if (fileType === 'video') contentType = 'video/mp4';
-
-    const audioBlob = new Blob([binaryAudio], { type: contentType });
-    formData.append('file', audioBlob, originalFilename);
-    formData.append('model', 'whisper-1');
-    formData.append('language', 'en'); // Explicit language hint for better accuracy
-
-    const transcriptionResponse = await fetch('https://api.openai.com/v1/audio/transcriptions', {
-      method: 'POST',
-      headers: {
-        'Authorization': `Bearer ${openaiApiKey}`,
-      },
-      body: formData,
-    });
-
-    if (!transcriptionResponse.ok) {
-      const errorText = await transcriptionResponse.text();
-      console.error('Transcription error:', errorText);
-      
-      // Try to parse OpenAI error for user-friendly message
-      try {
-        const errorData = JSON.parse(errorText);
-        if (errorData.error?.code === 'insufficient_quota') {
-          throw new Error('Transcription failed (quota): Please check OpenAI billing/limits.');
-        } else if (errorData.error?.message) {
-          throw new Error(`Transcription failed (${transcriptionResponse.status}): ${errorData.error.message}`);
-        }
-      } catch (parseError) {
-        console.error('Could not parse OpenAI error:', parseError);
-      }
-      
-      const snippet = (errorText || '').slice(0, 200);
-      throw new Error(`Transcription failed (${transcriptionResponse.status}). Details: ${snippet}`);
+    if (!uploadRecord.transcript) {
+      throw new Error('No transcript found for this call. Cannot re-analyze.');
     }
 
-    const transcriptionResult = await transcriptionResponse.json();
-    const transcript = transcriptionResult.text;
+    // Update status to processing
+    await supabase
+      .from('call_uploads')
+      .update({ status: 'processing' })
+      .eq('id', uploadId);
 
-    // Basic transcript validation
-    if (!transcript || transcript.trim().length < 50) {
-      throw new Error('Transcript too short or empty. Please ensure your audio contains clear speech content.');
-    }
+    // Re-analyze with robust retry and fallback
+    const { analysis, fallbackUsed } = await analyzeWithRetryAndFallback(uploadRecord.transcript);
 
-    console.log('Transcription completed, analyzing...');
+    console.log('Re-analysis completed, updating database...');
 
-    // Step 2: Analyze with robust retry and fallback
-    const { analysis, fallbackUsed } = await analyzeWithRetryAndFallback(transcript);
-
-    console.log('Analysis completed, updating database...');
-
-    // Step 3: Update the upload record with results
+    // Update the upload record with new results
     const { error: updateError } = await supabase
       .from('call_uploads')
       .update({
         status: 'completed',
-        transcript: transcript,
         ai_analysis: analysis,
         confidence_score: analysis.confidence_score,
         objection_handling_scores: analysis.objection_handling_scores,
@@ -411,62 +301,28 @@ serve(async (req) => {
         psychological_insights: analysis.psychological_insights,
         fallback_used: fallbackUsed
       })
-      .eq('id', uploadRecord.id);
+      .eq('id', uploadId);
 
     if (updateError) {
       throw new Error('Failed to update upload record');
     }
 
-    // Step 4: Deduct credit and log transaction
-    const { error: creditError } = await supabase.rpc('deduct_credits', {
-      user_id_param: user.id,
-      amount_param: 1
-    });
-
-    if (creditError) {
-      console.warn('Failed to deduct credit:', creditError);
-    }
-
-    const { error: transactionError } = await supabase
-      .from('credit_transactions')
-      .insert({
-        user_id: user.id,
-        type: 'debit',
-        amount: 1,
-        description: 'Call analysis review'
-      });
-
-    if (transactionError) {
-      console.warn('Failed to log transaction:', transactionError);
-    }
-
-    // Get updated profile
-    const { data: updatedProfile } = await supabase
-      .from('profiles')
-      .select('credits')
-      .eq('user_id', user.id)
-      .single();
-
     return new Response(
       JSON.stringify({
         success: true,
-        uploadId: uploadRecord.id,
-        remainingCredits: updatedProfile?.credits || 0,
+        analysis: analysis,
         fallbackUsed: fallbackUsed
       }),
       { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     );
 
   } catch (error) {
-    console.error('Error in upload-call-analysis:', error);
+    console.error('Error in reanalyze-call-upload:', error);
     const errorMessage = error instanceof Error ? error.message : 'Unknown error occurred';
-    console.error('Error message:', errorMessage);
-    console.error('Error stack:', error instanceof Error ? error.stack : 'No stack trace');
     
     return new Response(
       JSON.stringify({ 
-        error: errorMessage,
-        details: error instanceof Error ? error.stack : undefined 
+        error: errorMessage
       }),
       { 
         status: 500, 
