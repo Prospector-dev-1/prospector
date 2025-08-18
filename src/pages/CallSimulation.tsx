@@ -4,40 +4,63 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Slider } from '@/components/ui/slider';
+import { Dialog, DialogContent, DialogTrigger } from '@/components/ui/dialog';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
-import { Phone, PhoneOff, Timer, Mic, MicOff, ArrowLeft, User } from 'lucide-react';
+import { Phone, PhoneOff, Timer, Mic, MicOff, ArrowLeft, User, Bot, Settings } from 'lucide-react';
 import Vapi from '@vapi-ai/web';
 import SEO from '@/components/SEO';
 import CallCustomization from '@/components/CallCustomization';
 import MobileLayout from '@/components/MobileLayout';
 import SmartBackButton from '@/components/SmartBackButton';
+import ReplayModeControls from '@/components/ReplayModeControls';
+import AIProspectLibrary from '@/components/AIProspectLibrary';
+import { useRealtimeAIChat, type ReplayMode, type ProspectPersonality, type GamificationMode } from '@/hooks/useRealtimeAIChat';
+import { cn } from '@/lib/utils';
 
 const CallSimulation = () => {
   const navigate = useNavigate();
   const { user, profile, refreshProfile } = useAuth();
   const { toast } = useToast();
   
-  // Call setup states
+  // AI prospect mode toggle
+  const [useEnhancedMode, setUseEnhancedMode] = useState(false);
+  
+  // Traditional call setup states
   const [difficultyLevel, setDifficultyLevel] = useState([5]);
   const [isCallActive, setIsCallActive] = useState(false);
   const [callStarted, setCallStarted] = useState(false);
   const [isConnecting, setIsConnecting] = useState(false);
   
-  // Customization states
+  // Traditional customization states
   const [businessType, setBusinessType] = useState('');
   const [prospectRole, setProspectRole] = useState('');
   const [callObjective, setCallObjective] = useState('');
   const [customObjective, setCustomObjective] = useState('');
   const [customInstructions, setCustomInstructions] = useState('');
   
+  // Enhanced AI prospect states
+  const [replayMode, setReplayMode] = useState<ReplayMode>('detailed');
+  const [prospectPersonality, setProspectPersonality] = useState<ProspectPersonality>('professional');
+  const [gamificationMode, setGamificationMode] = useState<GamificationMode>('none');
+  const [selectedProspect, setSelectedProspect] = useState<any>(null);
+  
   // Call state tracking
   const [callDuration, setCallDuration] = useState(0);
   const [isMuted, setIsMuted] = useState(false);
   const [callRecordId, setCallRecordId] = useState<string | null>(null);
   
-  // Vapi instance
+  // Enhanced AI chat hook
+  const {
+    conversationState,
+    startConversation,
+    endConversation,
+    finalAnalysis
+  } = useRealtimeAIChat();
+  
+  // Vapi instance for traditional mode
   const vapiRef = useRef<any>(null);
   const timerRef = useRef<NodeJS.Timeout | null>(null);
   const transcriptRef = useRef<string>('');
@@ -219,52 +242,51 @@ const CallSimulation = () => {
     }
 
     setIsConnecting(true);
-    
-    console.log('=== STARTING CALL DEBUG ===');
-    console.log('Selected difficulty level:', difficultyLevel[0]);
-    console.log('User credits:', profile.credits);
-    console.log('Subscription type:', profile.subscription_type);
+    setCallStarted(true);
     
     try {
-      // Start call through our edge function
-      const { data, error } = await supabase.functions.invoke('start-call', {
-        body: { 
-          difficulty_level: difficultyLevel[0],
-          business_type: businessType,
-          prospect_role: prospectRole,
-          call_objective: callObjective === 'Custom' ? customObjective : callObjective,
-          custom_instructions: customInstructions
-        }
-      });
+      if (useEnhancedMode) {
+        // Use enhanced AI prospect system
+        const sessionId = `practice-${Date.now()}`;
+        const mockMoment = {
+          type: 'discovery',
+          summary: `Practice call with ${selectedProspect?.name || 'AI prospect'}`,
+          context: `${businessType || 'Business'} - ${prospectRole || 'Decision maker'} conversation`,
+          coaching_tip: `Focus on ${callObjective || 'building rapport and understanding needs'}`
+        };
 
-      console.log('Edge function response:', { data, error });
+        await startConversation(
+          sessionId,
+          mockMoment,
+          replayMode,
+          prospectPersonality,
+          gamificationMode,
+          selectedProspect?.id
+        );
 
-      if (error) {
-        console.error('Supabase function error:', error);
-        throw new Error(error.message);
+        // Refresh profile to update credits
+        await refreshProfile();
+      } else {
+        // Use traditional call system
+        const { data, error } = await supabase.functions.invoke('start-call', {
+          body: { 
+            difficulty_level: difficultyLevel[0],
+            business_type: businessType,
+            prospect_role: prospectRole,
+            call_objective: callObjective === 'Custom' ? customObjective : callObjective,
+            custom_instructions: customInstructions
+          }
+        });
+
+        if (error) throw new Error(error.message);
+        if (data.error) throw new Error(data.error);
+
+        setCallRecordId(data.callRecordId);
+        callRecordIdRef.current = data.callRecordId;
+        
+        await vapiRef.current.start(data.assistantId);
+        await refreshProfile();
       }
-
-      if (data.error) {
-        console.error('Edge function returned error:', data.error);
-        throw new Error(data.error);
-      }
-
-      console.log('Call data received:', data);
-      console.log('Setting callRecordId to:', data.callRecordId);
-      setCallRecordId(data.callRecordId);
-      callRecordIdRef.current = data.callRecordId; // Store in ref too
-      setCallStarted(true);
-      
-      // Debug: Check if callRecordId was set properly
-      console.log('callRecordId state should now be:', data.callRecordId);
-      console.log('callRecordId ref should now be:', callRecordIdRef.current);
-      
-      // Start the Vapi call with the assistant
-      console.log('Starting Vapi call with assistant ID:', data.assistantId);
-      await vapiRef.current.start(data.assistantId);
-      
-      // Refresh profile to update credits
-      await refreshProfile();
 
     } catch (error: any) {
       console.error('Error starting call:', error);
@@ -274,12 +296,26 @@ const CallSimulation = () => {
         variant: "destructive",
       });
       setIsConnecting(false);
+      setCallStarted(false);
     }
   };
 
   const endCall = async () => {
-    if (vapiRef.current) {
-      vapiRef.current.stop();
+    if (useEnhancedMode) {
+      await endConversation();
+      // Navigate to enhanced analysis when available
+      if (finalAnalysis) {
+        navigate('/call-analysis', { 
+          state: { 
+            analysis: finalAnalysis,
+            mode: 'enhanced-practice'
+          } 
+        });
+      }
+    } else {
+      if (vapiRef.current) {
+        vapiRef.current.stop();
+      }
     }
   };
 
@@ -376,54 +412,191 @@ const CallSimulation = () => {
 
       <div className="px-3 sm:px-4 lg:px-8 py-4 sm:py-6">
         {!callStarted ? (
-          // Call Setup - Combined View
+          // Call Setup - Enhanced with AI Prospect Mode
           <div className="space-y-6">
-            <CallCustomization
-              businessType={businessType}
-              setBusinessType={setBusinessType}
-              prospectRole={prospectRole}
-              setProspectRole={setProspectRole}
-              callObjective={callObjective}
-              setCallObjective={setCallObjective}
-              customObjective={customObjective}
-              setCustomObjective={setCustomObjective}
-              customInstructions={customInstructions}
-              setCustomInstructions={setCustomInstructions}
-              difficultyLevel={difficultyLevel}
-              setDifficultyLevel={setDifficultyLevel}
-            />
+            {/* Mode Selection */}
+            <Card className="border-primary/20">
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <Settings className="h-5 w-5" />
+                  Call Mode
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <Tabs value={useEnhancedMode ? 'enhanced' : 'traditional'} onValueChange={(value) => setUseEnhancedMode(value === 'enhanced')}>
+                  <TabsList className="grid w-full grid-cols-2">
+                    <TabsTrigger value="traditional" className="gap-2">
+                      <Phone className="h-4 w-4" />
+                      Traditional
+                    </TabsTrigger>
+                    <TabsTrigger value="enhanced" className="gap-2">
+                      <Bot className="h-4 w-4" />
+                      AI Prospect
+                    </TabsTrigger>
+                  </TabsList>
+
+                  <TabsContent value="traditional" className="mt-4">
+                    <p className="text-sm text-muted-foreground mb-4">
+                      Classic practice calls with configurable difficulty levels
+                    </p>
+                    <CallCustomization
+                      businessType={businessType}
+                      setBusinessType={setBusinessType}
+                      prospectRole={prospectRole}
+                      setProspectRole={setProspectRole}
+                      callObjective={callObjective}
+                      setCallObjective={setCallObjective}
+                      customObjective={customObjective}
+                      setCustomObjective={setCustomObjective}
+                      customInstructions={customInstructions}
+                      setCustomInstructions={setCustomInstructions}
+                      difficultyLevel={difficultyLevel}
+                      setDifficultyLevel={setDifficultyLevel}
+                    />
+                  </TabsContent>
+
+                  <TabsContent value="enhanced" className="mt-4 space-y-4">
+                    <p className="text-sm text-muted-foreground">
+                      Practice with intelligent AI prospects that adapt and learn from your conversations
+                    </p>
+                    
+                    <ReplayModeControls
+                      replayMode={replayMode}
+                      setReplayMode={setReplayMode}
+                      prospectPersonality={prospectPersonality}
+                      setProspectPersonality={setProspectPersonality}
+                      gamificationMode={gamificationMode}
+                      setGamificationMode={setGamificationMode}
+                    />
+
+                    <Dialog>
+                      <DialogTrigger asChild>
+                        <Card className="cursor-pointer hover:shadow-md transition-shadow border-2 border-dashed border-primary/30">
+                          <CardContent className="p-4">
+                            <div className="text-center">
+                              {selectedProspect ? (
+                                <div>
+                                  <h4 className="font-medium">{selectedProspect.name}</h4>
+                                  <p className="text-sm text-muted-foreground">
+                                    {selectedProspect.base_personality} • Level {selectedProspect.difficulty_level}
+                                  </p>
+                                  <p className="text-xs text-primary mt-2">Click to change prospect</p>
+                                </div>
+                              ) : (
+                                <div>
+                                  <Bot className="h-8 w-8 mx-auto mb-2 text-muted-foreground" />
+                                  <p className="text-sm font-medium">Select AI Prospect</p>
+                                  <p className="text-xs text-muted-foreground">Choose from library or use default</p>
+                                </div>
+                              )}
+                            </div>
+                          </CardContent>
+                        </Card>
+                      </DialogTrigger>
+                      <DialogContent className="max-w-6xl max-h-[90vh] overflow-y-auto">
+                        <AIProspectLibrary
+                          onProspectSelect={(prospect) => setSelectedProspect(prospect)}
+                          selectedProspectId={selectedProspect?.id}
+                        />
+                      </DialogContent>
+                    </Dialog>
+
+                    {/* Basic context for enhanced mode */}
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                      <div>
+                        <label className="text-sm font-medium">Business Context</label>
+                        <input
+                          type="text"
+                          className="w-full mt-1 px-3 py-2 border border-border rounded-md"
+                          placeholder="e.g., SaaS, Manufacturing"
+                          value={businessType}
+                          onChange={(e) => setBusinessType(e.target.value)}
+                        />
+                      </div>
+                      <div>
+                        <label className="text-sm font-medium">Prospect Role</label>
+                        <input
+                          type="text"
+                          className="w-full mt-1 px-3 py-2 border border-border rounded-md"
+                          placeholder="e.g., CEO, Marketing Director"
+                          value={prospectRole}
+                          onChange={(e) => setProspectRole(e.target.value)}
+                        />
+                      </div>
+                      <div>
+                        <label className="text-sm font-medium">Call Objective</label>
+                        <input
+                          type="text"
+                          className="w-full mt-1 px-3 py-2 border border-border rounded-md"
+                          placeholder="e.g., Discovery, Demo"
+                          value={callObjective}
+                          onChange={(e) => setCallObjective(e.target.value)}
+                        />
+                      </div>
+                    </div>
+                  </TabsContent>
+                </Tabs>
+              </CardContent>
+            </Card>
 
             {/* Scenario Preview */}
-            {(businessType || prospectRole || callObjective) && (
+            {(businessType || prospectRole || callObjective || selectedProspect) && (
               <Card className="border-primary/20 bg-primary/5">
                 <CardHeader>
-                  <CardTitle className="text-primary">Scenario Preview</CardTitle>
+                  <CardTitle className="text-primary">Practice Session Preview</CardTitle>
                 </CardHeader>
                 <CardContent>
                   <div className="space-y-2 text-sm">
+                    {useEnhancedMode ? (
+                      <>
+                        {selectedProspect && (
+                          <div>
+                            <span className="font-medium">AI Prospect:</span> {selectedProspect.name}
+                          </div>
+                        )}
+                        <div>
+                          <span className="font-medium">Personality:</span> {prospectPersonality}
+                        </div>
+                        <div>
+                          <span className="font-medium">Mode:</span> {replayMode}
+                        </div>
+                        {gamificationMode !== 'none' && (
+                          <div>
+                            <span className="font-medium">Challenge:</span> {gamificationMode}
+                          </div>
+                        )}
+                      </>
+                    ) : (
+                      <>
+                        {businessType && (
+                          <div>
+                            <span className="font-medium">Business:</span> {businessType}
+                          </div>
+                        )}
+                        {prospectRole && (
+                          <div>
+                            <span className="font-medium">Role:</span> {prospectRole}
+                          </div>
+                        )}
+                        {callObjective && (
+                          <div>
+                            <span className="font-medium">Objective:</span> {callObjective}
+                          </div>
+                        )}
+                        <div>
+                          <span className="font-medium">Difficulty:</span> Level {difficultyLevel[0]} ({getDifficultyLabel(difficultyLevel[0])})
+                        </div>
+                      </>
+                    )}
                     {businessType && (
                       <div>
-                        <span className="font-medium">Business:</span> {businessType}
+                        <span className="font-medium">Context:</span> {businessType}
                       </div>
                     )}
-                    {prospectRole && (
-                      <div>
-                        <span className="font-medium">Role:</span> {prospectRole}
-                      </div>
-                    )}
-                    {callObjective && (
-                      <div>
-                        <span className="font-medium">Objective:</span> {callObjective}
-                      </div>
-                    )}
-                    <div>
-                      <span className="font-medium">Difficulty:</span> Level {difficultyLevel[0]} ({getDifficultyLabel(difficultyLevel[0])})
-                    </div>
                   </div>
                 </CardContent>
               </Card>
             )}
-
 
             {/* Start Call Button */}
             <div className="space-y-4">
@@ -441,7 +614,7 @@ const CallSimulation = () => {
                 ) : (
                   <>
                     <Phone className="mr-2 h-4 w-4" />
-                    Start Practice Call {profile.subscription_type !== 'premium' && `(1 Credit)`}
+                    Start {useEnhancedMode ? 'AI Prospect' : 'Practice'} Call {profile.subscription_type !== 'premium' && `(1 Credit)`}
                   </>
                 )}
               </Button>
@@ -467,10 +640,18 @@ const CallSimulation = () => {
                   {/* Prospect Name */}
                   <div>
                     <h3 className="text-xl font-semibold">
-                      {prospectRole || 'Business Owner'}
+                      {useEnhancedMode ? (
+                        selectedProspect?.name || `${prospectPersonality} Prospect`
+                      ) : (
+                        prospectRole || 'Business Owner'
+                      )}
                     </h3>
                     <p className="text-muted-foreground">
-                      {businessType ? `${businessType} • ` : ''}Level {difficultyLevel[0]} Prospect
+                      {useEnhancedMode ? (
+                        `${selectedProspect?.base_personality || prospectPersonality} • ${replayMode} mode`
+                      ) : (
+                        `${businessType ? `${businessType} • ` : ''}Level ${difficultyLevel[0]} Prospect`
+                      )}
                     </p>
                     {callObjective && (
                       <p className="text-xs text-muted-foreground mt-1">
@@ -487,10 +668,10 @@ const CallSimulation = () => {
 
                   {/* Call Status */}
                   <div>
-                    {isConnecting && (
+                    {(isConnecting || conversationState.status === 'connecting') && (
                       <p className="text-muted-foreground">Connecting...</p>
                     )}
-                    {isCallActive && (
+                    {(isCallActive || conversationState.status === 'active') && (
                       <div className="flex items-center justify-center space-x-2">
                         <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse"></div>
                         <span className="text-green-500 font-medium">Connected</span>
