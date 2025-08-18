@@ -108,7 +108,7 @@ serve(async (req) => {
         rank: 0, // Will be calculated after sorting
         profile: {
           // Only expose first name and last initial for privacy
-          first_name: userProfile.first_name,
+          first_name: userProfile.first_name || 'Anonymous',
           last_initial: userProfile.last_name ? userProfile.last_name.charAt(0) : '',
           avatar_url: userProfile.avatar_url
         }

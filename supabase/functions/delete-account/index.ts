@@ -22,37 +22,44 @@ serve(async (req) => {
 
     const token = authHeader.replace('Bearer ', '');
 
-    // Decode JWT locally to extract user id (Edge functions verify JWT by default)
-    let userId: string | undefined;
-    try {
-      const base64Url = token.split('.')[1];
-      const payload = JSON.parse(atob(base64Url));
-      userId = payload?.sub as string | undefined;
-    } catch (_) {
-      userId = undefined;
-    }
+    const supabaseUrl = Deno.env.get('SUPABASE_URL') ?? '';
+    const supabaseKey = Deno.env.get('SUPABASE_ANON_KEY') ?? '';
 
-    if (!userId) {
+    // Create a Supabase client with the user's token for proper auth verification
+    const supabase = createClient(supabaseUrl, supabaseKey, {
+      auth: { persistSession: false },
+      global: {
+        headers: {
+          Authorization: authHeader,
+        },
+      },
+    });
+
+    // Verify the token and get user ID securely
+    const { data: { user }, error: authError } = await supabase.auth.getUser(token);
+    
+    if (authError || !user) {
       return new Response(JSON.stringify({ error: 'Invalid token' }), {
         status: 401,
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       });
     }
 
-    const supabaseUrl = Deno.env.get('SUPABASE_URL') ?? '';
-    const serviceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? '';
+    const userId = user.id;
 
-    const supabase = createClient(supabaseUrl, serviceKey, {
+    // Create service role client for administrative operations
+    const serviceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? '';
+    const supabaseAdmin = createClient(supabaseUrl, serviceKey, {
       auth: { persistSession: false },
     });
 
     // Best-effort: delete related data first
-    await supabase.from('calls').delete().eq('user_id', userId);
-    await supabase.from('credit_transactions').delete().eq('user_id', userId);
-    await supabase.from('profiles').delete().eq('user_id', userId);
+    await supabaseAdmin.from('calls').delete().eq('user_id', userId);
+    await supabaseAdmin.from('credit_transactions').delete().eq('user_id', userId);
+    await supabaseAdmin.from('profiles').delete().eq('user_id', userId);
 
     // Finally, delete auth user
-    const { error: adminError } = await supabase.auth.admin.deleteUser(userId);
+    const { error: adminError } = await supabaseAdmin.auth.admin.deleteUser(userId);
     if (adminError) {
       console.error('Admin delete error', adminError);
       return new Response(JSON.stringify({ error: 'Failed to delete user' }), {
