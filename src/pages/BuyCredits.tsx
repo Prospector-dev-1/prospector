@@ -8,6 +8,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import SEO from '@/components/SEO';
+import MobileLayout from '@/components/MobileLayout';
 
 interface CreditPackage {
   id: string;
@@ -87,122 +88,125 @@ const BuyCredits = () => {
     }
   };
 
-  return (<>
-    <SEO title="Buy Credits | Prospector" description="Purchase credits for AI script analysis and call simulations." canonicalPath="/buy-credits" />
-    <div className="min-h-screen bg-gradient-to-br from-background to-muted p-4">
-      <div className="container mx-auto max-w-6xl py-8">
-        {/* Header */}
-        <div className="mb-8">
-          <Button
-            variant="ghost"
-            onClick={() => navigate('/')}
-            className="mb-4"
-          >
-            <ArrowLeft className="mr-2 h-4 w-4" />
-            Back
-          </Button>
-          
-          <div className="text-center">
-            <h1 className="text-4xl font-bold mb-4">Buy Credits</h1>
-            <p className="text-lg text-muted-foreground mb-2">
-              Choose the perfect credit package for your needs
-            </p>
-            {profile && (
-              <div className="inline-flex items-center gap-2 bg-primary/10 text-primary px-4 py-2 rounded-full">
-                <Zap className="h-4 w-4" />
-                Current Balance: {Math.floor(profile.credits)} credits
+  return (
+    <>
+      <SEO title="Buy Credits | Prospector" description="Purchase credits for AI script analysis and call simulations." canonicalPath="/buy-credits" />
+      <MobileLayout>
+        <div className="min-h-screen bg-gradient-to-br from-background to-muted p-4">
+          <div className="container mx-auto max-w-6xl py-8">
+            {/* Header */}
+            <div className="mb-8">
+              <Button
+                variant="ghost"
+                onClick={() => navigate('/')}
+                className="mb-4"
+              >
+                <ArrowLeft className="mr-2 h-4 w-4" />
+                Back
+              </Button>
+              
+              <div className="text-center">
+                <h1 className="text-4xl font-bold mb-4">Buy Credits</h1>
+                <p className="text-lg text-muted-foreground mb-2">
+                  Choose the perfect credit package for your needs
+                </p>
+                {profile && (
+                  <div className="inline-flex items-center gap-2 bg-primary/10 text-primary px-4 py-2 rounded-full">
+                    <Zap className="h-4 w-4" />
+                    Current Balance: {Math.floor(profile.credits)} credits
+                  </div>
+                )}
               </div>
-            )}
+            </div>
+
+            {/* Credit Packages */}
+            <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+              {creditPackages.map((pkg) => (
+                <Card 
+                  key={pkg.id} 
+                  className={`relative transition-all duration-300 hover:shadow-lg ${
+                    pkg.popular ? 'ring-2 ring-primary' : ''
+                  }`}
+                >
+                  {pkg.popular && (
+                    <Badge className="absolute -top-3 left-1/2 transform -translate-x-1/2 bg-primary">
+                      Most Popular
+                    </Badge>
+                  )}
+                  
+                  <CardHeader className="text-center pb-4">
+                    <CardTitle className="text-2xl">
+                      {pkg.credits} Credits
+                    </CardTitle>
+                  </CardHeader>
+
+                  <CardContent className="text-center space-y-4">
+                    <div>
+                      <div className="text-3xl font-bold">
+                        ${(pkg.price / 100).toFixed(2)}
+                      </div>
+                      {pkg.savings && (
+                        <div className="text-sm text-green-600 font-medium">
+                          Save {pkg.savings}
+                        </div>
+                      )}
+                    </div>
+
+                    <div className="space-y-2 text-sm text-muted-foreground">
+                      <div className="flex items-center justify-center gap-2">
+                        <Check className="h-4 w-4 text-green-500" />
+                        <span>Perfect for script analysis</span>
+                      </div>
+                      <div className="flex items-center justify-center gap-2">
+                        <Check className="h-4 w-4 text-green-500" />
+                        <span>Call simulations</span>
+                      </div>
+                      <div className="flex items-center justify-center gap-2">
+                        <Check className="h-4 w-4 text-green-500" />
+                        <span>Never expires</span>
+                      </div>
+                    </div>
+
+                    <Button
+                      className="w-full"
+                      variant={pkg.popular ? "default" : "outline"}
+                      onClick={() => handlePurchase(pkg.id)}
+                      disabled={!!purchaseLoading}
+                    >
+                      {purchaseLoading === pkg.id ? (
+                        <>
+                          <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                          Processing...
+                        </>
+                      ) : (
+                        'Purchase Now'
+                      )}
+                    </Button>
+                  </CardContent>
+                </Card>
+              ))}
+            </div>
+
+            {/* View Plans Button */}
+            <div className="text-center mb-8">
+              <Button
+                variant="outline"
+                onClick={() => navigate('/plans')}
+                className="px-8"
+              >
+                View Subscription Plans
+              </Button>
+            </div>
+
+            {/* Additional Info */}
+            <div className="text-center text-sm text-muted-foreground space-y-2">
+              <p>All purchases are secured by Stripe. Credits never expire.</p>
+              <p>Credits are non refundable.</p>
+              <p>Need help? Contact our support team.</p>
+            </div>
           </div>
         </div>
-
-        {/* Credit Packages */}
-        <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
-          {creditPackages.map((pkg) => (
-            <Card 
-              key={pkg.id} 
-              className={`relative transition-all duration-300 hover:shadow-lg ${
-                pkg.popular ? 'ring-2 ring-primary' : ''
-              }`}
-            >
-              {pkg.popular && (
-                <Badge className="absolute -top-3 left-1/2 transform -translate-x-1/2 bg-primary">
-                  Most Popular
-                </Badge>
-              )}
-              
-              <CardHeader className="text-center pb-4">
-                <CardTitle className="text-2xl">
-                  {pkg.credits} Credits
-                </CardTitle>
-              </CardHeader>
-
-              <CardContent className="text-center space-y-4">
-                <div>
-                  <div className="text-3xl font-bold">
-                    ${(pkg.price / 100).toFixed(2)}
-                  </div>
-                  {pkg.savings && (
-                    <div className="text-sm text-green-600 font-medium">
-                      Save {pkg.savings}
-                    </div>
-                  )}
-                </div>
-
-                <div className="space-y-2 text-sm text-muted-foreground">
-                  <div className="flex items-center justify-center gap-2">
-                    <Check className="h-4 w-4 text-green-500" />
-                    <span>Perfect for script analysis</span>
-                  </div>
-                  <div className="flex items-center justify-center gap-2">
-                    <Check className="h-4 w-4 text-green-500" />
-                    <span>Call simulations</span>
-                  </div>
-                  <div className="flex items-center justify-center gap-2">
-                    <Check className="h-4 w-4 text-green-500" />
-                    <span>Never expires</span>
-                  </div>
-                </div>
-
-                <Button
-                  className="w-full"
-                  variant={pkg.popular ? "default" : "outline"}
-                  onClick={() => handlePurchase(pkg.id)}
-                  disabled={!!purchaseLoading}
-                >
-                  {purchaseLoading === pkg.id ? (
-                    <>
-                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                      Processing...
-                    </>
-                  ) : (
-                    'Purchase Now'
-                  )}
-                </Button>
-              </CardContent>
-            </Card>
-          ))}
-        </div>
-
-        {/* View Plans Button */}
-        <div className="text-center mb-8">
-          <Button
-            variant="outline"
-            onClick={() => navigate('/plans')}
-            className="px-8"
-          >
-            View Subscription Plans
-          </Button>
-        </div>
-
-        {/* Additional Info */}
-        <div className="text-center text-sm text-muted-foreground space-y-2">
-          <p>All purchases are secured by Stripe. Credits never expire.</p>
-          <p>Credits are non refundable.</p>
-          <p>Need help? Contact our support team.</p>
-        </div>
-      </div>
-    </div>
+      </MobileLayout>
     </>
   );
 };

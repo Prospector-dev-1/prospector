@@ -4,16 +4,27 @@ export function Toaster() {
   const {
     toasts
   } = useToast();
-  return <ToastProvider>
+  return (
+    <ToastProvider>
       {toasts.map(function ({
-      id,
-      title,
-      description,
-      action,
-      ...props
-    }) {
-      return;
-    })}
+        id,
+        title,
+        description,
+        action,
+        ...props
+      }) {
+        return (
+          <Toast key={id} {...props}>
+            {title && <ToastTitle>{title}</ToastTitle>}
+            {description && (
+              <ToastDescription>{description}</ToastDescription>
+            )}
+            {action}
+            <ToastClose />
+          </Toast>
+        )
+      })}
       <ToastViewport />
-    </ToastProvider>;
+    </ToastProvider>
+  )
 }

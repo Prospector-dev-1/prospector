@@ -10,6 +10,7 @@ import { ArrowLeft, TrendingUp, TrendingDown, Mic, BarChart3, Lightbulb, Refresh
 import { toast } from 'sonner';
 import { supabase } from '@/integrations/supabase/client';
 import SEO from '@/components/SEO';
+import MobileLayout from '@/components/MobileLayout';
 
 interface CallUpload {
   id: string;
@@ -106,8 +107,8 @@ const CallReview = () => {
         description="Detailed AI analysis of your sales call with actionable feedback and insights."
         canonicalPath={`/call-review/${uploadId}`}
       />
-      
-      <div className="min-h-screen bg-background px-4 py-8">
+      <MobileLayout>
+        <div className="min-h-screen bg-background px-4 py-8">
         <div className="max-w-6xl mx-auto">
           {/* Header */}
           <div className="mb-6">
@@ -335,7 +336,7 @@ const CallReview = () => {
             </TabsContent>
           </Tabs>
         </div>
-      </div>
+      </MobileLayout>
     </>
   );
 };

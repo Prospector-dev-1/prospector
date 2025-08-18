@@ -9,6 +9,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { ArrowLeft, Trophy, HelpCircle, Brain, Target, Lightbulb, Ear, DollarSign, FileText, Sparkles } from 'lucide-react';
 import SEO from '@/components/SEO';
 import { useToast } from '@/hooks/use-toast';
+import MobileLayout from '@/components/MobileLayout';
 interface CallRecord {
   id: string;
   difficulty_level: number;
@@ -254,207 +255,220 @@ const CallResults = () => {
     score: callRecord.closing_score,
     icon: DollarSign
   }];
-  return <>
-    <SEO title={`Call Results | Score & Feedback`} description="Detailed breakdown of your AI practice call with scores and feedback." canonicalPath={`/call-results/${callId}`} />
-    <div className="min-h-screen bg-background">
-      {/* Header */}
-      <div className="border-b border-border bg-card">
-        <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex justify-between items-center py-4">
-            <div className="flex items-center space-x-3">
-              <Button variant="ghost" size="icon" aria-label="Back to dashboard" onClick={() => navigate('/')}> 
-                <ArrowLeft className="h-4 w-4" />
+  return (
+    <>
+      <SEO title={`Call Results | Score & Feedback`} description="Detailed breakdown of your AI practice call with scores and feedback." canonicalPath={`/call-results/${callId}`} />
+      <MobileLayout>
+        <div className="min-h-screen bg-background">
+          {/* Header */}
+          <div className="border-b border-border bg-card">
+            <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
+              <div className="flex justify-between items-center py-4">
+                <div className="flex items-center space-x-3">
+                  <Button variant="ghost" size="icon" aria-label="Back to dashboard" onClick={() => navigate('/')}> 
+                    <ArrowLeft className="h-4 w-4" />
+                  </Button>
+                  <h1 className="text-2xl font-bold text-primary">Call Results</h1>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+            {/* Overall Score */}
+            <Card className="mb-8">
+              <CardHeader className="text-center">
+                <div className="mx-auto w-20 h-20 rounded-full bg-primary/10 flex items-center justify-center mb-4">
+                  <Trophy className="h-10 w-10 text-primary" />
+                </div>
+                <CardTitle className="text-3xl">
+                  Overall Score: <span className={getScoreColor(callRecord.overall_score || 0)}>
+                    {callRecord.overall_score || 0}/10
+                  </span>
+                </CardTitle>
+                <div className="mt-2">
+                  <Badge>
+                    {getScoreBadge(callRecord.overall_score || 0)}
+                  </Badge>
+                </div>
+              </CardHeader>
+              <CardContent>
+                <div className="mb-6 text-center">
+                  <div className="inline-flex items-center space-x-2">
+                    <span className="text-sm text-muted-foreground">Sale Result:</span>
+                    <Badge variant={callRecord.successful_sale ? "default" : "secondary"} className="ml-2">
+                      {callRecord.successful_sale ? "✅ Successful Sale" : "❌ No Sale"}
+                    </Badge>
+                  </div>
+                </div>
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-center">
+                  <div>
+                    <p className="text-sm text-muted-foreground">Difficulty</p>
+                    <p className="font-bold">Level {callRecord.difficulty_level}</p>
+                    <p className="text-xs text-muted-foreground">{getDifficultyLabel(callRecord.difficulty_level)}</p>
+                  </div>
+                  <div>
+                    <p className="text-sm text-muted-foreground">Duration</p>
+                    <p className="font-bold">{formatDuration(callRecord.duration_seconds || 0)}</p>
+                  </div>
+                  <div>
+                    <p className="text-sm text-muted-foreground">Date</p>
+                    <p className="font-bold">{new Date(callRecord.created_at).toLocaleDateString()}</p>
+                  </div>
+                  <div>
+                    <p className="text-sm text-muted-foreground">Time</p>
+                    <p className="font-bold">{new Date(callRecord.created_at).toLocaleTimeString()}</p>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+
+            {/* Score Breakdown */}
+            <Card className="mb-8">
+              <CardHeader>
+                <CardTitle>Performance Breakdown</CardTitle>
+                <CardDescription>
+                  Detailed analysis of your cold calling skills
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  {scoreCategories.map(category => (
+                    <div key={category.name} className="space-y-2">
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center space-x-2">
+                          <category.icon className="h-4 w-4 text-muted-foreground" />
+                          <div>
+                            <span className="font-medium">{category.name}</span>
+                            <p className="text-xs text-muted-foreground">{category.description}</p>
+                          </div>
+                        </div>
+                        <span className={`font-bold ${getScoreColor(category.score || 0)}`}>
+                          {category.score || 0}/10
+                        </span>
+                      </div>
+                      <Progress value={(category.score || 0) * 10} className="h-2" />
+                    </div>
+                  ))}
+                </div>
+              </CardContent>
+            </Card>
+
+            {/* AI Feedback */}
+            <Card className="mb-8 overflow-hidden">
+              <CardHeader className="bg-gradient-to-r from-primary/5 to-accent/5 border-b">
+                <div className="flex items-center gap-3">
+                  <div className="p-2 rounded-lg bg-primary/10">
+                    <Brain className="h-5 w-5 text-primary" />
+                  </div>
+                  <div>
+                    <CardTitle className="text-xl">AI Coach Feedback</CardTitle>
+                    <CardDescription>
+                      Personalized insights and recommendations to elevate your performance
+                    </CardDescription>
+                  </div>
+                </div>
+              </CardHeader>
+              <CardContent className="p-0">
+                {callRecord.ai_feedback ? (
+                  <div className="divide-y divide-border">
+                    {/* Feedback Content */}
+                    <div className="p-6">
+                      <div className="relative">
+                        <div className="absolute -left-2 top-0 w-1 h-full bg-gradient-to-b from-primary to-accent rounded-full"></div>
+                        <div className="pl-6 space-y-4">
+                          {callRecord.ai_feedback.split('\n\n').map((paragraph, index) => (
+                            <div key={index} className="group">
+                              <div className="flex items-start gap-3">
+                                <div className="flex-shrink-0 w-6 h-6 rounded-full bg-primary/10 flex items-center justify-center mt-1">
+                                  <span className="text-xs font-medium text-primary">{index + 1}</span>
+                                </div>
+                                <div className="flex-1">
+                                  <p className="text-foreground leading-relaxed whitespace-pre-wrap">
+                                    {paragraph.trim()}
+                                  </p>
+                                </div>
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    </div>
+                    
+                    {/* Action Footer */}
+                    <div className="px-6 py-4 bg-muted/30">
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                          <Sparkles className="h-4 w-4" />
+                          <span>Generated by AI Coach</span>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                ) : (
+                  <div className="p-8 text-center">
+                    <div className="mx-auto w-12 h-12 rounded-full bg-muted flex items-center justify-center mb-4">
+                      <Brain className="h-6 w-6 text-muted-foreground" />
+                    </div>
+                    <p className="text-muted-foreground mb-4">No feedback available for this call.</p>
+                    <Button variant="outline" onClick={handleCoaching} className="text-sm">
+                      Generate detailed coaching
+                    </Button>
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+
+            {/* Call Transcript */}
+            {callRecord.transcript && (
+              <Card className="mb-8">
+                <CardHeader>
+                  <CardTitle>Call Transcript</CardTitle>
+                  <CardDescription>
+                    Complete conversation from your practice session
+                  </CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <div className="bg-muted p-4 rounded-lg max-h-96 overflow-y-auto">
+                    <p className="text-sm whitespace-pre-wrap">
+                      {callRecord.transcript}
+                    </p>
+                  </div>
+                </CardContent>
+              </Card>
+            )}
+
+            {/* Objection Coaching */}
+            <Card className="mb-8">
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <Sparkles className="h-5 w-5 text-primary" />
+                  Objection Coaching
+                </CardTitle>
+                <CardDescription>
+                  Analyze this call for weak moments and get better responses for next time. Cost: 0.5 credit
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                <Button onClick={handleCoaching}>
+                  Get objection coaching (0.5 credit)
+                </Button>
+              </CardContent>
+            </Card>
+
+            {/* Action Buttons */}
+            <div className="flex flex-col sm:flex-row gap-4">
+              <Button onClick={() => navigate('/call-simulation')} className="flex-1">
+                Practice Again
               </Button>
-              <h1 className="text-2xl font-bold text-primary">Call Results</h1>
+              <Button variant="outline" onClick={() => navigate('/')} className="flex-1">
+                Back to Dashboard
+              </Button>
             </div>
           </div>
         </div>
-      </div>
-
-      <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        {/* Overall Score */}
-        <Card className="mb-8">
-          <CardHeader className="text-center">
-            <div className="mx-auto w-20 h-20 rounded-full bg-primary/10 flex items-center justify-center mb-4">
-              <Trophy className="h-10 w-10 text-primary" />
-            </div>
-            <CardTitle className="text-3xl">
-              Overall Score: <span className={getScoreColor(callRecord.overall_score || 0)}>
-                {callRecord.overall_score || 0}/10
-              </span>
-            </CardTitle>
-            <div className="mt-2">
-              <Badge>
-                {getScoreBadge(callRecord.overall_score || 0)}
-              </Badge>
-            </div>
-          </CardHeader>
-          <CardContent>
-            <div className="mb-6 text-center">
-              <div className="inline-flex items-center space-x-2">
-                <span className="text-sm text-muted-foreground">Sale Result:</span>
-                <Badge variant={callRecord.successful_sale ? "default" : "secondary"} className="ml-2">
-                  {callRecord.successful_sale ? "✅ Successful Sale" : "❌ No Sale"}
-                </Badge>
-              </div>
-            </div>
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-center">
-              <div>
-                <p className="text-sm text-muted-foreground">Difficulty</p>
-                <p className="font-bold">Level {callRecord.difficulty_level}</p>
-                <p className="text-xs text-muted-foreground">{getDifficultyLabel(callRecord.difficulty_level)}</p>
-              </div>
-              <div>
-                <p className="text-sm text-muted-foreground">Duration</p>
-                <p className="font-bold">{formatDuration(callRecord.duration_seconds || 0)}</p>
-              </div>
-              <div>
-                <p className="text-sm text-muted-foreground">Date</p>
-                <p className="font-bold">{new Date(callRecord.created_at).toLocaleDateString()}</p>
-              </div>
-              <div>
-                <p className="text-sm text-muted-foreground">Time</p>
-                <p className="font-bold">{new Date(callRecord.created_at).toLocaleTimeString()}</p>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-
-        {/* Score Breakdown */}
-        <Card className="mb-8">
-          <CardHeader>
-            <CardTitle>Performance Breakdown</CardTitle>
-            <CardDescription>
-              Detailed analysis of your cold calling skills
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              {scoreCategories.map(category => <div key={category.name} className="space-y-2">
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center space-x-2">
-                      <category.icon className="h-4 w-4 text-muted-foreground" />
-                      <div>
-                        <span className="font-medium">{category.name}</span>
-                        <p className="text-xs text-muted-foreground">{category.description}</p>
-                      </div>
-                    </div>
-                    <span className={`font-bold ${getScoreColor(category.score || 0)}`}>
-                      {category.score || 0}/10
-                    </span>
-                  </div>
-                  <Progress value={(category.score || 0) * 10} className="h-2" />
-                </div>)}
-            </div>
-          </CardContent>
-        </Card>
-
-        {/* AI Feedback */}
-        <Card className="mb-8 overflow-hidden">
-          <CardHeader className="bg-gradient-to-r from-primary/5 to-accent/5 border-b">
-            <div className="flex items-center gap-3">
-              <div className="p-2 rounded-lg bg-primary/10">
-                <Brain className="h-5 w-5 text-primary" />
-              </div>
-              <div>
-                <CardTitle className="text-xl">AI Coach Feedback</CardTitle>
-                <CardDescription>
-                  Personalized insights and recommendations to elevate your performance
-                </CardDescription>
-              </div>
-            </div>
-          </CardHeader>
-          <CardContent className="p-0">
-            {callRecord.ai_feedback ? <div className="divide-y divide-border">
-                {/* Feedback Content */}
-                <div className="p-6">
-                  <div className="relative">
-                    <div className="absolute -left-2 top-0 w-1 h-full bg-gradient-to-b from-primary to-accent rounded-full"></div>
-                    <div className="pl-6 space-y-4">
-                      {callRecord.ai_feedback.split('\n\n').map((paragraph, index) => <div key={index} className="group">
-                          <div className="flex items-start gap-3">
-                            <div className="flex-shrink-0 w-6 h-6 rounded-full bg-primary/10 flex items-center justify-center mt-1">
-                              <span className="text-xs font-medium text-primary">{index + 1}</span>
-                            </div>
-                            <div className="flex-1">
-                              <p className="text-foreground leading-relaxed whitespace-pre-wrap">
-                                {paragraph.trim()}
-                              </p>
-                            </div>
-                          </div>
-                        </div>)}
-                    </div>
-                  </div>
-                </div>
-                
-                {/* Action Footer */}
-                <div className="px-6 py-4 bg-muted/30">
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                      <Sparkles className="h-4 w-4" />
-                      <span>Generated by AI Coach</span>
-                    </div>
-                    
-                  </div>
-                </div>
-              </div> : <div className="p-8 text-center">
-                <div className="mx-auto w-12 h-12 rounded-full bg-muted flex items-center justify-center mb-4">
-                  <Brain className="h-6 w-6 text-muted-foreground" />
-                </div>
-                <p className="text-muted-foreground mb-4">No feedback available for this call.</p>
-                <Button variant="outline" onClick={handleCoaching} className="text-sm">
-                  Generate detailed coaching
-                </Button>
-              </div>}
-          </CardContent>
-        </Card>
-
-        {/* Call Transcript */}
-        {callRecord.transcript && <Card className="mb-8">
-            <CardHeader>
-              <CardTitle>Call Transcript</CardTitle>
-              <CardDescription>
-                Complete conversation from your practice session
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              <div className="bg-muted p-4 rounded-lg max-h-96 overflow-y-auto">
-                <p className="text-sm whitespace-pre-wrap">
-                  {callRecord.transcript}
-                </p>
-              </div>
-            </CardContent>
-          </Card>}
-
-        {/* Objection Coaching */}
-        <Card className="mb-8">
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <Sparkles className="h-5 w-5 text-primary" />
-              Objection Coaching
-            </CardTitle>
-            <CardDescription>
-              Analyze this call for weak moments and get better responses for next time. Cost: 0.5 credit
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            <Button onClick={handleCoaching}>
-              Get objection coaching (0.5 credit)
-            </Button>
-          </CardContent>
-        </Card>
-
-        {/* Action Buttons */}
-        <div className="flex flex-col sm:flex-row gap-4">
-          <Button onClick={() => navigate('/call-simulation')} className="flex-1">
-            Practice Again
-          </Button>
-          <Button variant="outline" onClick={() => navigate('/')} className="flex-1">
-            Back to Dashboard
-          </Button>
-        </div>
-      </div>
-    </div>
-    </>;
+      </MobileLayout>
+    </>
+  );
 };
 export default CallResults;

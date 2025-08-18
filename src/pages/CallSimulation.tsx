@@ -11,6 +11,7 @@ import { Phone, PhoneOff, Timer, Mic, MicOff, ArrowLeft, User } from 'lucide-rea
 import Vapi from '@vapi-ai/web';
 import SEO from '@/components/SEO';
 import CallCustomization from '@/components/CallCustomization';
+import MobileLayout from '@/components/MobileLayout';
 
 const CallSimulation = () => {
   const navigate = useNavigate();
@@ -351,9 +352,11 @@ const CallSimulation = () => {
     return <div>Loading...</div>;
   }
 
-  return (<>
-    <SEO title="Practice Call | AI Cold Call Simulator" description="Simulate realistic cold calls with AI; choose difficulty and get coaching." canonicalPath="/call-simulation" />
-    <div className="min-h-screen bg-background">
+  return (
+    <>
+      <SEO title="Practice Call | AI Cold Call Simulator" description="Simulate realistic cold calls with AI; choose difficulty and get coaching." canonicalPath="/call-simulation" />
+      <MobileLayout>
+        <div className="min-h-screen bg-background">
       {/* Header */}
       <div className="border-b border-border bg-card">
         <div className="px-3 sm:px-4 lg:px-8">
