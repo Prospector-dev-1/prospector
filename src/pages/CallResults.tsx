@@ -6,7 +6,7 @@ import { Badge } from '@/components/ui/badge';
 import { Progress } from '@/components/ui/progress';
 import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/integrations/supabase/client';
-import { ArrowLeft, Trophy, HelpCircle, Brain, Target, Lightbulb, Ear, DollarSign, FileText, Sparkles } from 'lucide-react';
+import { ArrowLeft, Trophy, HelpCircle, Brain, Target, Lightbulb, Ear, DollarSign, FileText, Sparkles, MessageSquare } from 'lucide-react';
 import SEO from '@/components/SEO';
 import { useToast } from '@/hooks/use-toast';
 import MobileLayout from '@/components/MobileLayout';
@@ -452,11 +452,16 @@ const CallResults = () => {
             </Card>
 
             {/* Action Buttons */}
-            <div className="flex flex-col sm:flex-row gap-4">
-              <Button onClick={() => navigate('/call-simulation')} className="flex-1">
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+              <Button onClick={() => navigate('/call-simulation')} className="flex items-center justify-center gap-2">
+                <Target className="h-4 w-4" />
                 Practice Again
               </Button>
-              <SmartBackButton variant="outline" className="flex-1" />
+              <Button variant="outline" onClick={() => navigate('/ai-replay')} className="flex items-center justify-center gap-2">
+                <MessageSquare className="h-4 w-4" />
+                Replay Mode
+              </Button>
+              <SmartBackButton variant="outline" className="flex items-center justify-center gap-2" />
             </div>
           </div>
         </div>
