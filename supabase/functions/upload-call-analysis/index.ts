@@ -78,26 +78,13 @@ serve(async (req) => {
       throw new Error('Server configuration error: AI service key missing. Please contact support.');
     }
 
-    // Convert base64 to binary for audio processing (chunked to reduce memory usage)
-    function processBase64Chunks(base64String: string, chunkSize = 32768) {
-      const chunks: Uint8Array[] = [];
-      let position = 0;
-      while (position < base64String.length) {
-        const slice = base64String.slice(position, position + chunkSize);
-        const binary = atob(slice);
-        const bytes = new Uint8Array(binary.length);
-        for (let i = 0; i < binary.length; i++) bytes[i] = binary.charCodeAt(i);
-        chunks.push(bytes);
-        position += chunkSize;
-      }
-      const totalLength = chunks.reduce((acc, c) => acc + c.length, 0);
-      const result = new Uint8Array(totalLength);
-      let offset = 0;
-      for (const c of chunks) { result.set(c, offset); offset += c.length; }
-      return result;
+    // Convert base64 to binary for audio processing (single pass for correctness)
+    // Note: Using single-pass to avoid base64 chunk boundary issues
+    const binaryString = atob(file);
+    const binaryAudio = new Uint8Array(binaryString.length);
+    for (let i = 0; i < binaryString.length; i++) {
+      binaryAudio[i] = binaryString.charCodeAt(i);
     }
-
-    const binaryAudio = processBase64Chunks(file);
     
     // Step 1: Transcribe the audio
     console.log('Starting transcription...');
