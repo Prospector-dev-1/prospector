@@ -66,14 +66,21 @@ const CallUpload = () => {
           setProgress(90);
 
           if (error) {
-            throw new Error(error.message);
+            console.error('Edge function error:', error);
+            const ctx: any = (error as any)?.context;
+            const serverMessage = ctx && typeof ctx === 'object' ? (ctx.error || ctx.message) : undefined;
+            throw new Error(serverMessage || (error as any)?.message || 'Upload failed');
+          }
+
+          if ((data as any)?.error) {
+            throw new Error((data as any).error);
           }
 
           setProgress(100);
           toast.success('Call analyzed successfully!');
           
           // Navigate to the review page
-          navigate(`/call-review/${data.uploadId}`);
+          navigate(`/call-review/${(data as any).uploadId}`);
           
         } catch (error) {
           console.error('Upload error:', error);
