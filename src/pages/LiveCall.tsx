@@ -68,7 +68,7 @@ const LiveCall = () => {
     if (sessionId && !conversationState.isActive && !conversationState.isConnecting) {
       handleStartConversation();
     }
-  }, [sessionId]);
+  }, [sessionId, conversationState.isActive, conversationState.isConnecting]);
 
   const formatCallDuration = (startTime: number, currentTime: number) => {
     const duration = Math.floor((currentTime - startTime) / 1000);
