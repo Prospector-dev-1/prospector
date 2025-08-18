@@ -249,11 +249,17 @@ const CallAnalysis = () => {
             </Card>
 
             {/* Quick Actions */}
-            <div className="grid grid-cols-2 gap-3">
+            <div className="grid grid-cols-3 gap-3">
               <Button onClick={handlePracticeAgain} className="h-auto py-4">
                 <div className="text-center">
                   <RefreshCw className="h-5 w-5 mx-auto mb-1" />
                   <div className="text-sm">Practice Again</div>
+                </div>
+              </Button>
+              <Button variant="outline" onClick={() => navigate('/ai-replay')} className="h-auto py-4">
+                <div className="text-center">
+                  <MessageSquare className="h-5 w-5 mx-auto mb-1" />
+                  <div className="text-sm">Replay Mode</div>
                 </div>
               </Button>
               <Button variant="outline" onClick={() => navigate('/progress')} className="h-auto py-4">
