@@ -13,6 +13,7 @@ import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/
 import { Link } from "react-router-dom";
 import { ArrowLeft } from "lucide-react";
 import SEO from "@/components/SEO";
+import SmartBackButton from '@/components/SmartBackButton';
 const contactSchema = z.object({
   name: z.string().min(2, "Please enter your name"),
   email: z.string().email("Enter a valid email"),
@@ -89,12 +90,7 @@ const Help: React.FC = () => {
       <div className="min-h-screen bg-background">
       <header className="border-b border-border bg-card">
         <div className="max-w-5xl mx-auto px-4 py-6 flex flex-col gap-2 sm:flex-row sm:items-center sm:gap-3">
-          <Button variant="ghost" size="sm" className="ml-0 sm:-ml-2" asChild>
-            <Link to="/" aria-label="Back to dashboard">
-              <ArrowLeft className="mr-2 h-4 w-4" />
-              Back to dashboard
-            </Link>
-          </Button>
+          <SmartBackButton variant="ghost" size="sm" className="ml-0 sm:-ml-2" />
           <div>
             <h1 className="text-2xl font-bold">Help & Support</h1>
             <p className="text-sm text-muted-foreground mt-1">FAQs, billing tips, troubleshooting steps, and contact support.</p>

@@ -10,6 +10,7 @@ import { toast } from 'sonner';
 import { supabase } from '@/integrations/supabase/client';
 import SEO from '@/components/SEO';
 import MobileLayout from '@/components/MobileLayout';
+import SmartBackButton from '@/components/SmartBackButton';
 
 interface CallUpload {
   id: string;
@@ -218,7 +219,7 @@ const AIReplay = () => {
       <div className="min-h-screen bg-background flex items-center justify-center">
         <div className="text-center">
           <p className="text-xl font-semibold text-foreground mb-2">Original call not found</p>
-          <Button onClick={() => navigate('/')}>Back to Dashboard</Button>
+          <SmartBackButton />
         </div>
       </div>
     );

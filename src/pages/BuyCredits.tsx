@@ -9,6 +9,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import SEO from '@/components/SEO';
 import MobileLayout from '@/components/MobileLayout';
+import SmartBackButton from '@/components/SmartBackButton';
 
 interface CreditPackage {
   id: string;
@@ -96,14 +97,10 @@ const BuyCredits = () => {
           <div className="container mx-auto max-w-6xl py-8">
             {/* Header */}
             <div className="mb-8">
-              <Button
+              <SmartBackButton 
                 variant="ghost"
-                onClick={() => navigate('/')}
                 className="mb-4"
-              >
-                <ArrowLeft className="mr-2 h-4 w-4" />
-                Back
-              </Button>
+              />
               
               <div className="text-center">
                 <h1 className="text-4xl font-bold mb-4">Buy Credits</h1>
