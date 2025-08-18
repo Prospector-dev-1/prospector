@@ -7,7 +7,8 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Progress } from '@/components/ui/progress';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { ArrowLeft, TrendingUp, TrendingDown, Mic, BarChart3, Lightbulb, RefreshCw, AlertTriangle } from 'lucide-react';
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
+import { ArrowLeft, TrendingUp, TrendingDown, Mic, BarChart3, Lightbulb, RefreshCw, AlertTriangle, HelpCircle, Info } from 'lucide-react';
 import { toast } from 'sonner';
 import { supabase } from '@/integrations/supabase/client';
 import SEO from '@/components/SEO';
@@ -187,42 +188,93 @@ const CallReview = () => {
             </Alert>
           )}
 
-          {/* Score Overview */}
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
-            <Card>
-              <CardHeader className="pb-3">
-                <CardTitle className="text-lg">Overall Confidence</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="flex items-center justify-between mb-2">
-                  <span className={`text-3xl font-bold ${getScoreColor(callData.confidence_score)}`}>
-                    {callData.confidence_score}%
-                  </span>
-                  <Badge variant={getScoreBadgeVariant(callData.confidence_score)}>
-                    {callData.confidence_score >= 80 ? 'Excellent' : 
-                     callData.confidence_score >= 60 ? 'Good' : 'Needs Work'}
-                  </Badge>
-                </div>
-                <Progress value={callData.confidence_score} className="h-2" />
-              </CardContent>
-            </Card>
+          {/* Score Interpretation Guide */}
+          <Card className="mb-6 bg-muted/30">
+            <CardContent className="p-4">
+              <div className="flex items-center gap-2 mb-3">
+                <Info className="h-4 w-4 text-primary" />
+                <span className="font-semibold text-sm">Score Guide:</span>
+              </div>
+              <div className="flex flex-wrap gap-4 text-xs">
+                <span className="flex items-center gap-1">
+                  <div className="w-3 h-3 rounded bg-success"></div>
+                  Excellent (80-100%)
+                </span>
+                <span className="flex items-center gap-1">
+                  <div className="w-3 h-3 rounded bg-warning"></div>
+                  Good (60-79%)
+                </span>
+                <span className="flex items-center gap-1">
+                  <div className="w-3 h-3 rounded bg-destructive"></div>
+                  Needs Work (0-59%)
+                </span>
+              </div>
+            </CardContent>
+          </Card>
 
-            <Card>
-              <CardHeader className="pb-3">
-                <CardTitle className="text-lg">Objection Handling</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="flex items-center justify-between mb-2">
-                  <span className={`text-3xl font-bold ${getScoreColor(averageObjectionScore)}`}>
-                    {Math.round(averageObjectionScore)}%
-                  </span>
-                  <Badge variant={getScoreBadgeVariant(averageObjectionScore)}>
-                    Average
-                  </Badge>
-                </div>
-                <Progress value={averageObjectionScore} className="h-2" />
-              </CardContent>
-            </Card>
+          {/* Score Overview */}
+          <TooltipProvider>
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+              <Card>
+                <CardHeader className="pb-3">
+                  <div className="flex items-center gap-2">
+                    <CardTitle className="text-lg">Overall Confidence</CardTitle>
+                    <Tooltip>
+                      <TooltipTrigger>
+                        <HelpCircle className="h-4 w-4 text-muted-foreground" />
+                      </TooltipTrigger>
+                      <TooltipContent>
+                        <p className="max-w-xs">Measures how confident and assured you sounded during the call. High confidence helps build trust with prospects.</p>
+                      </TooltipContent>
+                    </Tooltip>
+                  </div>
+                  <CardDescription>
+                    Your vocal confidence and assurance level throughout the call
+                  </CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <div className="flex items-center justify-between mb-2">
+                    <span className={`text-3xl font-bold ${getScoreColor(callData.confidence_score)}`}>
+                      {callData.confidence_score}%
+                    </span>
+                    <Badge variant={getScoreBadgeVariant(callData.confidence_score)}>
+                      {callData.confidence_score >= 80 ? 'Excellent' : 
+                       callData.confidence_score >= 60 ? 'Good' : 'Needs Work'}
+                    </Badge>
+                  </div>
+                  <Progress value={callData.confidence_score} className="h-2" />
+                </CardContent>
+              </Card>
+
+              <Card>
+                <CardHeader className="pb-3">
+                  <div className="flex items-center gap-2">
+                    <CardTitle className="text-lg">Objection Handling</CardTitle>
+                    <Tooltip>
+                      <TooltipTrigger>
+                        <HelpCircle className="h-4 w-4 text-muted-foreground" />
+                      </TooltipTrigger>
+                      <TooltipContent>
+                        <p className="max-w-xs">How effectively you addressed prospect concerns across price, trust, timing, and competitive objections.</p>
+                      </TooltipContent>
+                    </Tooltip>
+                  </div>
+                  <CardDescription>
+                    Average performance across all objection categories
+                  </CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <div className="flex items-center justify-between mb-2">
+                    <span className={`text-3xl font-bold ${getScoreColor(averageObjectionScore)}`}>
+                      {Math.round(averageObjectionScore)}%
+                    </span>
+                    <Badge variant={getScoreBadgeVariant(averageObjectionScore)}>
+                      Average
+                    </Badge>
+                  </div>
+                  <Progress value={averageObjectionScore} className="h-2" />
+                </CardContent>
+              </Card>
 
             <Card>
               <CardHeader className="pb-3">
@@ -260,6 +312,9 @@ const CallReview = () => {
                       <TrendingUp className="h-5 w-5" />
                       What You Did Well
                     </CardTitle>
+                    <CardDescription>
+                      Key strengths and effective techniques identified in your call
+                    </CardDescription>
                   </CardHeader>
                   <CardContent>
                     <ul className="space-y-3">
@@ -279,6 +334,9 @@ const CallReview = () => {
                       <TrendingDown className="h-5 w-5" />
                       Areas for Improvement
                     </CardTitle>
+                    <CardDescription>
+                      Specific areas where you can enhance your sales approach
+                    </CardDescription>
                   </CardHeader>
                   <CardContent>
                     <ul className="space-y-3">
@@ -295,10 +353,23 @@ const CallReview = () => {
 
               <Card>
                 <CardHeader>
-                  <CardTitle className="flex items-center gap-2">
-                    <Lightbulb className="h-5 w-5" />
-                    Psychological Insights
-                  </CardTitle>
+                  <div className="flex items-center gap-2">
+                    <CardTitle className="flex items-center gap-2">
+                      <Lightbulb className="h-5 w-5" />
+                      Psychological Insights
+                    </CardTitle>
+                    <Tooltip>
+                      <TooltipTrigger>
+                        <HelpCircle className="h-4 w-4 text-muted-foreground" />
+                      </TooltipTrigger>
+                      <TooltipContent>
+                        <p className="max-w-xs">Analysis of prospect psychology, emotional cues, and behavioral patterns to help you understand buyer mindset.</p>
+                      </TooltipContent>
+                    </Tooltip>
+                  </div>
+                  <CardDescription>
+                    Understanding the prospect's mindset and emotional state during the call
+                  </CardDescription>
                 </CardHeader>
                 <CardContent>
                   <p className="text-sm leading-relaxed">{callData.psychological_insights}</p>
@@ -307,39 +378,81 @@ const CallReview = () => {
             </TabsContent>
 
             <TabsContent value="objections" className="space-y-6">
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-                {Object.entries((callData.objection_handling_scores as Record<string, number>) || {}).map(([category, score]) => (
-                  <Card key={category}>
-                    <CardHeader className="pb-3">
-                      <CardTitle className="text-base capitalize">{category}</CardTitle>
-                    </CardHeader>
-                    <CardContent>
-                      <div className="flex items-center justify-between mb-2">
-                        <span className={`text-2xl font-bold ${getScoreColor(score as number)}`}>
-                          {score}%
-                        </span>
-                      </div>
-                      <Progress value={score as number} className="h-2" />
-                    </CardContent>
-                  </Card>
-                ))}
-              </div>
+              <TooltipProvider>
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+                  {Object.entries((callData.objection_handling_scores as Record<string, number>) || {}).map(([category, score]) => {
+                    const objectionDescriptions: Record<string, string> = {
+                      price: "How well you handled cost-related concerns and demonstrated value",
+                      trust: "Your ability to build credibility and address trust-related hesitations", 
+                      timing: "How effectively you addressed 'not right time' objections",
+                      competitor: "Your response to comparisons with competing solutions"
+                    };
+
+                    const objectionTooltips: Record<string, string> = {
+                      price: "Price objections are about perceived value vs. cost. Good responses focus on ROI, payment terms, and cost of inaction.",
+                      trust: "Trust objections stem from skepticism about you, your company, or solution. Address with social proof, guarantees, and transparency.",
+                      timing: "Timing objections often mask other concerns. Probe deeper and create urgency with compelling reasons to act now.",
+                      competitor: "Competitive objections require differentiation. Focus on unique benefits rather than attacking competitors."
+                    };
+
+                    return (
+                      <Card key={category}>
+                        <CardHeader className="pb-3">
+                          <div className="flex items-center gap-2">
+                            <CardTitle className="text-base capitalize">{category}</CardTitle>
+                            <Tooltip>
+                              <TooltipTrigger>
+                                <HelpCircle className="h-3 w-3 text-muted-foreground" />
+                              </TooltipTrigger>
+                              <TooltipContent>
+                                <p className="max-w-xs">{objectionTooltips[category] || "Objection handling effectiveness"}</p>
+                              </TooltipContent>
+                            </Tooltip>
+                          </div>
+                          <CardDescription className="text-xs">
+                            {objectionDescriptions[category] || "Objection handling performance"}
+                          </CardDescription>
+                        </CardHeader>
+                        <CardContent>
+                          <div className="flex items-center justify-between mb-2">
+                            <span className={`text-2xl font-bold ${getScoreColor(score as number)}`}>
+                              {score}%
+                            </span>
+                          </div>
+                          <Progress value={score as number} className="h-2" />
+                        </CardContent>
+                      </Card>
+                    );
+                  })}
+                </div>
+              </TooltipProvider>
 
               <Card>
                 <CardHeader>
-                  <CardTitle>Better Responses</CardTitle>
+                  <div className="flex items-center gap-2">
+                    <CardTitle>Better Responses</CardTitle>
+                    <Tooltip>
+                      <TooltipTrigger>
+                        <HelpCircle className="h-4 w-4 text-muted-foreground" />
+                      </TooltipTrigger>
+                      <TooltipContent>
+                        <p className="max-w-xs">AI-generated alternative responses based on sales best practices and successful objection handling techniques.</p>
+                      </TooltipContent>
+                    </Tooltip>
+                  </div>
                   <CardDescription>
-                    Here's how you could have handled objections more effectively
+                    Here's how you could have handled objections more effectively based on specific moments in your call
                   </CardDescription>
                 </CardHeader>
                 <CardContent>
                   <div className="space-y-4">
                     {Object.entries((callData.better_responses as Record<string, string>) || {}).map(([key, response]) => (
                       <div key={key} className="p-4 border rounded-lg bg-muted/50">
-                        <h4 className="font-semibold mb-2 capitalize">
+                        <h4 className="font-semibold mb-2 capitalize flex items-center gap-2">
                           {key.replace('_', ' ')}
+                          <Lightbulb className="h-4 w-4 text-primary" />
                         </h4>
-                        <p className="text-sm text-muted-foreground">{response}</p>
+                        <p className="text-sm text-muted-foreground leading-relaxed">{response}</p>
                       </div>
                     ))}
                   </div>
@@ -351,6 +464,9 @@ const CallReview = () => {
               <Card>
                 <CardHeader>
                   <CardTitle>Detailed AI Analysis</CardTitle>
+                  <CardDescription>
+                    Raw AI feedback and technical analysis data for advanced review
+                  </CardDescription>
                 </CardHeader>
                 <CardContent>
                   <pre className="whitespace-pre-wrap text-sm bg-muted p-4 rounded-lg">
@@ -367,6 +483,9 @@ const CallReview = () => {
                     <Mic className="h-5 w-5" />
                     Call Transcript
                   </CardTitle>
+                  <CardDescription>
+                    Complete conversation transcript used for AI analysis
+                  </CardDescription>
                 </CardHeader>
                 <CardContent>
                   <div className="bg-muted p-4 rounded-lg">
@@ -378,6 +497,7 @@ const CallReview = () => {
               </Card>
             </TabsContent>
             </Tabs>
+          </TooltipProvider>
           </div>
         </div>
       </MobileLayout>
