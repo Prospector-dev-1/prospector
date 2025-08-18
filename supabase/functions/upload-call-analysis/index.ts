@@ -93,7 +93,23 @@ serve(async (req) => {
     });
 
     if (!transcriptionResponse.ok) {
-      throw new Error(`Transcription failed: ${await transcriptionResponse.text()}`);
+      const errorText = await transcriptionResponse.text();
+      console.error('Transcription error:', errorText);
+      
+      // Parse OpenAI error for user-friendly messages
+      try {
+        const errorData = JSON.parse(errorText);
+        if (errorData.error?.code === 'insufficient_quota') {
+          throw new Error('AI transcription service is temporarily unavailable due to quota limits. Please try again later or contact support.');
+        } else if (errorData.error?.message) {
+          throw new Error(`Transcription failed: ${errorData.error.message}`);
+        }
+      } catch (parseError) {
+        // If we can't parse the error, use a generic message
+        console.error('Could not parse OpenAI error:', parseError);
+      }
+      
+      throw new Error('Transcription service is temporarily unavailable. Please try again later.');
     }
 
     const transcriptionResult = await transcriptionResponse.json();
@@ -162,7 +178,22 @@ Provide your response in this JSON format:
     });
 
     if (!analysisResponse.ok) {
-      throw new Error(`Analysis failed: ${await analysisResponse.text()}`);
+      const errorText = await analysisResponse.text();
+      console.error('Analysis error:', errorText);
+      
+      // Parse OpenAI error for user-friendly messages
+      try {
+        const errorData = JSON.parse(errorText);
+        if (errorData.error?.code === 'insufficient_quota') {
+          throw new Error('AI analysis service is temporarily unavailable due to quota limits. Please try again later or contact support.');
+        } else if (errorData.error?.message) {
+          throw new Error(`Analysis failed: ${errorData.error.message}`);
+        }
+      } catch (parseError) {
+        console.error('Could not parse OpenAI error:', parseError);
+      }
+      
+      throw new Error('Analysis service is temporarily unavailable. Please try again later.');
     }
 
     const analysisResult = await analysisResponse.json();
