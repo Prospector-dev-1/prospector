@@ -9,6 +9,7 @@ import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContai
 import { toast } from 'sonner';
 import { supabase } from '@/integrations/supabase/client';
 import SEO from '@/components/SEO';
+import MobileLayout from '@/components/MobileLayout';
 interface ProgressData {
   confidence_trend: Array<{
     date: string;
@@ -240,7 +241,7 @@ const Progress = () => {
         </div>
       </div>;
   }
-  return <>
+  return <MobileLayout>
       <SEO title="My Progress | Prospector" description="Track your sales performance over time with detailed analytics and insights." canonicalPath="/progress" />
       
       <div className="min-h-screen bg-background px-4 py-8">
@@ -476,6 +477,6 @@ const Progress = () => {
           </Card>
         </div>
       </div>
-    </>;
+    </MobileLayout>;
 };
 export default Progress;

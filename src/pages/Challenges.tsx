@@ -11,6 +11,7 @@ import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/component
 import { supabase } from '@/integrations/supabase/client';
 import { cn } from '@/lib/utils';
 import SEO from '@/components/SEO';
+import MobileLayout from '@/components/MobileLayout';
 
 interface Challenge {
   id: string;
@@ -373,7 +374,7 @@ const Challenges = () => {
   }
 
   return (
-    <>
+    <MobileLayout>
       <SEO 
         title="Challenges | Prospector"
         description="Complete challenges to improve your sales skills and earn rewards."
@@ -633,7 +634,7 @@ const Challenges = () => {
           </div>
         </div>
       </div>
-    </>
+    </MobileLayout>
   );
 };
 
