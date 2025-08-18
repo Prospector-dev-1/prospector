@@ -197,6 +197,7 @@ export type Database = {
         Row: {
           ai_analysis: Json | null
           better_responses: Json | null
+          call_moments: Json | null
           confidence_score: number | null
           created_at: string
           fallback_used: boolean | null
@@ -216,6 +217,7 @@ export type Database = {
         Insert: {
           ai_analysis?: Json | null
           better_responses?: Json | null
+          call_moments?: Json | null
           confidence_score?: number | null
           created_at?: string
           fallback_used?: boolean | null
@@ -235,6 +237,7 @@ export type Database = {
         Update: {
           ai_analysis?: Json | null
           better_responses?: Json | null
+          call_moments?: Json | null
           confidence_score?: number | null
           created_at?: string
           fallback_used?: boolean | null
@@ -390,6 +393,51 @@ export type Database = {
           id?: string
           stripe_session_id?: string | null
           type?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      moment_replays: {
+        Row: {
+          call_upload_id: string
+          coaching_feedback: Json | null
+          created_at: string
+          duration_seconds: number | null
+          id: string
+          improvement: number | null
+          moment_id: string
+          original_score: number | null
+          replay_score: number | null
+          session_transcript: string | null
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          call_upload_id: string
+          coaching_feedback?: Json | null
+          created_at?: string
+          duration_seconds?: number | null
+          id?: string
+          improvement?: number | null
+          moment_id: string
+          original_score?: number | null
+          replay_score?: number | null
+          session_transcript?: string | null
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          call_upload_id?: string
+          coaching_feedback?: Json | null
+          created_at?: string
+          duration_seconds?: number | null
+          id?: string
+          improvement?: number | null
+          moment_id?: string
+          original_score?: number | null
+          replay_score?: number | null
+          session_transcript?: string | null
+          updated_at?: string
           user_id?: string
         }
         Relationships: []
