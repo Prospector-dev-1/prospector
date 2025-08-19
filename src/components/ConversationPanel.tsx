@@ -80,24 +80,17 @@ const ConversationPanel: React.FC<ConversationPanelProps> = ({
             </div>}
         </div>
 
-        {/* Conversation Status */}
-        {(isActive || isConnecting) && <div className="space-y-3">
-            <div className="flex items-center justify-between">
-              <span className="text-sm font-medium">Conversation Progress</span>
-              <Badge variant={isActive ? "default" : "secondary"}>
-                {isConnecting ? 'Connecting...' : isActive ? 'Active' : 'Ended'}
-              </Badge>
-            </div>
-            
-            <Progress value={getExchangeProgress()} className="w-full" />
-            
-            <div className="flex items-center justify-between text-sm">
-              <span className="text-muted-foreground">
-                Exchange {exchangeCount}/3
-              </span>
-              {currentScore !== null && <span className={`font-medium ${getScoreColor(currentScore)}`}>
-                  Score: {currentScore}/100
-                </span>}
+        {/* Instructions */}
+        {!isActive && !isConnecting && <div className="p-3 bg-primary/5 rounded-lg border border-primary/10">
+            <div className="flex items-start gap-2">
+              <Zap className="h-4 w-4 text-primary mt-0.5 flex-shrink-0" />
+              <div className="text-sm">
+                <p className="font-medium text-primary mb-1">Real-time AI Practice</p>
+                <p className="text-primary/80 text-xs leading-relaxed">
+                  Have a live conversation with our AI prospect. Get real-time coaching hints 
+                  and handle multiple objections to improve your skills.
+                </p>
+              </div>
             </div>
           </div>}
 
@@ -126,17 +119,24 @@ const ConversationPanel: React.FC<ConversationPanelProps> = ({
             </div>}
         </div>
 
-        {/* Instructions */}
-        {!isActive && !isConnecting && <div className="p-3 bg-primary/5 rounded-lg border border-primary/10">
-            <div className="flex items-start gap-2">
-              <Zap className="h-4 w-4 text-primary mt-0.5 flex-shrink-0" />
-              <div className="text-sm">
-                <p className="font-medium text-primary mb-1">Real-time AI Practice</p>
-                <p className="text-primary/80 text-xs leading-relaxed">
-                  Have a live conversation with our AI prospect. Get real-time coaching hints 
-                  and handle multiple objections to improve your skills.
-                </p>
-              </div>
+        {/* Conversation Status */}
+        {(isActive || isConnecting) && <div className="space-y-3">
+            <div className="flex items-center justify-between">
+              <span className="text-sm font-medium">Conversation Progress</span>
+              <Badge variant={isActive ? "default" : "secondary"}>
+                {isConnecting ? 'Connecting...' : isActive ? 'Active' : 'Ended'}
+              </Badge>
+            </div>
+            
+            <Progress value={getExchangeProgress()} className="w-full" />
+            
+            <div className="flex items-center justify-between text-sm">
+              <span className="text-muted-foreground">
+                Exchange {exchangeCount}/3
+              </span>
+              {currentScore !== null && <span className={`font-medium ${getScoreColor(currentScore)}`}>
+                  Score: {currentScore}/100
+                </span>}
             </div>
           </div>}
 
