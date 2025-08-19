@@ -16,6 +16,15 @@ interface TranscriptState {
   lastUpdate: number;
 }
 
+interface PartialTranscriptBuffer {
+  [key: string]: {
+    text: string;
+    role: 'user' | 'assistant';
+    timestamp: number;
+    source: string;
+  };
+}
+
 export const useTranscriptManager = () => {
   const [transcriptState, setTranscriptState] = useState<TranscriptState>({
     fullTranscript: '',
@@ -29,6 +38,7 @@ export const useTranscriptManager = () => {
   const processedTextsRef = useRef<Set<string>>(new Set());
   const debounceTimerRef = useRef<NodeJS.Timeout | null>(null);
   const lastProcessedRef = useRef<string>('');
+  const partialBufferRef = useRef<PartialTranscriptBuffer>({});
 
   // Deduplication function - removes repeated words/phrases
   const deduplicateText = useCallback((text: string): string => {
@@ -191,7 +201,42 @@ export const useTranscriptManager = () => {
       }
 
       if (transcriptText && transcriptText.trim().length > 0) {
-        addTranscriptChunk(transcriptText, role, transcriptType, 'vapi');
+        // Handle partial transcripts differently - buffer them by role
+        if (transcriptType === 'partial') {
+          const bufferKey = `${role}-${message.source || 'vapi'}`;
+          
+          // Update partial buffer
+          if (!partialBufferRef.current[bufferKey]) {
+            partialBufferRef.current[bufferKey] = {
+              text: transcriptText,
+              role,
+              timestamp: Date.now(),
+              source: 'vapi'
+            };
+          } else {
+            // Accumulate partial text
+            partialBufferRef.current[bufferKey].text = transcriptText;
+            partialBufferRef.current[bufferKey].timestamp = Date.now();
+          }
+          
+          console.log('Buffering partial transcript:', bufferKey, transcriptText);
+        } else {
+          // For final transcripts, check if we have a partial buffer to flush
+          const bufferKey = `${role}-${message.source || 'vapi'}`;
+          
+          if (partialBufferRef.current[bufferKey]) {
+            // Use the final text from the buffer or the current text if different
+            const finalText = transcriptText || partialBufferRef.current[bufferKey].text;
+            addTranscriptChunk(finalText, role, 'final', 'vapi');
+            
+            // Clear the buffer
+            delete partialBufferRef.current[bufferKey];
+            console.log('Processed final transcript from buffer:', finalText);
+          } else {
+            // No buffer, just add the final chunk
+            addTranscriptChunk(transcriptText, role, 'final', 'vapi');
+          }
+        }
       }
     }
 
@@ -220,6 +265,7 @@ export const useTranscriptManager = () => {
     pendingChunksRef.current.clear();
     processedTextsRef.current.clear();
     lastProcessedRef.current = '';
+    partialBufferRef.current = {};
     
     setTranscriptState({
       fullTranscript: '',
@@ -236,8 +282,16 @@ export const useTranscriptManager = () => {
     if (debounceTimerRef.current) {
       clearTimeout(debounceTimerRef.current);
     }
+    
+    // Flush any remaining partial buffers as final
+    Object.entries(partialBufferRef.current).forEach(([key, buffer]) => {
+      console.log('Flushing partial buffer as final:', key, buffer.text);
+      addTranscriptChunk(buffer.text, buffer.role, 'final', buffer.source);
+    });
+    partialBufferRef.current = {};
+    
     commitPendingChunks();
-  }, [commitPendingChunks]);
+  }, [commitPendingChunks, addTranscriptChunk]);
 
   // Cleanup on unmount
   useEffect(() => {
