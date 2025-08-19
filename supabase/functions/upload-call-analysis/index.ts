@@ -286,8 +286,16 @@ serve(async (req) => {
     return new Response(null, { headers: corsHeaders });
   }
 
+  let uploadId: string | null = null;
   try {
-    const { file, originalFilename, fileType } = await req.json();
+    const body = await req.json().catch(() => null);
+    if (!body || typeof body.file !== 'string' || !body.originalFilename || !body.fileType) {
+      return new Response(
+        JSON.stringify({ error: 'Invalid request: expected { file: base64 string, originalFilename, fileType }' }),
+        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+    const { file, originalFilename, fileType } = body;
     
     const authHeader = req.headers.get('Authorization');
     if (!authHeader) {
@@ -324,13 +332,14 @@ serve(async (req) => {
     }
 
     // Create call upload record
+    const fileLengthEstimate = typeof file === 'string' ? Math.floor((file.length * 3) / 4) : 0;
     const { data: uploadRecord, error: uploadError } = await supabase
       .from('call_uploads')
       .insert({
         user_id: user.id,
         original_filename: originalFilename,
         file_type: fileType,
-        file_size: file.length,
+        file_size: fileLengthEstimate,
         status: 'processing'
       })
       .select()
@@ -340,6 +349,7 @@ serve(async (req) => {
       throw new Error('Failed to create upload record');
     }
 
+    uploadId = uploadRecord.id;
     console.log('Created upload record:', uploadRecord.id);
 
     // Ensure OpenAI API key is available
@@ -348,13 +358,19 @@ serve(async (req) => {
       throw new Error('Server configuration error: AI service key missing. Please contact support.');
     }
 
-    // Basic transcript validation - check for minimum length
-    if (!file || file.length < 100) {
+    // Basic file validation - check for minimum size (approx bytes)
+    const minBytes = 1024; // ~1KB minimum
+    if (fileLengthEstimate < minBytes) {
       throw new Error('File too small or empty. Please upload a valid audio/video file with speech content.');
     }
 
     // Convert base64 to binary for audio processing
-    const binaryString = atob(file);
+    let binaryString: string;
+    try {
+      binaryString = atob(file);
+    } catch (e) {
+      throw new Error('Invalid file encoding. Expected base64 string.');
+    }
     const binaryAudio = new Uint8Array(binaryString.length);
     for (let i = 0; i < binaryString.length; i++) {
       binaryAudio[i] = binaryString.charCodeAt(i);
@@ -488,6 +504,16 @@ serve(async (req) => {
     const errorMessage = error instanceof Error ? error.message : 'Unknown error occurred';
     console.error('Error message:', errorMessage);
     console.error('Error stack:', error instanceof Error ? error.stack : 'No stack trace');
+
+    // Attempt to mark upload as failed for visibility in UI
+    try {
+      if (uploadId) {
+        const supabase = createClient(supabaseUrl, supabaseServiceKey);
+        await supabase.from('call_uploads').update({ status: 'failed' }).eq('id', uploadId);
+      }
+    } catch (updateErr) {
+      console.error('Failed to mark upload as failed:', updateErr);
+    }
     
     return new Response(
       JSON.stringify({ 
