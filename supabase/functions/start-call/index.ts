@@ -345,22 +345,20 @@ serve(async (req) => {
       recordingEnabled: true,
       maxDurationSeconds: 600, // 10 minutes max
       silenceTimeoutSeconds: 30,
-      responseDelaySeconds
-      // Temporarily disabled transcriber to test
-      // transcriber: {
-      //   provider: "openai",
-      //   model: "whisper-1", 
-      //   language: "en",
-      //   interimResults: true
-      // },
-      // clientMessages: [
-      //   "conversation-update",
-      //   "speech-update", 
-      //   "status-update", 
-      //   "transcript",
-      //   "user-interrupted",
-      //   "voice-input"
-      // ]
+      responseDelaySeconds,
+      transcriber: {
+        provider: "openai",
+        model: "whisper-1",
+        language: "en"
+      },
+      clientMessages: [
+        "conversation-update",
+        "speech-update", 
+        "status-update", 
+        "transcript",
+        "user-interrupted",
+        "voice-input"
+      ]
     };
 
     console.log('Assistant config:', JSON.stringify(assistantConfig, null, 2));

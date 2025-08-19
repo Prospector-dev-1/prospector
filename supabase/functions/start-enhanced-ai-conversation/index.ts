@@ -125,8 +125,7 @@ serve(async (req) => {
       transcriber: {
         provider: "openai",
         model: "whisper-1",
-        language: "en",
-        interimResults: true
+        language: "en"
       },
       clientMessages: [
         "conversation-update",
