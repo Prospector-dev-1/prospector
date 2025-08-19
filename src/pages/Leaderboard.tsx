@@ -9,6 +9,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/integrations/supabase/client';
 import { Trophy, Medal, Award, ArrowLeft, Target } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
+import { useSmartNavigation } from '@/hooks/useSmartNavigation';
 
 interface LeaderboardEntry {
   user_id: string;
@@ -24,6 +25,7 @@ interface LeaderboardEntry {
 const Leaderboard = () => {
   const { user } = useAuth();
   const navigate = useNavigate();
+  const { goBack } = useSmartNavigation();
   const [leaderboard, setLeaderboard] = useState<LeaderboardEntry[]>([]);
   const [userRank, setUserRank] = useState<number | null>(null);
   const [loading, setLoading] = useState(true);
@@ -97,7 +99,7 @@ const Leaderboard = () => {
           <Button
             variant="ghost"
             size="sm"
-            onClick={() => navigate(-1)}
+            onClick={() => goBack()}
             className="text-muted-foreground hover:text-foreground"
           >
             <ArrowLeft className="h-4 w-4 mr-2" />

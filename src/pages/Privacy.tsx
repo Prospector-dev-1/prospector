@@ -1,5 +1,6 @@
 import React from 'react';
 import { useNavigate } from 'react-router-dom';
+import { useSmartNavigation } from '@/hooks/useSmartNavigation';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -7,6 +8,7 @@ import { ArrowLeft } from 'lucide-react';
 import SEO from '@/components/SEO';
 const Privacy = () => {
   const navigate = useNavigate();
+  const { goBack } = useSmartNavigation();
 
   return <>
       <SEO title="Prospector — Privacy Policy" description="Prospector Privacy Policy: what we collect, how we use data, and your rights." canonicalPath="/privacy" structuredData={{
@@ -26,7 +28,7 @@ const Privacy = () => {
           <div className="mb-6">
             <Button 
               variant="outline" 
-              onClick={() => navigate(-1)}
+              onClick={() => goBack()}
               className="flex items-center gap-2"
             >
               <ArrowLeft className="h-4 w-4" />

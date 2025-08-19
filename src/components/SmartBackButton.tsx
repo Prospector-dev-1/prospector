@@ -1,8 +1,7 @@
 import React from 'react';
-import { useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { ArrowLeft } from 'lucide-react';
-import { useNavigationHistory } from '@/hooks/useNavigationHistory';
+import { useSmartNavigation } from '@/hooks/useSmartNavigation';
 
 interface SmartBackButtonProps {
   variant?: 'ghost' | 'outline' | 'default' | 'destructive' | 'secondary' | 'link';
@@ -17,15 +16,10 @@ const SmartBackButton: React.FC<SmartBackButtonProps> = ({
   className,
   fallbackRoute = '/'
 }) => {
-  const navigate = useNavigate();
-  const { getPreviousPageName, hasPreviousPage } = useNavigationHistory();
+  const { goBack, getPreviousPageName } = useSmartNavigation();
 
   const handleBack = () => {
-    if (hasPreviousPage) {
-      navigate(-1);
-    } else {
-      navigate(fallbackRoute);
-    }
+    goBack(fallbackRoute);
   };
 
   const previousPageName = getPreviousPageName();

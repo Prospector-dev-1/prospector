@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import { useNavigate } from 'react-router-dom';
+import { useSmartNavigation } from '@/hooks/useSmartNavigation';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Progress } from '@/components/ui/progress';
@@ -15,6 +16,7 @@ import RecentCallUploads from '@/components/RecentCallUploads';
 const CallUpload = () => {
   const { user, profile } = useAuth();
   const navigate = useNavigate();
+  const { goBack } = useSmartNavigation();
   const [uploading, setUploading] = useState(false);
   const [progress, setProgress] = useState(0);
   const [dragActive, setDragActive] = useState(false);
@@ -176,7 +178,7 @@ const CallUpload = () => {
           <div className="mb-6">
             <Button 
               variant="outline" 
-              onClick={() => navigate(-1)}
+              onClick={() => goBack()}
               className="flex items-center gap-2 mb-4"
             >
               <ArrowLeft className="h-4 w-4" />
