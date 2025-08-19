@@ -195,20 +195,52 @@ const LiveCall = () => {
     console.log('Call simulation ended');
     setIsCallActive(false);
     
-    // Trigger call analysis
+    // Update call record with transcript and duration first
     try {
-      await supabase.functions.invoke('upload-call-analysis', {
+      await supabase
+        .from('calls')
+        .update({
+          transcript,
+          duration_seconds: callDuration,
+          call_status: 'analyzing'
+        })
+        .eq('id', sessionConfig.callRecordId);
+      
+      console.log('Updated call record with transcript and duration');
+    } catch (error) {
+      console.error('Error updating call record:', error);
+    }
+
+    // Trigger proper call analysis using end-call-analysis function
+    try {
+      const { data, error } = await supabase.functions.invoke('end-call-analysis', {
         body: {
           callRecordId: sessionConfig.callRecordId,
           transcript,
           duration: callDuration
         }
       });
+      
+      if (error) {
+        console.error('Error invoking end-call-analysis:', error);
+        toast({
+          title: "Analysis Failed",
+          description: "Call analysis failed. You can retry from the results page.",
+          variant: "destructive",
+        });
+      } else {
+        console.log('Call analysis completed successfully');
+      }
     } catch (error) {
       console.error('Error analyzing call:', error);
+      toast({
+        title: "Analysis Failed", 
+        description: "Call analysis failed. You can retry from the results page.",
+        variant: "destructive",
+      });
     }
     
-    // Navigate to results
+    // Navigate to results regardless of analysis success/failure
     navigate(`/call-results/${sessionConfig.callRecordId}`);
   };
 

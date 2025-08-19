@@ -15,6 +15,9 @@ serve(async (req) => {
   try {
     const { callRecordId, transcript, duration } = await req.json();
     
+    // If transcript is missing, try to fetch from call record
+    let finalTranscript = transcript;
+    
     // Authenticate user
     const authHeader = req.headers.get('Authorization')!;
     const token = authHeader.replace('Bearer ', '');
@@ -50,9 +53,19 @@ serve(async (req) => {
       throw new Error('Call record not found');
     }
 
+    // If no transcript provided, try to use the one from the call record
+    if (!finalTranscript && callRecord.transcript) {
+      console.log('Using transcript from call record');
+      finalTranscript = callRecord.transcript;
+    }
+    
+    if (!finalTranscript) {
+      throw new Error('No transcript available for analysis');
+    }
+
     console.log('=== ANALYSIS DEBUG ===');
-    console.log('Transcript received:', transcript);
-    console.log('Transcript length:', transcript.length);
+    console.log('Transcript received:', finalTranscript);
+    console.log('Transcript length:', finalTranscript.length);
     console.log('Duration:', duration);
 
     // Clean up transcript to remove duplicates and repetitive text
@@ -148,7 +161,7 @@ serve(async (req) => {
       return out.join('\n');
     }
 
-    const initialClean = cleanTranscript(transcript);
+    const initialClean = cleanTranscript(finalTranscript);
     const cleanedTranscript = rebuildTurns(initialClean);
     console.log('Cleaned transcript:', cleanedTranscript);
 

@@ -135,25 +135,57 @@ const CallResults = () => {
     setLoading(true);
     setAnalysisError(null);
     try {
-      // Reset call status to trigger reanalysis
-      const {
-        error
-      } = await supabase.from('calls').update({
-        call_status: 'started'
-      }).eq('id', callId).eq('user_id', user.id);
-      if (error) {
-        throw error;
+      // First fetch the call record to get transcript and duration
+      const { data: callData, error: fetchError } = await supabase
+        .from('calls')
+        .select('transcript, duration_seconds')
+        .eq('id', callId)
+        .eq('user_id', user.id)
+        .single();
+      
+      if (fetchError) {
+        throw new Error('Failed to fetch call data for retry');
       }
 
-      // Start polling again
-      pollForAnalysisCompletion();
+      if (!callData?.transcript) {
+        throw new Error('No transcript available for analysis');
+      }
+
+      // Update status to analyzing
+      const { error: updateError } = await supabase
+        .from('calls')
+        .update({ call_status: 'analyzing' })
+        .eq('id', callId)
+        .eq('user_id', user.id);
+      
+      if (updateError) {
+        throw updateError;
+      }
+
+      // Invoke end-call-analysis with the saved transcript and duration
+      const { data, error: analysisError } = await supabase.functions.invoke('end-call-analysis', {
+        body: {
+          callRecordId: callId,
+          transcript: callData.transcript,
+          duration: callData.duration_seconds || 0
+        }
+      });
+
+      if (analysisError) {
+        console.error('Analysis invocation error:', analysisError);
+        throw new Error(`Analysis failed: ${analysisError.message}`);
+      }
+
       toast({
         title: "Analysis restarted",
         description: "We're processing your call again. This may take a moment."
       });
+
+      // Start polling again
+      pollForAnalysisCompletion();
     } catch (error) {
       console.error('Error retrying analysis:', error);
-      setAnalysisError('Failed to restart analysis. Please try again.');
+      setAnalysisError(error instanceof Error ? error.message : 'Failed to restart analysis. Please try again.');
       setLoading(false);
     }
   };
