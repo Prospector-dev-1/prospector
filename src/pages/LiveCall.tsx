@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useParams, useNavigate, useLocation } from 'react-router-dom';
 import { useRealtimeAIChat } from '@/hooks/useRealtimeAIChat';
+import { useTranscriptManager } from '@/hooks/useTranscriptManager';
 import { Button } from '@/components/ui/button';
 import { Progress } from '@/components/ui/progress';
 import { Badge } from '@/components/ui/badge';
@@ -41,10 +42,18 @@ const LiveCall = () => {
     finalAnalysis
   } = useRealtimeAIChat();
   
+  // Centralized transcript management
+  const {
+    transcript,
+    handleVapiMessage,
+    clearTranscript,
+    flushPendingChunks,
+    isProcessing: isTranscriptProcessing
+  } = useTranscriptManager();
+  
   // Call simulation specific state
   const [vapiService] = useState(() => VapiService.getInstance());
   const [callDuration, setCallDuration] = useState(0);
-  const [transcript, setTranscript] = useState('');
   const [isCallActive, setIsCallActive] = useState(false);
   const [isAnalyzing, setIsAnalyzing] = useState(false);
 
@@ -117,20 +126,9 @@ const LiveCall = () => {
 
           handleMessage = (message: any) => {
             console.log('Vapi message received:', message);
-
-            // Handle different message types for transcript collection
-            if (message.type === 'transcript') {
-              if (message.transcript && message.transcript.text) {
-                setTranscript(prev => prev + ' ' + message.transcript.text);
-              } else if (message.transcript && typeof message.transcript === 'string') {
-                setTranscript(prev => prev + ' ' + message.transcript);
-              }
-            }
-
-            // Also check for speech-update or other transcript formats
-            if (message.type === 'speech-update' && message.speech?.text) {
-              setTranscript(prev => prev + ' ' + message.speech.text);
-            }
+            
+            // Use centralized transcript manager for all message processing
+            handleVapiMessage(message);
           };
 
           // Set up Vapi event listeners
@@ -182,6 +180,9 @@ const LiveCall = () => {
           if (handleCallStart) vapiService.off('call-start', handleCallStart);
           if (handleCallEnd) vapiService.off('call-end', handleCallEnd);
           if (handleMessage) vapiService.off('message', handleMessage);
+          
+          // Clear transcript data when component unmounts
+          clearTranscript();
         } catch (e) {
           console.error('Error cleaning up Vapi listeners', e);
         }
@@ -240,6 +241,12 @@ const LiveCall = () => {
     console.log('Call simulation ended');
     setIsCallActive(false);
     setIsAnalyzing(true);
+    
+    // Flush any pending transcript chunks before finalizing
+    flushPendingChunks();
+    
+    // Wait a moment for transcript processing to complete
+    await new Promise(resolve => setTimeout(resolve, 1000));
     
     const finalTranscript = transcript.trim();
     const finalDuration = Math.max(callDuration, 1); // Ensure minimum duration

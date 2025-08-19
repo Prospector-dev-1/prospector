@@ -157,17 +157,24 @@ export const useRealtimeAIChat = () => {
       vapi.on('message', (message: any) => {
         console.log('Vapi message:', message);
         
+        // Handle transcript updates without duplicate processing
         if (message.type === 'transcript' && message.transcript) {
-          sessionTranscript.current += message.transcript + '\n';
-          setConversationState(prev => ({
-            ...prev,
-            transcript: sessionTranscript.current,
-            exchangeCount: prev.exchangeCount + (message.role === 'user' ? 1 : 0)
-          }));
+          const transcriptText = typeof message.transcript === 'string' 
+            ? message.transcript 
+            : message.transcript.text || message.transcript.content || '';
           
-          // Analyze AI responses for objections and coaching opportunities
-          if (message.role === 'assistant') {
-            analyzeAIResponse(message.transcript, sessionConfigRef.current?.prospectPersonality);
+          if (transcriptText && transcriptText.trim()) {
+            sessionTranscript.current += transcriptText + '\n';
+            setConversationState(prev => ({
+              ...prev,
+              transcript: sessionTranscript.current,
+              exchangeCount: prev.exchangeCount + (message.role === 'user' ? 1 : 0)
+            }));
+            
+            // Analyze AI responses for objections and coaching opportunities
+            if (message.role === 'assistant') {
+              analyzeAIResponse(transcriptText, sessionConfigRef.current?.prospectPersonality);
+            }
           }
         }
       });
