@@ -200,6 +200,8 @@ const getPageNameFromPath = (pathname: string): string => {
     '/call-coaching': 'Call Coaching',
     '/call-results': 'Call Results',
     '/call-review': 'Call Review',
+    '/call-analysis': 'Call Analysis',
+    '/live-call': 'Live Call',
     '/ai-replay': 'AI Replay',
     '/ai-replay-setup': 'AI Replay Setup',
     '/custom-script': 'Script Generator',
