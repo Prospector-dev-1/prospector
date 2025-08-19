@@ -515,23 +515,30 @@ const CallResults = () => {
             </Card>
 
             {/* Call Transcript */}
-            {callRecord.transcript && (
-              <Card className="mb-8">
-                <CardHeader>
-                  <CardTitle>Call Transcript</CardTitle>
-                  <CardDescription>
-                    Complete conversation from your practice session
-                  </CardDescription>
-                </CardHeader>
-                <CardContent>
+            <Card className="mb-8">
+              <CardHeader>
+                <CardTitle>Call Transcript</CardTitle>
+                <CardDescription>
+                  Complete conversation from your practice session
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                {callRecord.transcript && callRecord.transcript.trim().length > 0 ? (
                   <div className="bg-muted p-4 rounded-lg max-h-96 overflow-y-auto">
                     <p className="text-sm whitespace-pre-wrap">
                       {callRecord.transcript}
                     </p>
                   </div>
-                </CardContent>
-              </Card>
-            )}
+                ) : (
+                  <div className="bg-muted/50 p-6 rounded-lg text-center">
+                    <p className="text-muted-foreground mb-2">No transcript available</p>
+                    <p className="text-sm text-muted-foreground">
+                      This call was too short or no speech was detected. Try speaking during your next practice call.
+                    </p>
+                  </div>
+                )}
+              </CardContent>
+            </Card>
 
             {/* Objection Coaching */}
             <Card className="mb-8">
