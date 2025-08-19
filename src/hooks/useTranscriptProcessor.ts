@@ -40,29 +40,40 @@ export class TranscriptProcessor {
   deduplicateText(text: string): string {
     if (!text?.trim()) return '';
     
-    const normalized = text.trim();
+    // Normalize text: lowercase, trim, remove extra spaces and punctuation
+    const normalized = text.trim().toLowerCase()
+      .replace(/[.,!?;:]+/g, '') // Remove punctuation
+      .replace(/\s+/g, ' '); // Normalize spaces
     
-    // Skip if identical to last processed
-    if (normalized.toLowerCase() === this.lastProcessedText.toLowerCase()) {
+    // Skip if identical to last processed (more lenient comparison)
+    if (normalized === this.lastProcessedText) {
+      console.log('Skipping duplicate normalized text:', text);
       return '';
     }
     
-    // Remove consecutive duplicate words
-    const words = normalized.split(/\s+/);
+    // Remove consecutive duplicate words but preserve original case
+    const words = text.trim().split(/\s+/);
     const dedupedWords: string[] = [];
-    const allowedRepeats = new Set(['the', 'a', 'an', 'and', 'or', 'but', 'yes', 'no', 'I', 'you']);
+    const allowedRepeats = new Set(['the', 'a', 'an', 'and', 'or', 'but', 'yes', 'no', 'I', 'you', 'we', 'they']);
     
     for (let i = 0; i < words.length; i++) {
       const currentWord = words[i].toLowerCase();
       const prevWord = i > 0 ? words[i - 1].toLowerCase() : '';
       
+      // Allow repeats for allowed words or if words are different
       if (currentWord !== prevWord || allowedRepeats.has(currentWord)) {
         dedupedWords.push(words[i]);
       }
     }
     
     const result = dedupedWords.join(' ');
-    this.lastProcessedText = result.toLowerCase();
+    
+    // Only update lastProcessedText if we're returning a valid result
+    if (result.trim()) {
+      this.lastProcessedText = result.toLowerCase()
+        .replace(/[.,!?;:]+/g, '')
+        .replace(/\s+/g, ' ');
+    }
     
     return result;
   }
@@ -108,8 +119,13 @@ export class TranscriptProcessor {
     
     if (!finalText) return null;
     
-    // Skip duplicates
-    const textKey = `${finalText.toLowerCase()}-${role}`;
+    // Create a more sophisticated duplicate key using normalized text + context
+    const normalizedKey = finalText.toLowerCase()
+      .replace(/[.,!?;:]+/g, '')
+      .replace(/\s+/g, ' ')
+      .trim();
+    const textKey = `${normalizedKey}-${role}-${source}`;
+    
     if (this.processedTexts.has(textKey)) {
       console.log('Skipping duplicate final transcript:', finalText);
       return null;
@@ -143,9 +159,26 @@ export class TranscriptProcessor {
     for (const [key, buffer] of this.partialBuffers.entries()) {
       console.log('Flushing partial buffer as final:', key, buffer.text);
       
+      // Apply the same deduplication logic as processFinalTranscript
+      const cleanText = this.deduplicateText(buffer.text);
+      if (!cleanText) continue;
+      
+      const normalizedKey = cleanText.toLowerCase()
+        .replace(/[.,!?;:]+/g, '')
+        .replace(/\s+/g, ' ')
+        .trim();
+      const textKey = `${normalizedKey}-${buffer.role}-${buffer.source}`;
+      
+      if (this.processedTexts.has(textKey)) {
+        console.log('Skipping duplicate flushed buffer:', cleanText);
+        continue;
+      }
+      
+      this.processedTexts.add(textKey);
+      
       const chunk: TranscriptChunk = {
         id: `flush-${buffer.source}-${buffer.role}-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
-        text: buffer.text,
+        text: cleanText,
         timestamp: buffer.timestamp,
         role: buffer.role,
         type: 'final',
@@ -214,17 +247,34 @@ export const useTranscriptProcessor = (config?: Partial<ProcessorConfig>) => {
     const chunks = [...pendingChunksRef.current].sort((a, b) => a.timestamp - b.timestamp);
     console.log('Committing transcript chunks:', chunks.length);
     
-    const finalTexts = chunks
-      .map(chunk => chunk.text)
-      .filter(text => text.trim().length > 0);
+    // Apply final deduplication pass before assembly
+    const deduplicatedTexts: string[] = [];
+    const seenTexts = new Set<string>();
     
-    if (finalTexts.length > 0) {
-      const newTranscript = finalTexts.join(' ').trim();
+    for (const chunk of chunks) {
+      const normalizedText = chunk.text.toLowerCase()
+        .replace(/[.,!?;:]+/g, '')
+        .replace(/\s+/g, ' ')
+        .trim();
+      
+      if (!seenTexts.has(normalizedText) && chunk.text.trim().length > 0) {
+        seenTexts.add(normalizedText);
+        deduplicatedTexts.push(chunk.text);
+      }
+    }
+    
+    if (deduplicatedTexts.length > 0) {
+      const newTranscript = deduplicatedTexts.join(' ').trim();
+      
+      console.log(`💾 COMMITTING TRANSCRIPT: "${newTranscript}"`);
+      console.log(`📊 Transcript stats: ${deduplicatedTexts.length} unique chunks, ${newTranscript.length} total chars`);
       
       setTranscriptState(prev => {
         const updatedTranscript = prev.fullTranscript 
           ? `${prev.fullTranscript} ${newTranscript}`.trim()
           : newTranscript;
+        
+        console.log(`📝 Updated transcript length: ${updatedTranscript.length} chars`);
         
         return {
           ...prev,
@@ -234,8 +284,13 @@ export const useTranscriptProcessor = (config?: Partial<ProcessorConfig>) => {
           isProcessing: false
         };
       });
+      
+      console.log('Transcript state updated with:', deduplicatedTexts.length, 'unique texts');
+    } else {
+      console.log('⚠️ No valid transcript chunks to commit');
     }
     
+    // Clear pending chunks after successful commit
     pendingChunksRef.current = [];
   }, []);
 
@@ -268,10 +323,15 @@ export const useTranscriptProcessor = (config?: Partial<ProcessorConfig>) => {
   ) => {
     if (!processorRef.current || !text?.trim()) return;
     
+    console.log(`🔄 Processing final transcript: role=${role}, source=${source}, text="${text.trim()}"`);
+    
     const chunk = processorRef.current.processFinalTranscript(text.trim(), role, source);
     if (chunk) {
       pendingChunksRef.current.push(chunk);
+      console.log(`✅ Final transcript chunk added to pending queue. Queue size: ${pendingChunksRef.current.length}`);
       debouncedCommit();
+    } else {
+      console.log(`❌ Final transcript chunk was rejected (duplicate or empty)`);
     }
   }, [debouncedCommit]);
 

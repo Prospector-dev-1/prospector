@@ -155,26 +155,26 @@ export const useRealtimeAIChat = () => {
       });
 
       vapi.on('message', (message: any) => {
-        console.log('Vapi message:', message);
+        console.log('Vapi message received in useRealtimeAIChat:', message.type);
         
-        // Handle transcript updates without duplicate processing
-        if (message.type === 'transcript' && message.transcript) {
+        // DO NOT process transcripts here - they are handled by useTranscriptManager
+        // Only handle non-transcript message types for coaching and analysis
+        
+        if (message.type === 'transcript' && message.transcript && message.role === 'assistant') {
+          // Only analyze AI responses for coaching, don't duplicate transcript processing
           const transcriptText = typeof message.transcript === 'string' 
             ? message.transcript 
             : message.transcript.text || message.transcript.content || '';
           
           if (transcriptText && transcriptText.trim()) {
-            sessionTranscript.current += transcriptText + '\n';
+            // Just analyze for coaching opportunities - don't store the transcript
+            analyzeAIResponse(transcriptText, sessionConfigRef.current?.prospectPersonality);
+            
+            // Update exchange count without storing transcript
             setConversationState(prev => ({
               ...prev,
-              transcript: sessionTranscript.current,
               exchangeCount: prev.exchangeCount + (message.role === 'user' ? 1 : 0)
             }));
-            
-            // Analyze AI responses for objections and coaching opportunities
-            if (message.role === 'assistant') {
-              analyzeAIResponse(transcriptText, sessionConfigRef.current?.prospectPersonality);
-            }
           }
         }
       });

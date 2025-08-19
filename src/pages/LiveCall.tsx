@@ -120,40 +120,16 @@ const LiveCall = () => {
             },
             onCallEnd: () => {
               handleCallSimulationEnd();
-            },
-            onTranscriptFinal: (text: string, role: 'user' | 'assistant', source: string) => {
-              // Direct integration with transcript processor
-              handleVapiMessage({
-                type: 'transcript',
-                transcript: { text },
-                role,
-                transcriptType: 'final',
-                source
-              });
-            },
-            onTranscriptPartial: (text: string, role: 'user' | 'assistant', source: string) => {
-              // Direct integration with transcript processor
-              handleVapiMessage({
-                type: 'transcript',
-                transcript: { text },
-                role,
-                transcriptType: 'partial',
-                source
-              });
-            },
-            onMessage: (message: any) => {
-              console.log('Raw VAPI message:', message);
-              // Additional message handling if needed
             }
           };
 
-          // Set up stable event listeners
+          // Set up stable event listeners - SINGLE message handler only
           vapiService.on('call-start', eventHandlers.onCallStart);
           vapiService.on('call-end', eventHandlers.onCallEnd);
           vapiService.on('message', (message: any) => {
-            // Process all messages through centralized handler
+            console.log('Raw VAPI message in LiveCall:', message.type);
+            // Process ALL messages through centralized handler only
             handleVapiMessage(message);
-            eventHandlers.onMessage(message);
           });
 
           // Store cleanup function
@@ -163,6 +139,7 @@ const LiveCall = () => {
               vapiService.off('call-end', eventHandlers.onCallEnd);
               vapiService.off('message');
               clearTranscript();
+              console.log('VAPI listeners cleaned up successfully');
             } catch (e) {
               console.error('Error cleaning up VAPI listeners:', e);
             }
