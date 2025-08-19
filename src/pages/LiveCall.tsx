@@ -48,8 +48,22 @@ const LiveCall = () => {
   // Get session config from URL params or localStorage
   const [sessionConfig] = useState(() => {
     const urlParams = new URLSearchParams(window.location.search);
+    const mode = urlParams.get('mode') || 'practice';
+    
+    if (mode === 'call_simulation') {
+      return {
+        replayMode: 'call_simulation',
+        businessType: urlParams.get('business_type') || '',
+        prospectRole: urlParams.get('prospect_role') || 'Business Owner',
+        callObjective: urlParams.get('call_objective') || '',
+        difficulty: parseInt(urlParams.get('difficulty') || '5'),
+        assistantId: urlParams.get('assistant_id') || '',
+        originalMoment: { prospect_name: urlParams.get('prospect_role') || 'Business Owner' }
+      };
+    }
+    
     return {
-      replayMode: urlParams.get('mode') || 'practice',
+      replayMode: mode,
       prospectPersonality: urlParams.get('personality') || 'professional',
       gamificationMode: urlParams.get('gamification') || 'streak_builder',
       originalMoment: JSON.parse(urlParams.get('moment') || '{}')
@@ -109,16 +123,22 @@ const LiveCall = () => {
   const handleEndCall = async () => {
     try {
       await endConversation();
-      // Navigate to analysis page with session data
-      navigate(`/call-analysis/${sessionId}`, {
-        state: {
-          sessionConfig,
-          duration: Math.floor((currentTime - callStartTime) / 1000),
-          score: conversationState.currentScore,
-          exchanges: conversationState.exchangeCount,
-          analysis: finalAnalysis || null
-        }
-      });
+      
+      // For call simulation, navigate to results page
+      if (sessionConfig.replayMode === 'call_simulation') {
+        navigate(`/call-results/${sessionId}`);
+      } else {
+        // Navigate to analysis page with session data for AI replay
+        navigate(`/call-analysis/${sessionId}`, {
+          state: {
+            sessionConfig,
+            duration: Math.floor((currentTime - callStartTime) / 1000),
+            score: conversationState.currentScore,
+            exchanges: conversationState.exchangeCount,
+            analysis: finalAnalysis || null
+          }
+        });
+      }
     } catch (error) {
       toast({
         title: "Error",
@@ -207,7 +227,10 @@ const LiveCall = () => {
                 {sessionConfig.originalMoment?.prospect_name || 'AI Prospect'}
               </h2>
               <p className="text-muted-foreground">
-                {sessionConfig.prospectPersonality} personality
+                {sessionConfig.replayMode === 'call_simulation' 
+                  ? `${sessionConfig.businessType || 'Business'} - Level ${sessionConfig.difficulty || 5}`
+                  : `${sessionConfig.prospectPersonality} personality`
+                }
               </p>
             </div>
 

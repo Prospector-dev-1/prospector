@@ -239,6 +239,18 @@ const CallSimulation = () => {
       
       await vapiRef.current.start(data.assistantId);
       await refreshProfile();
+      
+      // Redirect to live call interface with call simulation config
+      const sessionConfig = new URLSearchParams({
+        mode: 'call_simulation',
+        business_type: businessType,
+        prospect_role: prospectRole,
+        call_objective: callObjective === 'Custom' ? customObjective : callObjective,
+        difficulty: difficultyLevel[0].toString(),
+        assistant_id: data.assistantId
+      });
+      
+      navigate(`/call-simulation-live/${data.callRecordId}?${sessionConfig.toString()}`);
 
     } catch (error: any) {
       console.error('Error starting call:', error);
