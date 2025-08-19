@@ -477,50 +477,65 @@ const CallReview = () => {
 
                     // Extract different types of feedback from the analysis
                     const sections = [
+                      { key: 'strengths', title: 'Strengths', icon: '💪' },
+                      { key: 'weaknesses', title: 'Weaknesses', icon: '⚠️' },
+                      { key: 'better_responses', title: 'Better Responses', icon: '💡' },
+                      { key: 'psychological_insights', title: 'Psychological Insights', icon: '🧠' },
+                      { key: 'objection_handling_scores', title: 'Objection Handling', icon: '🎯' },
+                      { key: 'confidence_score', title: 'Confidence Score', icon: '📊' },
                       { key: 'feedback', title: 'Overall Feedback', icon: '💬' },
                       { key: 'summary', title: 'Call Summary', icon: '📋' },
-                      { key: 'recommendations', title: 'Recommendations', icon: '💡' },
-                      { key: 'analysis', title: 'Detailed Analysis', icon: '🔍' },
-                      { key: 'insights', title: 'Key Insights', icon: '🎯' },
-                      { key: 'coaching_points', title: 'Coaching Points', icon: '🏆' },
-                      { key: 'improvement_areas', title: 'Areas for Improvement', icon: '📈' }
+                      { key: 'recommendations', title: 'Recommendations', icon: '🔍' }
                     ];
 
-                    const hasContent = sections.some(section => analysis[section.key]);
+                    // Find sections that have actual content
+                    const availableSections = sections.filter(section => {
+                      const content = analysis[section.key];
+                      return content && (
+                        typeof content === 'string' ||
+                        typeof content === 'number' ||
+                        (Array.isArray(content) && content.length > 0) ||
+                        (typeof content === 'object' && Object.keys(content).length > 0)
+                      );
+                    });
 
-                    if (!hasContent) {
+                    if (availableSections.length === 0) {
                       return (
-                        <div className="space-y-4">
-                          <div className="text-muted-foreground text-sm">
-                            The AI analysis contains technical data but no formatted feedback. Here's a summary of available information:
-                          </div>
-                          <div className="bg-muted/50 p-4 rounded-lg">
-                            <div className="text-sm space-y-2">
-                              {Object.keys(analysis).map((key) => (
-                                <div key={key} className="flex justify-between">
-                                  <span className="font-medium capitalize">{key.replace(/_/g, ' ')}:</span>
-                                  <span className="text-muted-foreground">
-                                    {typeof analysis[key] === 'object' ? 'Available' : 'Set'}
-                                  </span>
-                                </div>
-                              ))}
-                            </div>
-                          </div>
+                        <div className="text-muted-foreground text-sm">
+                          No detailed feedback available for this call.
                         </div>
                       );
                     }
 
                     return (
                       <div className="space-y-6">
-                        {sections.map(section => {
+                        {availableSections.map(section => {
                           const content = analysis[section.key];
-                          if (!content) return null;
-
-                          const displayContent = typeof content === 'string' 
-                            ? content 
-                            : Array.isArray(content) 
-                              ? content.join('\n• ') 
-                              : JSON.stringify(content, null, 2);
+                          
+                          // Format different content types
+                          let displayContent;
+                          if (typeof content === 'string') {
+                            displayContent = content;
+                          } else if (typeof content === 'number') {
+                            displayContent = `${content}${section.key === 'confidence_score' ? '%' : ''}`;
+                          } else if (Array.isArray(content)) {
+                            displayContent = content.map(item => `• ${item}`).join('\n');
+                          } else if (typeof content === 'object') {
+                            // Handle objects like objection_handling_scores or better_responses
+                            if (section.key === 'objection_handling_scores') {
+                              displayContent = Object.entries(content)
+                                .map(([key, value]) => `• ${key.charAt(0).toUpperCase() + key.slice(1)}: ${value}%`)
+                                .join('\n');
+                            } else if (section.key === 'better_responses') {
+                              displayContent = Object.entries(content)
+                                .map(([key, value]) => `${key.charAt(0).toUpperCase() + key.slice(1).replace(/_/g, ' ')}:\n${value}`)
+                                .join('\n\n');
+                            } else {
+                              displayContent = JSON.stringify(content, null, 2);
+                            }
+                          } else {
+                            displayContent = String(content);
+                          }
 
                           return (
                             <div key={section.key} className="space-y-3">
@@ -530,7 +545,6 @@ const CallReview = () => {
                               </h3>
                               <div className="bg-muted/30 p-4 rounded-lg">
                                 <p className="text-sm leading-relaxed whitespace-pre-wrap">
-                                  {Array.isArray(content) && '• '}
                                   {displayContent}
                                 </p>
                               </div>
