@@ -28,7 +28,8 @@ import {
   Signal,
   TrendingUp,
   Zap,
-  Target
+  Target,
+  BarChart3
 } from 'lucide-react';
 
 const LiveCall = () => {
@@ -369,9 +370,10 @@ const LiveCall = () => {
       setIsAnalyzing(false);
     }
     
-    // Navigate to results regardless of analysis success/failure
-    // Use replace: true to prevent going back to ended call
-    navigate(`/call-results/${sessionConfig.callRecordId}`, { replace: true });
+    // Wait a moment for the analysis to start, then navigate
+    setTimeout(() => {
+      navigate(`/call-results/${sessionConfig.callRecordId}`, { replace: true });
+    }, 2000);
   };
 
   const handleEndCall = async () => {
@@ -493,6 +495,31 @@ const LiveCall = () => {
           {/* Main Call Interface */}
           <div className="flex flex-col items-center justify-center min-h-[calc(100vh-120px)] p-4 space-y-8">
             
+            {/* Analysis in Progress State */}
+            {isAnalyzing && (
+              <div className="text-center space-y-6">
+                <div className="relative">
+                  <div className="w-32 h-32 sm:w-40 sm:h-40 rounded-full bg-gradient-primary flex items-center justify-center">
+                    <BarChart3 className="h-16 w-16 sm:h-20 sm:w-20 text-primary-foreground animate-pulse" />
+                  </div>
+                  <div className="absolute inset-0 rounded-full bg-primary/20 animate-ping" />
+                </div>
+                <div className="space-y-4">
+                  <h2 className="text-2xl font-bold">Analyzing Your Call</h2>
+                  <p className="text-muted-foreground max-w-md">
+                    Our AI is analyzing your performance and preparing detailed feedback. This will take a moment...
+                  </p>
+                  <div className="flex justify-center">
+                    <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+                  </div>
+                </div>
+              </div>
+            )}
+            
+            {/* Regular Call Interface - only show if not analyzing */}
+            {!isAnalyzing && (
+              <>
+            
             {/* AI Prospect Avatar */}
             <div className="relative">
               <div className="w-32 h-32 sm:w-40 sm:h-40 rounded-full bg-gradient-primary flex items-center justify-center">
@@ -566,6 +593,8 @@ const LiveCall = () => {
                 </div>
               )}
             </div>
+            </>
+            )}
           </div>
 
           {/* Volume Control */}
