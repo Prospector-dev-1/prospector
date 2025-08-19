@@ -12,13 +12,11 @@ export const persistTranscript = async (data: TranscriptPersistenceData): Promis
   try {
     console.log(`💾 Persisting transcript for session ${data.callSessionId}`);
     
-    // Update the calls table with the final transcript
+    // Update the calls table with the final transcript only (avoid optional columns that may not exist)
     const { error } = await supabase
       .from('calls')
       .update({
-        transcript: data.finalTranscript,
-        // Add metadata if available
-        ...(data.timeline && { timeline: data.timeline })
+        transcript: data.finalTranscript
       })
       .eq('id', data.callSessionId);
 
