@@ -81,14 +81,53 @@ const CallCoaching = () => {
   }, [callId, user]);
 
   const generateCoaching = async () => {
-    if (!callId) return;
-    
+    if (!callId || !user) return;
     setLoading(true);
     try {
+      // Pre-check transcript and credits to avoid opaque 400s from the Edge Function
+      const [callRes, profileRes] = await Promise.all([
+        supabase
+          .from('calls')
+          .select('id, user_id, transcript')
+          .eq('id', callId)
+          .eq('user_id', user.id)
+          .single(),
+        supabase
+          .from('profiles')
+          .select('credits, monthly_coaching_unlimited')
+          .eq('user_id', user.id)
+          .single(),
+      ]);
+
+      if (callRes.error || !callRes.data) {
+        console.error('Coaching precheck failed: call not found', callRes.error);
+        toast({ title: 'Call not found', description: 'We could not find this call.' });
+        navigate(`/call-results/${callId}`);
+        return;
+      }
+
+      const transcript = callRes.data.transcript as string | null;
+      if (!transcript || transcript.trim().length === 0) {
+        toast({ title: 'Transcript unavailable', description: 'No transcript is available for this call.' });
+        navigate(`/call-results/${callId}`);
+        return;
+      }
+
+      const credits = Number(profileRes.data?.credits ?? 0);
+      const unlimited = Boolean(profileRes.data?.monthly_coaching_unlimited);
+      if (!unlimited && credits < 0.5) {
+        toast({
+          title: 'Insufficient credits',
+          description: 'You need 0.5 credits for objection coaching.'
+        });
+        navigate('/plans');
+        return;
+      }
+
       const { data, error } = await supabase.functions.invoke('analyze-call-coaching', {
         body: { callId },
       });
-      
+
       if (error) {
         console.error('Coaching error:', error, data);
         const generic = 'Objection Coaching is temporarily unavailable. Please try again shortly. No credits were deducted.';
@@ -96,26 +135,17 @@ const CallCoaching = () => {
         const description = (data as any)?.error || (status === 429
           ? 'Rate limited by AI provider. Please retry in a few minutes. No credits were deducted.'
           : generic);
-        toast({ 
-          title: 'Coaching failed', 
-          description
-        });
+        toast({ title: 'Coaching failed', description });
         navigate(`/call-results/${callId}`);
         return;
       }
-      
+
       const payload = data as CoachingResponse;
       setCoachingData(payload);
-      toast({ 
-        title: 'Coaching ready', 
-        description: 'We analyzed your transcript and prepared suggestions.' 
-      });
+      toast({ title: 'Coaching ready', description: 'We analyzed your transcript and prepared suggestions.' });
     } catch (e: any) {
       console.error('Coaching exception:', e);
-      toast({ 
-        title: 'Error', 
-        description: 'Something went wrong. Please try again.' 
-      });
+      toast({ title: 'Error', description: 'Something went wrong. Please try again.' });
       navigate(`/call-results/${callId}`);
     } finally {
       setLoading(false);
