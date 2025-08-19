@@ -48,8 +48,7 @@ const ConversationPanel: React.FC<ConversationPanelProps> = ({
         <CardContent>
           <div className="text-center py-8">
             <MessageSquare className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
-            <p className="text-muted-foreground">Select a moment from Call Moments 
- to begin AI Replay mode</p>
+            <p className="text-muted-foreground">Select a moment from Practice Moments to begin AI Replay mode</p>
           </div>
         </CardContent>
       </Card>;
