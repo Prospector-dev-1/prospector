@@ -1,5 +1,7 @@
 import { useState, useRef, useCallback } from 'react';
 import { supabase } from '@/integrations/supabase/client';
+import { detectObjections, getObjectionCoaching, getPersonalityGuidance } from '@/utils/objectionDetection';
+import { getMomentSpecificCoaching } from '@/utils/momentCoaching';
 
 
 export type ReplayMode = 'detailed' | 'quick' | 'focused';
@@ -9,8 +11,11 @@ export type GamificationMode = 'none' | 'speed' | 'difficulty' | 'empathy';
 interface CoachingHint {
   id: string;
   message: string;
-  type: 'success' | 'warning' | 'info';
+  type: 'success' | 'warning' | 'info' | 'objection' | 'technique';
   timestamp: number;
+  objectionType?: string;
+  technique?: string;
+  priority?: 'low' | 'medium' | 'high';
 }
 
 export interface ConversationState {
@@ -64,26 +69,45 @@ export const useRealtimeAIChat = () => {
     sessionId?: string;
   } | null>(null);
 
-  const addCoachingHint = useCallback((message: string, type: CoachingHint['type'] = 'info') => {
+  const addCoachingHint = useCallback((
+    message: string, 
+    type: CoachingHint['type'] = 'info',
+    options: {
+      objectionType?: string;
+      technique?: string;
+      priority?: 'low' | 'medium' | 'high';
+      duration?: number;
+    } = {}
+  ) => {
     const hint: CoachingHint = {
       id: Date.now().toString(),
       message,
       type,
-      timestamp: Date.now()
+      timestamp: Date.now(),
+      objectionType: options.objectionType,
+      technique: options.technique,
+      priority: options.priority || 'medium'
     };
     
     setConversationState(prev => ({
       ...prev,
-      hints: [...prev.hints.slice(-2), hint] // Keep only last 3 hints
+      hints: [...prev.hints.slice(-3), hint] // Keep only last 4 hints
     }));
 
-    // Auto-remove hint after 8 seconds
+    // Variable auto-remove duration based on type and priority
+    const duration = options.duration || (
+      type === 'objection' ? 20000 : // 20 seconds for objections
+      type === 'technique' ? 15000 : // 15 seconds for techniques
+      options.priority === 'high' ? 12000 : // 12 seconds for high priority
+      8000 // 8 seconds default
+    );
+
     setTimeout(() => {
       setConversationState(prev => ({
         ...prev,
         hints: prev.hints.filter(h => h.id !== hint.id)
       }));
-    }, 8000);
+    }, duration);
   }, []);
 
   const initializeVapi = useCallback(async () => {
@@ -136,8 +160,14 @@ export const useRealtimeAIChat = () => {
           sessionTranscript.current += message.transcript + '\n';
           setConversationState(prev => ({
             ...prev,
-            transcript: sessionTranscript.current
+            transcript: sessionTranscript.current,
+            exchangeCount: prev.exchangeCount + (message.role === 'user' ? 1 : 0)
           }));
+          
+          // Analyze AI responses for objections and coaching opportunities
+          if (message.role === 'assistant') {
+            analyzeAIResponse(message.transcript, sessionConfigRef.current?.prospectPersonality);
+          }
         }
       });
 
@@ -164,14 +194,88 @@ export const useRealtimeAIChat = () => {
     }
   }, [addCoachingHint]);
 
-  const analyzeAIResponse = useCallback((response: string) => {
-    const positiveKeywords = ['interested', 'sounds good', 'tell me more', 'that could work'];
-    const objectionKeywords = ['expensive', 'not sure', 'concerned', 'worried', 'budget'];
+  const analyzeAIResponse = useCallback((response: string, prospectPersonality?: string) => {
+    const personality = prospectPersonality || 'professional';
     
-    if (positiveKeywords.some(keyword => response.toLowerCase().includes(keyword))) {
-      addCoachingHint("Great! The prospect is showing interest. This might be a good time to ask for next steps.", 'success');
-    } else if (objectionKeywords.some(keyword => response.toLowerCase().includes(keyword))) {
-      addCoachingHint("The prospect has raised an objection. Listen carefully and acknowledge their concern.", 'warning');
+    // Detect objections with sophisticated analysis
+    const detectedObjections = detectObjections(response);
+    
+    if (detectedObjections.length > 0) {
+      const primaryObjection = detectedObjections[0];
+      const coaching = getObjectionCoaching(primaryObjection.type, personality);
+      
+      if (coaching) {
+        // Immediate objection handling coaching
+        addCoachingHint(
+          coaching.immediate,
+          'objection',
+          {
+            objectionType: primaryObjection.type,
+            technique: coaching.technique,
+            priority: 'high',
+            duration: 20000
+          }
+        );
+        
+        // Follow-up technique hint
+        if (coaching.followUp) {
+          setTimeout(() => {
+            addCoachingHint(
+              coaching.followUp!,
+              'technique',
+              {
+                technique: coaching.technique,
+                priority: 'medium',
+                duration: 15000
+              }
+            );
+          }, 5000);
+        }
+        
+        // Example response hint
+        if (coaching.example) {
+          setTimeout(() => {
+            addCoachingHint(
+              `Try: "${coaching.example}"`,
+              'info',
+              {
+                priority: 'medium',
+                duration: 12000
+              }
+            );
+          }, 10000);
+        }
+      }
+      
+      return; // Exit early for objections
+    }
+    
+    // Analyze positive signals
+    const positiveKeywords = ['interested', 'sounds good', 'tell me more', 'that could work', 'makes sense', 'compelling'];
+    const buyingSignals = ['when', 'how', 'timeline', 'implementation', 'next step', 'contract', 'pricing', 'proposal'];
+    
+    if (buyingSignals.some(keyword => response.toLowerCase().includes(keyword))) {
+      addCoachingHint(
+        "Strong buying signal detected! The prospect is ready to move forward. Ask for next steps or a commitment.",
+        'success',
+        { priority: 'high', duration: 15000 }
+      );
+    } else if (positiveKeywords.some(keyword => response.toLowerCase().includes(keyword))) {
+      addCoachingHint(
+        "Positive response! Build on their interest by sharing a relevant case study or asking discovery questions.",
+        'success',
+        { priority: 'medium' }
+      );
+    }
+    
+    // Check for stalling tactics
+    const stallingKeywords = ['think about it', 'consider', 'discuss', 'review', 'later', 'maybe'];
+    if (stallingKeywords.some(keyword => response.toLowerCase().includes(keyword))) {
+      addCoachingHint(
+        "They're stalling. Ask what specific concerns they need to address before moving forward.",
+        'warning',
+        { priority: 'high' }
+      );
     }
   }, [addCoachingHint]);
 
@@ -235,10 +339,25 @@ export const useRealtimeAIChat = () => {
 
       await vapiInstance.current?.start(data.assistantId);
 
-      // Start coaching hints
+      // Start with personality-specific coaching
       setTimeout(() => {
-        addCoachingHint(`You're now talking to a ${prospectPersonality} prospect. Adapt your approach accordingly.`, 'info');
+        const personalityGuidance = getPersonalityGuidance(prospectPersonality);
+        addCoachingHint(
+          `${prospectPersonality.charAt(0).toUpperCase() + prospectPersonality.slice(1)} prospect detected. ${personalityGuidance.approach}`,
+          'info',
+          { priority: 'high', duration: 12000 }
+        );
       }, 2000);
+      
+      // Add moment-specific coaching
+      if (selectedMoment?.type) {
+        setTimeout(() => {
+          const momentCoaching = getMomentSpecificCoaching(selectedMoment.type, prospectPersonality);
+          if (momentCoaching) {
+            addCoachingHint(momentCoaching, 'technique', { priority: 'high' });
+          }
+        }, 5000);
+      }
 
     } catch (error) {
       console.error('Error starting enhanced conversation:', error);
