@@ -291,7 +291,7 @@ const CallReview = () => {
 
           {/* Detailed Analysis */}
           <Tabs defaultValue="overview" className="space-y-6">
-            <TabsList className="grid w-full grid-cols-4">
+            <TabsList className="grid w-full grid-cols-2 md:grid-cols-4">
               <TabsTrigger value="overview">Overview</TabsTrigger>
               <TabsTrigger value="objections">Objections</TabsTrigger>
               <TabsTrigger value="feedback">Feedback</TabsTrigger>
