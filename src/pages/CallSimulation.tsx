@@ -292,7 +292,7 @@ const CallSimulation = () => {
       
       // Navigate immediately to results page
       console.log('Navigating to results page...');
-      navigate(`/call-results/${currentCallRecordId}`);
+      navigate(`/call-results/${currentCallRecordId}`, { replace: true });
 
       // Start analysis in background
       try {

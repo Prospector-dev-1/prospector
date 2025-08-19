@@ -289,7 +289,7 @@ const LiveCall = () => {
         variant: "destructive",
       });
       setIsAnalyzing(false);
-      navigate(`/call-results/${sessionConfig.callRecordId}`);
+      navigate(`/call-results/${sessionConfig.callRecordId}`, { replace: true });
       return;
     }
 
@@ -330,7 +330,8 @@ const LiveCall = () => {
     }
     
     // Navigate to results regardless of analysis success/failure
-    navigate(`/call-results/${sessionConfig.callRecordId}`);
+    // Use replace: true to prevent going back to ended call
+    navigate(`/call-results/${sessionConfig.callRecordId}`, { replace: true });
   };
 
   const handleEndCall = async () => {
@@ -343,6 +344,7 @@ const LiveCall = () => {
         // End AI conversation
         await endConversation();
         navigate(`/call-analysis/${sessionId}`, {
+          replace: true, // Prevent going back to ended call
           state: {
             sessionConfig,
             duration: Math.floor((currentTime - callStartTime) / 1000),
