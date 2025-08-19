@@ -82,13 +82,13 @@ const AIReplay = () => {
       if (error) throw error;
       setOriginalCall(data);
 
-      // Set existing moments if available
-      if (data.call_moments && Array.isArray(data.call_moments)) {
+      // Set existing moments if available and not empty
+      if (data.call_moments && Array.isArray(data.call_moments) && data.call_moments.length > 0) {
         // Type-safe parsing of moments from JSON
         const parsedMoments = data.call_moments as Moment[];
         setMoments(parsedMoments);
       } else {
-        // Load moments if not available
+        // Load moments if not available or empty
         await loadMoments(data.id);
       }
     } catch (error) {
