@@ -99,12 +99,10 @@ const LiveCall = () => {
   const [isSettingUp, setIsSettingUp] = useState(sessionConfig.replayMode === 'call_simulation' && sessionConfig.autoStart);
   const [setupError, setSetupError] = useState<string | null>(null);
   
-  // Initialize Vapi for call simulation
+  // Initialize Vapi for call simulation with centralized event management
   useEffect(() => {
     if (sessionConfig.replayMode === 'call_simulation') {
-      let handleCallStart: (() => void) | undefined;
-      let handleCallEnd: (() => void) | undefined;
-      let handleMessage: ((message: any) => void) | undefined;
+      let cleanup: (() => void) | undefined;
 
       const initializeCall = async () => {
         try {
@@ -113,28 +111,62 @@ const LiveCall = () => {
 
           await vapiService.initialize();
 
-          // Define event listeners with stable references
-          handleCallStart = () => {
-            console.log('Call started in LiveCall');
-            setIsCallActive(true);
-            setIsSettingUp(false);
+          // Define event handlers
+          const eventHandlers = {
+            onCallStart: () => {
+              console.log('Call started in LiveCall');
+              setIsCallActive(true);
+              setIsSettingUp(false);
+            },
+            onCallEnd: () => {
+              handleCallSimulationEnd();
+            },
+            onTranscriptFinal: (text: string, role: 'user' | 'assistant', source: string) => {
+              // Direct integration with transcript processor
+              handleVapiMessage({
+                type: 'transcript',
+                transcript: { text },
+                role,
+                transcriptType: 'final',
+                source
+              });
+            },
+            onTranscriptPartial: (text: string, role: 'user' | 'assistant', source: string) => {
+              // Direct integration with transcript processor
+              handleVapiMessage({
+                type: 'transcript',
+                transcript: { text },
+                role,
+                transcriptType: 'partial',
+                source
+              });
+            },
+            onMessage: (message: any) => {
+              console.log('Raw VAPI message:', message);
+              // Additional message handling if needed
+            }
           };
 
-          handleCallEnd = () => {
-            handleCallSimulationEnd();
-          };
-
-          handleMessage = (message: any) => {
-            console.log('Vapi message received:', message);
-            
-            // Use centralized transcript manager for all message processing
+          // Set up stable event listeners
+          vapiService.on('call-start', eventHandlers.onCallStart);
+          vapiService.on('call-end', eventHandlers.onCallEnd);
+          vapiService.on('message', (message: any) => {
+            // Process all messages through centralized handler
             handleVapiMessage(message);
-          };
+            eventHandlers.onMessage(message);
+          });
 
-          // Set up Vapi event listeners
-          vapiService.on('call-start', handleCallStart);
-          vapiService.on('call-end', handleCallEnd);
-          vapiService.on('message', handleMessage);
+          // Store cleanup function
+          cleanup = () => {
+            try {
+              vapiService.off('call-start', eventHandlers.onCallStart);
+              vapiService.off('call-end', eventHandlers.onCallEnd);
+              vapiService.off('message');
+              clearTranscript();
+            } catch (e) {
+              console.error('Error cleaning up VAPI listeners:', e);
+            }
+          };
 
           // If auto-start is enabled, call the start-call function
           if (sessionConfig.autoStart) {
@@ -174,19 +206,7 @@ const LiveCall = () => {
 
       initializeCall();
 
-      // Clean up listeners on unmount or dependency change
-      return () => {
-        try {
-          if (handleCallStart) vapiService.off('call-start', handleCallStart);
-          if (handleCallEnd) vapiService.off('call-end', handleCallEnd);
-          if (handleMessage) vapiService.off('message', handleMessage);
-          
-          // Clear transcript data when component unmounts
-          clearTranscript();
-        } catch (e) {
-          console.error('Error cleaning up Vapi listeners', e);
-        }
-      };
+      return cleanup;
     }
   }, [sessionConfig.replayMode, sessionConfig.autoStart]);
   

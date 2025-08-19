@@ -1,174 +1,36 @@
-import { useState, useRef, useCallback, useEffect } from 'react';
+import { useCallback } from 'react';
+import { useTranscriptProcessor } from './useTranscriptProcessor';
 
-interface TranscriptChunk {
-  id: string;
-  text: string;
-  timestamp: number;
-  role: 'user' | 'assistant' | 'system';
-  type: 'partial' | 'final';
-  source: string; // 'vapi' | 'realtime' | 'manual'
-}
-
-interface TranscriptState {
-  fullTranscript: string;
-  chunks: TranscriptChunk[];
-  isProcessing: boolean;
-  lastUpdate: number;
-}
-
-interface PartialTranscriptBuffer {
-  [key: string]: {
-    text: string;
-    role: 'user' | 'assistant';
-    timestamp: number;
-    source: string;
-  };
+// Legacy interface for backward compatibility  
+interface VapiMessage {
+  type: string;
+  transcript?: any;
+  role?: string;
+  transcriptType?: string;
+  isFinal?: boolean;
+  source?: string;
+  conversation?: any[];
+  speech?: { text: string };
 }
 
 export const useTranscriptManager = () => {
-  const [transcriptState, setTranscriptState] = useState<TranscriptState>({
-    fullTranscript: '',
-    chunks: [],
-    isProcessing: false,
-    lastUpdate: 0
+  const {
+    transcript,
+    chunks,
+    isProcessing,
+    lastUpdate,
+    processPartialTranscript,
+    processFinalTranscript,
+    flushAllPendingTranscripts,
+    clearAllTranscripts
+  } = useTranscriptProcessor({
+    debounceMs: 500,
+    maxPartialBufferAge: 5000,
+    maxChunksToKeep: 100
   });
 
-  // Refs for deduplication and buffering
-  const pendingChunksRef = useRef<Map<string, TranscriptChunk>>(new Map());
-  const processedTextsRef = useRef<Set<string>>(new Set());
-  const debounceTimerRef = useRef<NodeJS.Timeout | null>(null);
-  const lastProcessedRef = useRef<string>('');
-  const partialBufferRef = useRef<PartialTranscriptBuffer>({});
-
-  // Deduplication function - removes repeated words/phrases
-  const deduplicateText = useCallback((text: string): string => {
-    if (!text || text.trim().length === 0) return '';
-    
-    // Normalize the text
-    const normalized = text.trim().toLowerCase();
-    
-    // Check if this exact text was just processed
-    if (normalized === lastProcessedRef.current) {
-      console.log('Duplicate text detected, skipping:', text);
-      return '';
-    }
-    
-    // Split into words and remove consecutive duplicates
-    const words = text.trim().split(/\s+/);
-    const dedupedWords: string[] = [];
-    
-    for (let i = 0; i < words.length; i++) {
-      const currentWord = words[i].toLowerCase();
-      const prevWord = i > 0 ? words[i - 1].toLowerCase() : '';
-      
-      // Skip if same as previous word (but allow some common words)
-      const allowedRepeats = ['the', 'a', 'an', 'and', 'or', 'but', 'yes', 'no'];
-      if (currentWord !== prevWord || allowedRepeats.includes(currentWord)) {
-        dedupedWords.push(words[i]);
-      }
-    }
-    
-    const result = dedupedWords.join(' ');
-    lastProcessedRef.current = result.toLowerCase();
-    
-    return result;
-  }, []);
-
-  // Process and commit pending chunks
-  const commitPendingChunks = useCallback(() => {
-    const chunks = Array.from(pendingChunksRef.current.values())
-      .sort((a, b) => a.timestamp - b.timestamp);
-    
-    if (chunks.length === 0) return;
-
-    console.log('Committing transcript chunks:', chunks.length);
-    
-    // Build final transcript from chunks
-    const finalTexts = chunks
-      .filter(chunk => chunk.type === 'final' && chunk.text.trim().length > 0)
-      .map(chunk => deduplicateText(chunk.text))
-      .filter(text => text.length > 0);
-    
-    if (finalTexts.length > 0) {
-      const newTranscript = finalTexts.join(' ').trim();
-      
-      setTranscriptState(prev => {
-        const updatedTranscript = prev.fullTranscript 
-          ? `${prev.fullTranscript} ${newTranscript}`.trim()
-          : newTranscript;
-        
-        return {
-          ...prev,
-          fullTranscript: updatedTranscript,
-          chunks: [...prev.chunks, ...chunks],
-          lastUpdate: Date.now(),
-          isProcessing: false
-        };
-      });
-    }
-    
-    // Clear processed chunks
-    pendingChunksRef.current.clear();
-  }, [deduplicateText]);
-
-  // Add transcript chunk with deduplication
-  const addTranscriptChunk = useCallback((
-    text: string,
-    role: 'user' | 'assistant' | 'system' = 'user',
-    type: 'partial' | 'final' = 'final',
-    source: string = 'vapi'
-  ) => {
-    if (!text || text.trim().length === 0) return;
-
-    const chunkId = `${source}-${role}-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
-    const normalizedText = text.trim();
-    
-    // Skip if we've seen this exact text recently
-    const textKey = `${normalizedText.toLowerCase()}-${role}`;
-    if (processedTextsRef.current.has(textKey)) {
-      console.log('Skipping duplicate text:', normalizedText);
-      return;
-    }
-    
-    processedTextsRef.current.add(textKey);
-    
-    // Clean up old processed texts (keep last 100)
-    if (processedTextsRef.current.size > 100) {
-      const texts = Array.from(processedTextsRef.current);
-      processedTextsRef.current.clear();
-      texts.slice(-50).forEach(t => processedTextsRef.current.add(t));
-    }
-
-    const chunk: TranscriptChunk = {
-      id: chunkId,
-      text: normalizedText,
-      timestamp: Date.now(),
-      role,
-      type,
-      source
-    };
-
-    console.log('Adding transcript chunk:', chunk);
-    
-    // Add to pending chunks
-    pendingChunksRef.current.set(chunkId, chunk);
-    
-    setTranscriptState(prev => ({ ...prev, isProcessing: true }));
-
-    // Debounced commit for final chunks
-    if (type === 'final') {
-      if (debounceTimerRef.current) {
-        clearTimeout(debounceTimerRef.current);
-      }
-      
-      debounceTimerRef.current = setTimeout(() => {
-        commitPendingChunks();
-      }, 500); // 500ms debounce
-    }
-  }, [commitPendingChunks]);
-
   // Handle VAPI message with proper transcript extraction
-  const handleVapiMessage = useCallback((message: any) => {
+  const handleVapiMessage = useCallback((message: VapiMessage) => {
     if (!message) return;
 
     console.log('Processing VAPI message for transcript:', message.type);
@@ -182,60 +44,35 @@ export const useTranscriptManager = () => {
       // Extract transcript based on message structure
       if (typeof message.transcript === 'string') {
         transcriptText = message.transcript;
-      } else if (message.transcript && message.transcript.text) {
+      } else if (message.transcript?.text) {
         transcriptText = message.transcript.text;
-      } else if (message.transcript && typeof message.transcript === 'object') {
-        transcriptText = message.transcript.transcript || message.transcript.content || '';
+      } else if (message.transcript?.transcript) {
+        transcriptText = message.transcript.transcript;
+      } else if (message.transcript?.content) {
+        transcriptText = message.transcript.content;
       }
 
       // Determine role from message
-      if (message.role) {
-        role = message.role === 'assistant' ? 'assistant' : 'user';
+      if (message.role === 'assistant') {
+        role = 'assistant';
+      } else if (message.role === 'user') {
+        role = 'user';
       }
 
       // Determine if partial or final
       if (message.transcriptType) {
-        transcriptType = message.transcriptType;
+        transcriptType = message.transcriptType as 'partial' | 'final';
       } else if (message.isFinal !== undefined) {
         transcriptType = message.isFinal ? 'final' : 'partial';
       }
 
-      if (transcriptText && transcriptText.trim().length > 0) {
-        // Handle partial transcripts differently - buffer them by role
+      if (transcriptText?.trim()) {
+        const source = message.source || 'vapi';
+        
         if (transcriptType === 'partial') {
-          const bufferKey = `${role}-${message.source || 'vapi'}`;
-          
-          // Update partial buffer
-          if (!partialBufferRef.current[bufferKey]) {
-            partialBufferRef.current[bufferKey] = {
-              text: transcriptText,
-              role,
-              timestamp: Date.now(),
-              source: 'vapi'
-            };
-          } else {
-            // Accumulate partial text
-            partialBufferRef.current[bufferKey].text = transcriptText;
-            partialBufferRef.current[bufferKey].timestamp = Date.now();
-          }
-          
-          console.log('Buffering partial transcript:', bufferKey, transcriptText);
+          processPartialTranscript(transcriptText, role, source);
         } else {
-          // For final transcripts, check if we have a partial buffer to flush
-          const bufferKey = `${role}-${message.source || 'vapi'}`;
-          
-          if (partialBufferRef.current[bufferKey]) {
-            // Use the final text from the buffer or the current text if different
-            const finalText = transcriptText || partialBufferRef.current[bufferKey].text;
-            addTranscriptChunk(finalText, role, 'final', 'vapi');
-            
-            // Clear the buffer
-            delete partialBufferRef.current[bufferKey];
-            console.log('Processed final transcript from buffer:', finalText);
-          } else {
-            // No buffer, just add the final chunk
-            addTranscriptChunk(transcriptText, role, 'final', 'vapi');
-          }
+          processFinalTranscript(transcriptText, role, source);
         }
       }
     }
@@ -244,7 +81,7 @@ export const useTranscriptManager = () => {
     if (message.type === 'conversation-update' && message.conversation) {
       message.conversation.forEach((entry: any) => {
         if (entry.role === 'assistant' && entry.content) {
-          addTranscriptChunk(entry.content, 'assistant', 'final', 'vapi-conversation');
+          processFinalTranscript(entry.content, 'assistant', 'vapi-conversation');
         }
       });
     }
@@ -252,64 +89,19 @@ export const useTranscriptManager = () => {
     // Handle speech updates
     if (message.type === 'speech-update' && message.speech?.text) {
       const role = message.role === 'assistant' ? 'assistant' : 'user';
-      addTranscriptChunk(message.speech.text, role, 'final', 'vapi-speech');
+      processFinalTranscript(message.speech.text, role, 'vapi-speech');
     }
-  }, [addTranscriptChunk]);
-
-  // Clear all transcript data
-  const clearTranscript = useCallback(() => {
-    if (debounceTimerRef.current) {
-      clearTimeout(debounceTimerRef.current);
-    }
-    
-    pendingChunksRef.current.clear();
-    processedTextsRef.current.clear();
-    lastProcessedRef.current = '';
-    partialBufferRef.current = {};
-    
-    setTranscriptState({
-      fullTranscript: '',
-      chunks: [],
-      isProcessing: false,
-      lastUpdate: 0
-    });
-    
-    console.log('Transcript cleared');
-  }, []);
-
-  // Force commit any pending chunks
-  const flushPendingChunks = useCallback(() => {
-    if (debounceTimerRef.current) {
-      clearTimeout(debounceTimerRef.current);
-    }
-    
-    // Flush any remaining partial buffers as final
-    Object.entries(partialBufferRef.current).forEach(([key, buffer]) => {
-      console.log('Flushing partial buffer as final:', key, buffer.text);
-      addTranscriptChunk(buffer.text, buffer.role, 'final', buffer.source);
-    });
-    partialBufferRef.current = {};
-    
-    commitPendingChunks();
-  }, [commitPendingChunks, addTranscriptChunk]);
-
-  // Cleanup on unmount
-  useEffect(() => {
-    return () => {
-      if (debounceTimerRef.current) {
-        clearTimeout(debounceTimerRef.current);
-      }
-    };
-  }, []);
+  }, [processPartialTranscript, processFinalTranscript]);
 
   return {
-    transcript: transcriptState.fullTranscript,
-    chunks: transcriptState.chunks,
-    isProcessing: transcriptState.isProcessing,
-    lastUpdate: transcriptState.lastUpdate,
-    addTranscriptChunk,
+    transcript,
+    chunks,
+    isProcessing,
+    lastUpdate,
+    // Legacy methods for backward compatibility
+    addTranscriptChunk: processFinalTranscript,
     handleVapiMessage,
-    clearTranscript,
-    flushPendingChunks
+    clearTranscript: clearAllTranscripts,
+    flushPendingChunks: flushAllPendingTranscripts
   };
 };
