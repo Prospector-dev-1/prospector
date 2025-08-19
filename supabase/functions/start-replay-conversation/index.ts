@@ -43,8 +43,15 @@ serve(async (req) => {
       endCallFunctionEnabled: false,
       recordingEnabled: true,
       hipaaEnabled: false,
+      transcriber: {
+        provider: "openai",
+        model: "whisper-1",
+        language: "en",
+        interimResults: true
+      },
       clientMessages: ["conversation-update", "function-call", "hang", "model-output", "speech-update", "status-update", "transcript", "tool-calls", "user-interrupted", "voice-input"]
     };
+    console.log('Assistant config:', JSON.stringify(assistantConfig, null, 2));
 
     const response = await fetch('https://api.vapi.ai/assistant', {
       method: 'POST',
