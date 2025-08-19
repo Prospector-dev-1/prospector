@@ -147,8 +147,8 @@ const CallResults = () => {
         throw new Error('Failed to fetch call data for retry');
       }
 
-      if (!callData?.transcript) {
-        throw new Error('No transcript available for analysis');
+      if (!callData?.transcript || callData.transcript.trim().length === 0) {
+        throw new Error('No transcript available for analysis. The call may have been too short or no speech was detected.');
       }
 
       // Update status to analyzing

@@ -46,6 +46,7 @@ const LiveCall = () => {
   const [callDuration, setCallDuration] = useState(0);
   const [transcript, setTranscript] = useState('');
   const [isCallActive, setIsCallActive] = useState(false);
+  const [isAnalyzing, setIsAnalyzing] = useState(false);
 
   const [callStartTime] = useState(Date.now());
   const [currentTime, setCurrentTime] = useState(Date.now());
@@ -106,8 +107,20 @@ const LiveCall = () => {
           vapiService.on('call-end', handleCallSimulationEnd);
           
           vapiService.on('message', (message: any) => {
-            if (message.type === 'transcript' && message.transcript) {
-              setTranscript(prev => prev + ' ' + message.transcript);
+            console.log('Vapi message received:', message);
+            
+            // Handle different message types for transcript collection
+            if (message.type === 'transcript') {
+              if (message.transcript && message.transcript.text) {
+                setTranscript(prev => prev + ' ' + message.transcript.text);
+              } else if (message.transcript && typeof message.transcript === 'string') {
+                setTranscript(prev => prev + ' ' + message.transcript);
+              }
+            }
+            
+            // Also check for speech-update or other transcript formats
+            if (message.type === 'speech-update' && message.speech?.text) {
+              setTranscript(prev => prev + ' ' + message.speech.text);
             }
           });
 
@@ -192,32 +205,72 @@ const LiveCall = () => {
   }, [conversationState.isActive, conversationState.isConnecting, endConversation]);
 
   const handleCallSimulationEnd = async () => {
+    // Prevent duplicate calls
+    if (isAnalyzing) {
+      console.log('Analysis already in progress, skipping duplicate call');
+      return;
+    }
+    
     console.log('Call simulation ended');
     setIsCallActive(false);
+    setIsAnalyzing(true);
     
-    // Update call record with transcript and duration first
+    const finalTranscript = transcript.trim();
+    const finalDuration = Math.max(callDuration, 1); // Ensure minimum duration
+    
+    console.log('Final transcript length:', finalTranscript.length);
+    console.log('Final duration:', finalDuration);
+    
+    // Update call record with transcript and duration first, with validation
     try {
-      await supabase
+      const updateData = {
+        transcript: finalTranscript,
+        duration_seconds: finalDuration,
+        call_status: finalTranscript.length > 0 ? 'analyzing' : 'failed'
+      };
+      
+      const { error: updateError } = await supabase
         .from('calls')
-        .update({
-          transcript,
-          duration_seconds: callDuration,
-          call_status: 'analyzing'
-        })
+        .update(updateData)
         .eq('id', sessionConfig.callRecordId);
+      
+      if (updateError) {
+        throw updateError;
+      }
       
       console.log('Updated call record with transcript and duration');
     } catch (error) {
       console.error('Error updating call record:', error);
+      toast({
+        title: "Update Failed",
+        description: "Failed to save call data. Please try again.",
+        variant: "destructive",
+      });
+      setIsAnalyzing(false);
+      return;
+    }
+
+    // Only proceed with analysis if we have a valid transcript
+    if (finalTranscript.length === 0) {
+      console.log('No transcript captured, skipping analysis');
+      toast({
+        title: "No Transcript",
+        description: "No conversation was captured. Please try speaking during the call.",
+        variant: "destructive",
+      });
+      setIsAnalyzing(false);
+      navigate(`/call-results/${sessionConfig.callRecordId}`);
+      return;
     }
 
     // Trigger proper call analysis using end-call-analysis function
     try {
+      console.log('Starting call analysis...');
       const { data, error } = await supabase.functions.invoke('end-call-analysis', {
         body: {
           callRecordId: sessionConfig.callRecordId,
-          transcript,
-          duration: callDuration
+          transcript: finalTranscript,
+          duration: finalDuration
         }
       });
       
@@ -230,6 +283,10 @@ const LiveCall = () => {
         });
       } else {
         console.log('Call analysis completed successfully');
+        toast({
+          title: "Analysis Started",
+          description: "Processing your call performance...",
+        });
       }
     } catch (error) {
       console.error('Error analyzing call:', error);
@@ -238,6 +295,8 @@ const LiveCall = () => {
         description: "Call analysis failed. You can retry from the results page.",
         variant: "destructive",
       });
+    } finally {
+      setIsAnalyzing(false);
     }
     
     // Navigate to results regardless of analysis success/failure

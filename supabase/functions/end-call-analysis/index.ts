@@ -12,8 +12,19 @@ serve(async (req) => {
     return new Response(null, { headers: corsHeaders });
   }
 
+  let callRecordId: string | undefined;
+  let userId: string | undefined;
+  
   try {
-    const { callRecordId, transcript, duration } = await req.json();
+    const requestBody = await req.json();
+    callRecordId = requestBody.callRecordId;
+    const transcript = requestBody.transcript;
+    const duration = requestBody.duration;
+    
+    console.log('=== END-CALL-ANALYSIS START ===');
+    console.log('Call Record ID:', callRecordId);
+    console.log('Transcript length:', transcript?.length || 0);
+    console.log('Duration:', duration);
     
     // If transcript is missing, try to fetch from call record
     let finalTranscript = transcript;
@@ -29,7 +40,6 @@ serve(async (req) => {
     );
 
     // Decode JWT locally
-    let userId: string | undefined;
     try {
       const base64Url = token.split('.')[1];
       const payload = JSON.parse(atob(base64Url));
@@ -59,8 +69,26 @@ serve(async (req) => {
       finalTranscript = callRecord.transcript;
     }
     
-    if (!finalTranscript) {
-      throw new Error('No transcript available for analysis');
+    if (!finalTranscript || finalTranscript.trim().length === 0) {
+      console.log('No valid transcript available, updating call status to failed');
+      
+      // Update call record with failed status and helpful message
+      await supabaseService
+        .from('calls')
+        .update({
+          call_status: 'failed',
+          ai_feedback: 'Unable to analyze call: No transcript was captured during the call. This may happen if the call was too short or there were technical issues. Please try making another call.'
+        })
+        .eq('id', callRecordId);
+      
+      return new Response(JSON.stringify({ 
+        success: false, 
+        error: 'No transcript available for analysis',
+        message: 'Call analysis failed due to missing transcript'
+      }), {
+        status: 400,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
     }
 
     console.log('=== ANALYSIS DEBUG ===');
@@ -440,15 +468,27 @@ ${overallScore < 3 ? 'This was a weak sales call. Focus on: 1) Professional intr
   } catch (error) {
     console.error('Error in end-call-analysis function:', error);
     
-    // Update call status to failed so it doesn't stay in analyzing state
-    if (callRecordId) {
+    // Update call record with failed status if we have the callRecordId
+    if (callRecordId && userId) {
       try {
+        const supabaseService = createClient(
+          Deno.env.get('SUPABASE_URL') ?? '',
+          Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? '',
+          { auth: { persistSession: false } }
+        );
+        
         await supabaseService
           .from('calls')
-          .update({ call_status: 'failed' })
-          .eq('id', callRecordId);
+          .update({
+            call_status: 'failed',
+            ai_feedback: `Analysis failed: ${error.message}. Please try the analysis again or contact support if the issue persists.`
+          })
+          .eq('id', callRecordId)
+          .eq('user_id', userId);
+          
+        console.log('Updated call record with failed status');
       } catch (updateError) {
-        console.error('Failed to update call status to failed:', updateError);
+        console.error('Failed to update call record with error status:', updateError);
       }
     }
     
