@@ -141,20 +141,7 @@ const ConversationPanel: React.FC<ConversationPanelProps> = ({
           </div>}
 
         {/* Final Score Display */}
-        {currentScore !== null && !isActive && !isConnecting && <div className="p-4 bg-accent/10 rounded-lg border border-accent/20">
-            <div className="flex items-center justify-between mb-2">
-              <span className="text-sm font-medium">Final Score</span>
-              <span className={`text-2xl font-bold ${getScoreColor(currentScore)}`}>
-                {currentScore}/100
-              </span>
-            </div>
-            <div className="flex items-center gap-2">
-              <TrendingUp className="h-4 w-4 text-success" />
-              <span className="text-sm text-muted-foreground">
-                {exchangeCount} exchanges completed
-              </span>
-            </div>
-          </div>}
+        {currentScore !== null && !isActive && !isConnecting}
       </CardContent>
     </Card>;
 };
