@@ -124,8 +124,28 @@ const LiveCall = () => {
           vapiService.on('call-end', eventHandlers.onCallEnd);
           vapiService.on('message', (message: any) => {
             console.log('Raw VAPI message in LiveCall:', message.type);
-            // Process transcript messages through new session manager
             transcriptSession.processVapiMessage(message);
+          });
+          // Attach explicit transcript-related events as fallback (SDK variants)
+          vapiService.on('transcript', (evt: any) => {
+            console.log('VAPI transcript event:', evt);
+            transcriptSession.processVapiMessage({ type: 'transcript', ...evt });
+          });
+          vapiService.on('transcript.partial', (evt: any) => {
+            console.log('VAPI transcript.partial event:', evt);
+            transcriptSession.processVapiMessage({ type: 'transcript', isFinal: false, ...evt });
+          });
+          vapiService.on('transcript.final', (evt: any) => {
+            console.log('VAPI transcript.final event:', evt);
+            transcriptSession.processVapiMessage({ type: 'transcript', isFinal: true, ...evt });
+          });
+          vapiService.on('speech-update', (evt: any) => {
+            console.log('VAPI speech-update event:', evt);
+            transcriptSession.processVapiMessage({ type: 'speech-update', ...evt });
+          });
+          vapiService.on('conversation-update', (evt: any) => {
+            console.log('VAPI conversation-update event:', evt);
+            transcriptSession.processVapiMessage({ type: 'conversation-update', ...evt });
           });
 
           // Store cleanup function
@@ -134,6 +154,11 @@ const LiveCall = () => {
                 vapiService.off('call-start', eventHandlers.onCallStart);
                 vapiService.off('call-end', eventHandlers.onCallEnd);
                 vapiService.off('message');
+                vapiService.off('transcript');
+                vapiService.off('transcript.partial');
+                vapiService.off('transcript.final');
+                vapiService.off('speech-update');
+                vapiService.off('conversation-update');
                 transcriptSession.clear();
                 console.log('VAPI listeners cleaned up successfully');
               } catch (e) {

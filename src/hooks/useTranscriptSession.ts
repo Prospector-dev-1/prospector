@@ -126,30 +126,65 @@ class TranscriptSessionManager {
     this.notifyListeners();
   }
 
-  public processVapiMessage(message: VapiTranscriptMessage) {
-    if (!message || message.type !== 'transcript') return;
+  public processVapiMessage(message: VapiTranscriptMessage | any) {
+    if (!message) return;
 
-    let text = '';
-    if (typeof message.transcript === 'string') {
-      text = message.transcript;
-    } else if (message.transcript?.text) {
-      text = message.transcript.text;
-    } else if (message.transcript?.content) {
-      text = message.transcript.content;
+    // Some SDKs emit direct transcript events without type
+    if (!message.type && (message.transcript || message.text)) {
+      const text = message.transcript?.text || message.text || '';
+      const role = message.role === 'assistant' ? 'prospect' : 'user';
+      const isFinal = !!message.isFinal;
+      const timestamp = message.timestamp || Date.now();
+      const source = message.source || 'vapi';
+      if (isFinal) this.addFinalTranscript(text, role, timestamp, source);
+      else this.addInterimTranscript(text, role, timestamp, source);
+      return;
     }
 
-    if (!text?.trim()) return;
+    // Normalize message
+    const type = message.type;
 
-    const speaker = message.role === 'assistant' ? 'prospect' : 'user';
-    const isFinal = message.isFinal ?? (message.transcriptType === 'final');
-    const timestamp = message.timestamp || Date.now();
-    const source = message.source || 'vapi';
+    if (type === 'transcript') {
+      let text = '';
+      if (typeof message.transcript === 'string') text = message.transcript;
+      else if (message.transcript?.text) text = message.transcript.text;
+      else if (message.transcript?.content) text = message.transcript.content;
 
-    if (isFinal) {
-      this.addFinalTranscript(text, speaker, timestamp, source);
-    } else {
-      this.addInterimTranscript(text, speaker, timestamp, source);
+      if (!text?.trim()) return;
+
+      const speaker = message.role === 'assistant' ? 'prospect' : 'user';
+      const isFinal = message.isFinal ?? (message.transcriptType === 'final');
+      const timestamp = message.timestamp || Date.now();
+      const source = message.source || 'vapi';
+
+      if (isFinal) this.addFinalTranscript(text, speaker, timestamp, source);
+      else this.addInterimTranscript(text, speaker, timestamp, source);
+      return;
     }
+
+    if (type === 'speech-update' && message.speech?.text) {
+      const text = message.speech.text as string;
+      const speaker = message.role === 'assistant' ? 'prospect' : 'user';
+      this.addFinalTranscript(text, speaker, message.timestamp || Date.now(), 'vapi-speech');
+      return;
+    }
+
+    if (type === 'conversation-update' && message.conversation) {
+      try {
+        message.conversation.forEach((entry: any) => {
+          if (entry.content && typeof entry.content === 'string') {
+            const sp = entry.role === 'assistant' ? 'prospect' : 'user';
+            this.addFinalTranscript(entry.content, sp, Date.now(), 'vapi-conversation');
+          }
+        });
+      } catch (e) {
+        console.warn('Failed to process conversation-update:', e);
+      }
+      return;
+    }
+
+    // Fallback log
+    console.log('Unhandled VAPI message type:', type, message);
   }
 
   private addInterimTranscript(text: string, speaker: 'user' | 'prospect', timestamp: number, source: string) {
