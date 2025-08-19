@@ -96,10 +96,40 @@ serve(async (req) => {
     console.log('Transcript length:', finalTranscript.length);
     console.log('Duration:', duration);
 
+    // Remove large system/prompt blocks and normalize whitespace
+    function stripSystemContent(raw: string): string {
+      if (!raw) return '';
+      let t = raw.replace(/\r/g, '');
+      // Aggressively drop known prompt sections (often injected by simulators)
+      const sectionPattern = /(?:ROLE AND CONTEXT|BUSINESS CONTEXT|PERSONALITY|OBJECTIONS STRATEGY|HUMAN-LIKE SPEECH GUIDELINES)[\s\S]*?(?=(?:\n{2,}|$))/gi;
+      t = t.replace(sectionPattern, '');
+      // Remove obvious guideline lines
+      const lines = t.split(/\n+/).map(l => l.trim());
+      const keep: string[] = [];
+      for (const l of lines) {
+        if (!l) continue;
+        if (/^(Assistant:|User:)/.test(l)) { keep.push(l); continue; }
+        // Skip lines that look like meta/guidelines
+        if (/\b(communication style|backchannel|disfluenc|guidelines|constraint|primary goal|current toolset|mood right now|conversation quirks)\b/i.test(l)) continue;
+        if (/^[-•]/.test(l)) continue;
+        if ((l.match(/-/g)?.length || 0) >= 3) continue;
+        // Very long lines are likely prompt blocks
+        if (l.length > 320) continue;
+        keep.push(l);
+      }
+      // Deduplicate adjacent repeats
+      const dedup: string[] = [];
+      for (const l of keep) {
+        if (dedup.length === 0 || dedup[dedup.length - 1] !== l) dedup.push(l);
+      }
+      return dedup.join('\n').trim();
+    }
+
     // Clean up transcript to remove duplicates and repetitive text
     function cleanTranscript(rawTranscript: string): string {
       if (!rawTranscript) return '';
-      const lines = rawTranscript.split('\n').map(line => line.trim()).filter(Boolean);
+      const stripped = stripSystemContent(rawTranscript);
+      const lines = stripped.split(/\n+/).map(line => line.trim()).filter(Boolean);
       const cleanedLines: string[] = [];
       for (const line of lines) {
         const words = line.split(/\s+/);
@@ -113,10 +143,10 @@ serve(async (req) => {
           cleanedLines.push(cleanedLine);
         }
       }
-      return cleanedLines.join(' ');
+      return cleanedLines.join('\n');
     }
 
-    // Advanced normalization: rebuild turns and collapse repeated phrases
+    // Advanced normalization: collapse repeated phrases
     function collapseRepeatedPhrases(text: string): string {
       const words = text.split(/\s+/).filter(Boolean);
       const out: string[] = [];
@@ -145,6 +175,42 @@ serve(async (req) => {
         }
       }
       return out.join(' ').replace(/\s+([,.!?;:])/g, '$1');
+    }
+
+    // Fallback: infer speaker turns from plain text by alternating speakers
+    function inferTurnsFromPlainText(raw: string): string {
+      const lines = raw.split(/\n+/).map(l => l.trim()).filter(Boolean);
+      const filtered = lines.filter(l => {
+        if (/^(Assistant:|User:)/.test(l)) return true;
+        if (l.length > 280) return false;
+        if (/\b(ROLE AND CONTEXT|BUSINESS CONTEXT|PERSONALITY|OBJECTIONS STRATEGY|HUMAN-LIKE SPEECH GUIDELINES)\b/i.test(l)) return false;
+        if (/\b(communication style|backchannel|disfluenc|guidelines|constraint|primary goal|current toolset)\b/i.test(l)) return false;
+        return true;
+      });
+      if (filtered.length === 0) return '';
+      // Heuristic: if the first line looks like a probing question, assume Assistant starts
+      const first = filtered[0].toLowerCase();
+      let next: 'Assistant' | 'User' = /(what's|what’s|how can i help|what can i do|tell me|what brings you)/.test(first) ? 'Assistant' : 'User';
+      const out: string[] = [];
+      for (const l of filtered) {
+        if (/^(Assistant:|User:)/.test(l)) { out.push(l); continue; }
+        out.push(`${next}: ${l}`);
+        next = next === 'Assistant' ? 'User' : 'Assistant';
+      }
+      // Merge consecutive same-speaker lines
+      const merged: string[] = [];
+      for (const line of out) {
+        const m = line.match(/^(Assistant|User):\s*(.*)$/);
+        if (!m) continue;
+        const speaker = m[1];
+        const content = m[2];
+        if (merged.length && merged[merged.length - 1].startsWith(`${speaker}:`)) {
+          merged[merged.length - 1] = `${speaker}: ${collapseRepeatedPhrases(merged[merged.length - 1].slice(speaker.length + 2) + ' ' + content).trim()}`;
+        } else {
+          merged.push(`${speaker}: ${collapseRepeatedPhrases(content).trim()}`);
+        }
+      }
+      return merged.join('\n');
     }
 
     function rebuildTurns(raw: string): string {
@@ -176,6 +242,11 @@ serve(async (req) => {
         }
       }
 
+      if (turns.length === 0) {
+        // No labeled turns present; infer by alternation
+        return inferTurnsFromPlainText(normalized);
+      }
+
       const out: string[] = [];
       let prevLine = '';
       for (const t of turns) {
@@ -186,7 +257,14 @@ serve(async (req) => {
           prevLine = line;
         }
       }
-      return out.join('\n');
+
+      const joined = out.join('\n');
+      const hasUser = /\n?User:\s+/.test(joined);
+      if (!hasUser) {
+        // Ensure we have user participation for analysis to proceed
+        return inferTurnsFromPlainText(normalized);
+      }
+      return joined;
     }
 
     const initialClean = cleanTranscript(finalTranscript);
