@@ -56,7 +56,7 @@ const LiveCall = () => {
 
   // Get session config from URL params or localStorage
   const [sessionConfig] = useState(() => {
-    const urlParams = new URLSearchParams(window.location.search);
+    const urlParams = new URLSearchParams(location.search);
     const mode = urlParams.get('mode') || 'practice';
     
     if (mode === 'call_simulation') {

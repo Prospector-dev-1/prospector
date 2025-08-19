@@ -18,12 +18,12 @@ class VapiService {
     if (this.vapi) return;
 
     try {
-      // Get Vapi public key from edge function
-      const response = await fetch('/functions/v1/get-vapi-key');
-      const data = await response.json();
+      // Get Vapi public key from edge function using Supabase client
+      const { supabase } = await import('@/integrations/supabase/client');
+      const { data, error } = await supabase.functions.invoke('get-vapi-key');
       
-      if (!data.publicKey) {
-        throw new Error('Failed to get Vapi public key');
+      if (error || !data?.publicKey) {
+        throw new Error('Failed to get Vapi public key from Supabase');
       }
 
       this.publicKey = data.publicKey;

@@ -51,6 +51,11 @@ const CallSimulation = () => {
         
         if (keyError || !keyData?.publicKey) {
           console.error('Failed to get Vapi public key:', keyError);
+          toast({
+            title: "Initialization Error",
+            description: "Failed to initialize call system. Please refresh and try again.",
+            variant: "destructive",
+          });
           return;
         }
 
