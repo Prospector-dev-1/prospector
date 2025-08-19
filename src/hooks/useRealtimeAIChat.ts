@@ -79,11 +79,12 @@ export const useRealtimeAIChat = () => {
       duration?: number;
     } = {}
   ) => {
+    const timestamp = Date.now();
     const hint: CoachingHint = {
-      id: Date.now().toString(),
+      id: `${timestamp}-${Math.random().toString(36).substr(2, 9)}`,
       message,
       type,
-      timestamp: Date.now(),
+      timestamp,
       objectionType: options.objectionType,
       technique: options.technique,
       priority: options.priority || 'medium'
