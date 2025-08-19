@@ -370,10 +370,8 @@ const LiveCall = () => {
       setIsAnalyzing(false);
     }
     
-    // Wait a moment for the analysis to start, then navigate
-    setTimeout(() => {
-      navigate(`/call-results/${sessionConfig.callRecordId}`, { replace: true });
-    }, 2000);
+    // Navigate immediately after analysis starts
+    navigate(`/call-results/${sessionConfig.callRecordId}`, { replace: true });
   };
 
   const handleEndCall = async () => {
@@ -598,21 +596,23 @@ const LiveCall = () => {
           </div>
 
           {/* Volume Control */}
-          <div className="px-6 pb-4">
-            <Card className="p-4">
-              <div className="flex items-center gap-4">
-                <Volume2 className="h-4 w-4" />
-                <Slider
-                  value={volume}
-                  onValueChange={setVolume}
-                  max={100}
-                  step={5}
-                  className="flex-1"
-                />
-                <span className="text-sm font-medium w-12">{volume[0]}%</span>
-              </div>
-            </Card>
-          </div>
+          {!isAnalyzing && (
+            <div className="px-6 pb-4">
+              <Card className="p-4">
+                <div className="flex items-center gap-4">
+                  <Volume2 className="h-4 w-4" />
+                  <Slider
+                    value={volume}
+                    onValueChange={setVolume}
+                    max={100}
+                    step={5}
+                    className="flex-1"
+                  />
+                  <span className="text-sm font-medium w-12">{volume[0]}%</span>
+                </div>
+              </Card>
+            </div>
+          )}
 
           {/* Call Controls */}
           {!isAnalyzing && (
@@ -655,17 +655,6 @@ const LiveCall = () => {
           </div>
           )}
 
-          {/* Live Transcript Display */}
-          {(isCallActive || conversationState.isActive) && (
-            <div className="fixed bottom-24 left-4 right-4 z-30 max-h-48 overflow-hidden">
-              <TranscriptDisplay
-                finalChunks={transcriptSession.state.finalChunks}
-                liveBuffer={transcriptSession.state.liveBuffer}
-                showLive={true}
-                className="bg-background/95 backdrop-blur-md"
-              />
-            </div>
-          )}
 
           {/* Floating Coaching Hints */}
           <div className="fixed top-20 right-4 left-4 z-40 pointer-events-none">
