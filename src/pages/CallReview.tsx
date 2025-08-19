@@ -457,15 +457,89 @@ const CallReview = () => {
             <TabsContent value="feedback" className="space-y-6">
               <Card>
                 <CardHeader>
-                  <CardTitle>Detailed AI Analysis</CardTitle>
+                  <CardTitle>AI Feedback & Analysis</CardTitle>
                   <CardDescription>
-                    Raw AI feedback and technical analysis data for advanced review
+                    Detailed insights and recommendations from AI analysis
                   </CardDescription>
                 </CardHeader>
-                <CardContent>
-                  <pre className="whitespace-pre-wrap text-sm bg-muted p-4 rounded-lg">
-                    {JSON.stringify(callData.ai_analysis, null, 2)}
-                  </pre>
+                <CardContent className="space-y-6">
+                  {(() => {
+                    // Parse the AI analysis to extract readable feedback
+                    const analysis = callData.ai_analysis;
+                    
+                    if (!analysis || typeof analysis !== 'object') {
+                      return (
+                        <div className="text-muted-foreground text-sm">
+                          No detailed feedback available for this call.
+                        </div>
+                      );
+                    }
+
+                    // Extract different types of feedback from the analysis
+                    const sections = [
+                      { key: 'feedback', title: 'Overall Feedback', icon: '💬' },
+                      { key: 'summary', title: 'Call Summary', icon: '📋' },
+                      { key: 'recommendations', title: 'Recommendations', icon: '💡' },
+                      { key: 'analysis', title: 'Detailed Analysis', icon: '🔍' },
+                      { key: 'insights', title: 'Key Insights', icon: '🎯' },
+                      { key: 'coaching_points', title: 'Coaching Points', icon: '🏆' },
+                      { key: 'improvement_areas', title: 'Areas for Improvement', icon: '📈' }
+                    ];
+
+                    const hasContent = sections.some(section => analysis[section.key]);
+
+                    if (!hasContent) {
+                      return (
+                        <div className="space-y-4">
+                          <div className="text-muted-foreground text-sm">
+                            The AI analysis contains technical data but no formatted feedback. Here's a summary of available information:
+                          </div>
+                          <div className="bg-muted/50 p-4 rounded-lg">
+                            <div className="text-sm space-y-2">
+                              {Object.keys(analysis).map((key) => (
+                                <div key={key} className="flex justify-between">
+                                  <span className="font-medium capitalize">{key.replace(/_/g, ' ')}:</span>
+                                  <span className="text-muted-foreground">
+                                    {typeof analysis[key] === 'object' ? 'Available' : 'Set'}
+                                  </span>
+                                </div>
+                              ))}
+                            </div>
+                          </div>
+                        </div>
+                      );
+                    }
+
+                    return (
+                      <div className="space-y-6">
+                        {sections.map(section => {
+                          const content = analysis[section.key];
+                          if (!content) return null;
+
+                          const displayContent = typeof content === 'string' 
+                            ? content 
+                            : Array.isArray(content) 
+                              ? content.join('\n• ') 
+                              : JSON.stringify(content, null, 2);
+
+                          return (
+                            <div key={section.key} className="space-y-3">
+                              <h3 className="text-lg font-semibold flex items-center gap-2">
+                                <span>{section.icon}</span>
+                                {section.title}
+                              </h3>
+                              <div className="bg-muted/30 p-4 rounded-lg">
+                                <p className="text-sm leading-relaxed whitespace-pre-wrap">
+                                  {Array.isArray(content) && '• '}
+                                  {displayContent}
+                                </p>
+                              </div>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    );
+                  })()}
                 </CardContent>
               </Card>
             </TabsContent>
