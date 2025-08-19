@@ -11,6 +11,7 @@ import SEO from '@/components/SEO';
 import { useToast } from '@/hooks/use-toast';
 import MobileLayout from '@/components/MobileLayout';
 import SmartBackButton from '@/components/SmartBackButton';
+import { TranscriptDisplay } from '@/components/TranscriptDisplay';
 interface CallRecord {
   id: string;
   difficulty_level: number;
@@ -515,30 +516,13 @@ const CallResults = () => {
             </Card>
 
             {/* Call Transcript */}
-            <Card className="mb-8">
-              <CardHeader>
-                <CardTitle>Call Transcript</CardTitle>
-                <CardDescription>
-                  Complete conversation from your practice session
-                </CardDescription>
-              </CardHeader>
-              <CardContent>
-                {callRecord.transcript && callRecord.transcript.trim().length > 0 ? (
-                  <div className="bg-muted p-4 rounded-lg max-h-96 overflow-y-auto">
-                    <p className="text-sm whitespace-pre-wrap">
-                      {callRecord.transcript}
-                    </p>
-                  </div>
-                ) : (
-                  <div className="bg-muted/50 p-6 rounded-lg text-center">
-                    <p className="text-muted-foreground mb-2">No transcript available</p>
-                    <p className="text-sm text-muted-foreground">
-                      This call was too short or no speech was detected. Try speaking during your next practice call.
-                    </p>
-                  </div>
-                )}
-              </CardContent>
-            </Card>
+            <TranscriptDisplay
+              finalChunks={[]}
+              liveBuffer={[]}
+              finalTranscript={callRecord.transcript}
+              showLive={false}
+              className="mb-8"
+            />
 
             {/* Objection Coaching */}
             <Card className="mb-8">

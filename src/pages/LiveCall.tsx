@@ -1,7 +1,8 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useParams, useNavigate, useLocation } from 'react-router-dom';
 import { useRealtimeAIChat } from '@/hooks/useRealtimeAIChat';
-import { useTranscriptManager } from '@/hooks/useTranscriptManager';
+import { useTranscriptSession } from '@/hooks/useTranscriptSession';
+import { TranscriptDisplay } from '@/components/TranscriptDisplay';
 import { Button } from '@/components/ui/button';
 import { Progress } from '@/components/ui/progress';
 import { Badge } from '@/components/ui/badge';
@@ -15,6 +16,7 @@ import SmartBackButton from '@/components/SmartBackButton';
 import { useToast } from '@/components/ui/use-toast';
 import VapiService from '@/utils/vapiService';
 import { supabase } from '@/integrations/supabase/client';
+import { persistTranscript, generateTranscriptChecksum } from '@/utils/transcriptPersistence';
 import { 
   Phone, 
   PhoneOff, 
@@ -41,15 +43,6 @@ const LiveCall = () => {
     endConversation,
     finalAnalysis
   } = useRealtimeAIChat();
-  
-  // Centralized transcript management
-  const {
-    transcript,
-    handleVapiMessage,
-    clearTranscript,
-    flushPendingChunks,
-    isProcessing: isTranscriptProcessing
-  } = useTranscriptManager();
   
   // Call simulation specific state
   const [vapiService] = useState(() => VapiService.getInstance());
@@ -95,6 +88,9 @@ const LiveCall = () => {
     };
   });
 
+  // New transcript session management - initialized after sessionConfig
+  const transcriptSession = useTranscriptSession(sessionConfig.callRecordId || `session-${Date.now()}`);
+
   // State for call setup process
   const [isSettingUp, setIsSettingUp] = useState(sessionConfig.replayMode === 'call_simulation' && sessionConfig.autoStart);
   const [setupError, setSetupError] = useState<string | null>(null);
@@ -128,22 +124,22 @@ const LiveCall = () => {
           vapiService.on('call-end', eventHandlers.onCallEnd);
           vapiService.on('message', (message: any) => {
             console.log('Raw VAPI message in LiveCall:', message.type);
-            // Process ALL messages through centralized handler only
-            handleVapiMessage(message);
+            // Process transcript messages through new session manager
+            transcriptSession.processVapiMessage(message);
           });
 
           // Store cleanup function
-          cleanup = () => {
-            try {
-              vapiService.off('call-start', eventHandlers.onCallStart);
-              vapiService.off('call-end', eventHandlers.onCallEnd);
-              vapiService.off('message');
-              clearTranscript();
-              console.log('VAPI listeners cleaned up successfully');
-            } catch (e) {
-              console.error('Error cleaning up VAPI listeners:', e);
-            }
-          };
+            cleanup = () => {
+              try {
+                vapiService.off('call-start', eventHandlers.onCallStart);
+                vapiService.off('call-end', eventHandlers.onCallEnd);
+                vapiService.off('message');
+                transcriptSession.clear();
+                console.log('VAPI listeners cleaned up successfully');
+              } catch (e) {
+                console.error('Error cleaning up VAPI listeners:', e);
+              }
+            };
 
           // If auto-start is enabled, call the start-call function
           if (sessionConfig.autoStart) {
@@ -165,6 +161,9 @@ const LiveCall = () => {
             // Update session config with the received data
             sessionConfig.assistantId = (data as any).assistantId;
             sessionConfig.callRecordId = (data as any).callRecordId;
+
+            // Set transcript session status to active
+            transcriptSession.setStatus('active');
 
             console.log('Starting call with assistant:', (data as any).assistantId);
             await vapiService.startCall((data as any).assistantId);
@@ -239,14 +238,23 @@ const LiveCall = () => {
     setIsCallActive(false);
     setIsAnalyzing(true);
     
-    // Flush any pending transcript chunks before finalizing
-    flushPendingChunks();
-    
-    // Wait a moment for transcript processing to complete
-    await new Promise(resolve => setTimeout(resolve, 1000));
-    
-    const finalTranscript = transcript.trim();
+    // Finalize transcript and get the cleaned version
+    const finalTranscript = await transcriptSession.finalize();
     const finalDuration = Math.max(callDuration, 1); // Ensure minimum duration
+
+    // Persist the finalized transcript
+    if (finalTranscript.trim() && sessionConfig.callRecordId) {
+      const wordCount = finalTranscript.split(/\s+/).length;
+      const checksum = generateTranscriptChecksum(finalTranscript);
+      
+      await persistTranscript({
+        callSessionId: sessionConfig.callRecordId,
+        finalTranscript,
+        wordCount,
+        checksum,
+        timeline: transcriptSession.state.timeline
+      });
+    }
     
     console.log('Final transcript length:', finalTranscript.length);
     console.log('Final duration:', finalDuration);
@@ -583,6 +591,18 @@ const LiveCall = () => {
               </Button>
             </div>
           </div>
+
+          {/* Live Transcript Display */}
+          {(isCallActive || conversationState.isActive) && (
+            <div className="fixed bottom-24 left-4 right-4 z-30 max-h-48 overflow-hidden">
+              <TranscriptDisplay
+                finalChunks={transcriptSession.state.finalChunks}
+                liveBuffer={transcriptSession.state.liveBuffer}
+                showLive={true}
+                className="bg-background/95 backdrop-blur-md"
+              />
+            </div>
+          )}
 
           {/* Floating Coaching Hints */}
           <div className="fixed top-20 right-4 left-4 z-40 pointer-events-none">
