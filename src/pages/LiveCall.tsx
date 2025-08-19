@@ -286,6 +286,13 @@ const LiveCall = () => {
     
     // Update call record with transcript and duration first, with validation
     try {
+      // Skip update if callRecordId is not available
+      if (!sessionConfig.callRecordId) {
+        console.log('No callRecordId available, skipping call record update');
+        setIsAnalyzing(false);
+        return;
+      }
+
       const updateData = {
         transcript: finalTranscript,
         duration_seconds: finalDuration,

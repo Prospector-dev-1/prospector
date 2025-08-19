@@ -345,21 +345,22 @@ serve(async (req) => {
       recordingEnabled: true,
       maxDurationSeconds: 600, // 10 minutes max
       silenceTimeoutSeconds: 30,
-      responseDelaySeconds,
-      transcriber: {
-        provider: 'openai',
-        model: 'whisper-1',
-        language: 'en',
-        interimResults: true
-      },
-      clientMessages: [
-        'conversation-update',
-        'speech-update',
-        'status-update',
-        'transcript',
-        'user-interrupted',
-        'voice-input'
-      ]
+      responseDelaySeconds
+      // Temporarily disabled transcriber to test
+      // transcriber: {
+      //   provider: "openai",
+      //   model: "whisper-1", 
+      //   language: "en",
+      //   interimResults: true
+      // },
+      // clientMessages: [
+      //   "conversation-update",
+      //   "speech-update", 
+      //   "status-update", 
+      //   "transcript",
+      //   "user-interrupted",
+      //   "voice-input"
+      // ]
     };
 
     console.log('Assistant config:', JSON.stringify(assistantConfig, null, 2));
@@ -374,13 +375,15 @@ serve(async (req) => {
     });
 
     console.log('Vapi response status:', vapiResponse.status);
-    const vapiData = await vapiResponse.json();
-    console.log('Vapi response data:', vapiData);
     
     if (!vapiResponse.ok) {
-      console.error('Vapi error response:', vapiData);
-      throw new Error(`Vapi error: ${vapiData.message || JSON.stringify(vapiData)}`);
+      const errorText = await vapiResponse.text();
+      console.error('Vapi error response:', errorText);
+      throw new Error(`Vapi API error (${vapiResponse.status}): ${errorText}`);
     }
+    
+    const vapiData = await vapiResponse.json();
+    console.log('Vapi response data:', vapiData);
 
     // Create call record in database
     const { data: callRecord, error: callError } = await supabaseService
@@ -414,7 +417,15 @@ serve(async (req) => {
 
   } catch (error) {
     console.error('Error in start-call function:', error);
-    return new Response(JSON.stringify({ error: error.message }), {
+    console.error('Error details:', {
+      message: error.message,
+      stack: error.stack,
+      name: error.name
+    });
+    return new Response(JSON.stringify({ 
+      error: error.message,
+      details: error.stack 
+    }), {
       status: 500,
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
     });
