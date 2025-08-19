@@ -182,6 +182,7 @@ All colors MUST be HSL.
   /* Better text scaling on mobile */
   html {
     -webkit-text-size-adjust: 100%;
+    scroll-behavior: auto; /* Disable smooth scrolling during route changes */
   }
 
   /* Glass card styles */
