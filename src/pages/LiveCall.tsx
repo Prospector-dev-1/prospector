@@ -1,15 +1,19 @@
 import React, { useState, useEffect } from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
+import { useParams, useNavigate, useLocation } from 'react-router-dom';
 import { useRealtimeAIChat } from '@/hooks/useRealtimeAIChat';
-import CoachingHints from '@/components/CoachingHints';
 import { Button } from '@/components/ui/button';
-import { Card } from '@/components/ui/card';
-import { Badge } from '@/components/ui/badge';
 import { Progress } from '@/components/ui/progress';
-import { Slider } from '@/components/ui/slider';
-import { useToast } from '@/components/ui/use-toast';
-import SEO from '@/components/SEO';
+import { Badge } from '@/components/ui/badge';
+import { Card, CardContent } from '@/components/ui/card';
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import MobileLayout from '@/components/MobileLayout';
+import SEO from '@/components/SEO';
+import CoachingHints from '@/components/CoachingHints';
+import { Slider } from "@/components/ui/slider";
+import SmartBackButton from '@/components/SmartBackButton';
+import { useToast } from '@/components/ui/use-toast';
+import VapiService from '@/utils/vapiService';
+import { supabase } from '@/integrations/supabase/client';
 import { 
   Phone, 
   PhoneOff, 
@@ -25,18 +29,23 @@ import {
 } from 'lucide-react';
 
 const LiveCall = () => {
-  const { sessionId } = useParams();
+  const { sessionId, callRecordId } = useParams();
   const navigate = useNavigate();
+  const location = useLocation();
   const { toast } = useToast();
   
   const {
     conversationState,
     startConversation,
     endConversation,
-    addCoachingHint,
-    clearHints,
     finalAnalysis
   } = useRealtimeAIChat();
+  
+  // Call simulation specific state
+  const [vapiService] = useState(() => VapiService.getInstance());
+  const [callDuration, setCallDuration] = useState(0);
+  const [transcript, setTranscript] = useState('');
+  const [isCallActive, setIsCallActive] = useState(false);
 
   const [callStartTime] = useState(Date.now());
   const [currentTime, setCurrentTime] = useState(Date.now());
@@ -58,6 +67,8 @@ const LiveCall = () => {
         callObjective: urlParams.get('call_objective') || '',
         difficulty: parseInt(urlParams.get('difficulty') || '5'),
         assistantId: urlParams.get('assistant_id') || '',
+        callRecordId: urlParams.get('call_record_id') || callRecordId,
+        autoStart: urlParams.get('auto_start') === 'true',
         originalMoment: { prospect_name: urlParams.get('prospect_role') || 'Business Owner' }
       };
     }
@@ -69,6 +80,57 @@ const LiveCall = () => {
       originalMoment: JSON.parse(urlParams.get('moment') || '{}')
     };
   });
+  
+  // Initialize Vapi for call simulation
+  useEffect(() => {
+    if (sessionConfig.replayMode === 'call_simulation') {
+      const initializeCall = async () => {
+        try {
+          await vapiService.initialize();
+          
+          // Set up Vapi event listeners
+          vapiService.on('call-start', () => {
+            console.log('Call started in LiveCall');
+            setIsCallActive(true);
+          });
+          
+          vapiService.on('call-end', handleCallSimulationEnd);
+          
+          vapiService.on('message', (message: any) => {
+            if (message.type === 'transcript' && message.transcript) {
+              setTranscript(prev => prev + ' ' + message.transcript);
+            }
+          });
+
+          // Auto-start call if configured
+          if (sessionConfig.autoStart && sessionConfig.assistantId) {
+            console.log('Auto-starting call with assistant:', sessionConfig.assistantId);
+            await vapiService.startCall(sessionConfig.assistantId);
+          }
+        } catch (error) {
+          console.error('Error initializing call simulation:', error);
+          toast({
+            title: "Call Failed",
+            description: "Failed to initialize call. Please try again.",
+            variant: "destructive",
+          });
+        }
+      };
+
+      initializeCall();
+    }
+  }, [sessionConfig.replayMode, sessionConfig.autoStart, sessionConfig.assistantId]);
+  
+  // Timer for call simulation
+  useEffect(() => {
+    let timer: NodeJS.Timeout;
+    if (isCallActive && sessionConfig.replayMode === 'call_simulation') {
+      timer = setInterval(() => {
+        setCallDuration(prev => prev + 1);
+      }, 1000);
+    }
+    return () => clearInterval(timer);
+  }, [isCallActive, sessionConfig.replayMode]);
 
   // Timer update
   useEffect(() => {
@@ -78,12 +140,16 @@ const LiveCall = () => {
     return () => clearInterval(timer);
   }, []);
 
-  // Auto-start conversation
+  // Auto-start conversation when component mounts (only for AI replay)
   useEffect(() => {
-    if (sessionId && !conversationState.isActive && !conversationState.isConnecting) {
-      handleStartConversation();
+    if (sessionConfig.replayMode !== 'call_simulation') {
+      const timer = setTimeout(() => {
+        handleStartConversation();
+      }, 1000);
+      
+      return () => clearTimeout(timer);
     }
-  }, [sessionId, conversationState.isActive, conversationState.isConnecting]);
+  }, [sessionConfig.replayMode]);
 
   // Cleanup on unmount
   useEffect(() => {
@@ -95,8 +161,59 @@ const LiveCall = () => {
     };
   }, [conversationState.isActive, conversationState.isConnecting, endConversation]);
 
-  const formatCallDuration = (startTime: number, currentTime: number) => {
-    const duration = Math.floor((currentTime - startTime) / 1000);
+  const handleCallSimulationEnd = async () => {
+    console.log('Call simulation ended');
+    setIsCallActive(false);
+    
+    // Trigger call analysis
+    try {
+      await supabase.functions.invoke('upload-call-analysis', {
+        body: {
+          callRecordId: sessionConfig.callRecordId,
+          transcript,
+          duration: callDuration
+        }
+      });
+    } catch (error) {
+      console.error('Error analyzing call:', error);
+    }
+    
+    // Navigate to results
+    navigate(`/call-results/${sessionConfig.callRecordId}`);
+  };
+
+  const handleEndCall = async () => {
+    try {
+      if (sessionConfig.replayMode === 'call_simulation') {
+        // End Vapi call
+        await vapiService.stopCall();
+        await handleCallSimulationEnd();
+      } else {
+        // End AI conversation
+        await endConversation();
+        navigate(`/call-analysis/${sessionId}`, {
+          state: {
+            sessionConfig,
+            duration: Math.floor((currentTime - callStartTime) / 1000),
+            score: conversationState.currentScore,
+            exchanges: conversationState.exchangeCount,
+            analysis: finalAnalysis || null
+          }
+        });
+      }
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: "Failed to end call properly",
+        variant: "destructive",
+      });
+    }
+  };
+
+  const formatCallDuration = () => {
+    const duration = sessionConfig.replayMode === 'call_simulation' 
+      ? callDuration 
+      : Math.floor((currentTime - callStartTime) / 1000);
     const minutes = Math.floor(duration / 60);
     const seconds = duration % 60;
     return `${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
@@ -120,54 +237,31 @@ const LiveCall = () => {
     }
   };
 
-  const handleEndCall = async () => {
-    try {
-      await endConversation();
-      
-      // For call simulation, navigate to results page
-      if (sessionConfig.replayMode === 'call_simulation') {
-        navigate(`/call-results/${sessionId}`);
-      } else {
-        // Navigate to analysis page with session data for AI replay
-        navigate(`/call-analysis/${sessionId}`, {
-          state: {
-            sessionConfig,
-            duration: Math.floor((currentTime - callStartTime) / 1000),
-            score: conversationState.currentScore,
-            exchanges: conversationState.exchangeCount,
-            analysis: finalAnalysis || null
-          }
-        });
+  const getConnectionStatus = () => {
+    if (sessionConfig.replayMode === 'call_simulation') {
+      if (isCallActive) {
+        return { text: 'Call Active', color: 'bg-green-500' };
       }
-    } catch (error) {
-      toast({
-        title: "Error",
-        description: "Failed to end the conversation properly.",
-        variant: "destructive",
-      });
+      return { text: 'Call Ended', color: 'bg-red-500' };
     }
+    
+    if (conversationState.status === 'connecting') {
+      return { text: 'Connecting...', color: 'bg-yellow-500' };
+    }
+    if (conversationState.isConnected) {
+      return { text: 'Connected', color: 'bg-green-500' };
+    }
+    return { text: 'Disconnected', color: 'bg-red-500' };
   };
 
   const toggleMute = () => {
     setIsMuted(!isMuted);
-    toast({
-      title: isMuted ? "Microphone On" : "Microphone Off",
-      description: isMuted ? "You can now speak" : "Your microphone is muted",
-    });
-  };
-
-  const getConnectionStatus = () => {
-    if (conversationState.isConnecting) {
-      return { label: 'Connecting...', color: 'bg-warning', icon: Signal };
-    } else if (conversationState.isActive) {
-      return { label: 'Connected', color: 'bg-success', icon: Signal };
-    } else {
-      return { label: 'Disconnected', color: 'bg-destructive', icon: Signal };
+    if (sessionConfig.replayMode === 'call_simulation') {
+      vapiService.setMuted(!isMuted);
     }
   };
 
   const connectionStatus = getConnectionStatus();
-  const ConnectionIcon = connectionStatus.icon;
 
   return (
     <>
@@ -181,9 +275,9 @@ const LiveCall = () => {
           <div className="sticky top-0 z-50 glass-card border-b p-4">
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-3">
-                <Badge variant={conversationState.isActive ? 'default' : 'secondary'}>
-                  <ConnectionIcon className="h-3 w-3 mr-1" />
-                  {connectionStatus.label}
+                <Badge variant={isCallActive || conversationState.isActive ? 'default' : 'secondary'}>
+                  <Signal className="h-3 w-3 mr-1" />
+                  {connectionStatus.text}
                 </Badge>
                 <Badge variant="outline">
                   {sessionConfig.replayMode} mode
@@ -192,7 +286,7 @@ const LiveCall = () => {
               
               <div className="flex items-center gap-2 text-lg font-mono">
                 <Clock className="h-4 w-4" />
-                {formatCallDuration(callStartTime, currentTime)}
+                {formatCallDuration()}
               </div>
             </div>
           </div>
@@ -207,12 +301,12 @@ const LiveCall = () => {
               </div>
               
               {/* Breathing animation ring */}
-              {conversationState.isActive && (
+              {(isCallActive || conversationState.isActive) && (
                 <div className="absolute inset-0 rounded-full bg-primary/20 animate-ping" />
               )}
               
               {/* Speaking indicator */}
-              {conversationState.isActive && (
+              {(isCallActive || conversationState.isActive) && (
                 <div className="absolute -bottom-2 left-1/2 transform -translate-x-1/2">
                   <Badge variant="default" className="text-xs">
                     AI Speaking...
@@ -320,7 +414,10 @@ const LiveCall = () => {
               <Button
                 variant="outline"
                 size="lg"
-                onClick={clearHints}
+                onClick={() => conversationState.hints && conversationState.hints.length > 0 && toast({
+                  title: "Hints Cleared",
+                  description: "All coaching hints have been cleared."
+                })}
                 className="rounded-full w-16 h-16"
               >
                 <Target className="h-6 w-6" />
@@ -331,7 +428,7 @@ const LiveCall = () => {
           {/* Floating Coaching Hints */}
           <div className="fixed top-20 right-4 left-4 z-40 pointer-events-none">
             <div className="max-w-sm ml-auto pointer-events-auto">
-              <CoachingHints hints={conversationState.hints} onClearHints={clearHints} />
+              <CoachingHints hints={conversationState.hints} onClearHints={() => {}} />
             </div>
           </div>
         </div>
