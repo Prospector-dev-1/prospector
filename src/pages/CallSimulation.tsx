@@ -226,36 +226,19 @@ const CallSimulation = () => {
     setCallStarted(true);
     
     try {
-      const { data, error } = await supabase.functions.invoke('start-call', {
-        body: { 
-          difficulty_level: difficultyLevel[0],
-          business_type: businessType,
-          prospect_role: prospectRole,
-          call_objective: callObjective === 'Custom' ? customObjective : callObjective,
-          custom_instructions: customInstructions
-        }
-      });
-
-      if (error) throw new Error(error.message);
-      if (data.error) throw new Error(data.error);
-
-      setCallRecordId(data.callRecordId);
-      callRecordIdRef.current = data.callRecordId;
-      
-      // Navigate to live call interface with call simulation config
+      // Navigate immediately after credit check with call configuration
       const sessionConfig = new URLSearchParams({
         mode: 'call_simulation',
         business_type: businessType,
         prospect_role: prospectRole,
         call_objective: callObjective === 'Custom' ? customObjective : callObjective,
         difficulty: difficultyLevel[0].toString(),
-        assistant_id: data.assistantId,
-        call_record_id: data.callRecordId,
+        custom_instructions: customInstructions || '',
         auto_start: 'true'
       });
       
-      navigate(`/call-simulation-live/${data.callRecordId}?${sessionConfig.toString()}`);
-      await refreshProfile();
+      // Navigate immediately - the LiveCall page will handle the setup
+      navigate(`/call-simulation-live?${sessionConfig.toString()}`);
 
     } catch (error: any) {
       console.error('Error starting call:', error);

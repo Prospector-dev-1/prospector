@@ -66,8 +66,9 @@ const LiveCall = () => {
         prospectRole: urlParams.get('prospect_role') || 'Business Owner',
         callObjective: urlParams.get('call_objective') || '',
         difficulty: parseInt(urlParams.get('difficulty') || '5'),
-        assistantId: urlParams.get('assistant_id') || '',
-        callRecordId: urlParams.get('call_record_id') || callRecordId,
+        customInstructions: urlParams.get('custom_instructions') || '',
+        assistantId: '', // Will be set after start-call function
+        callRecordId: '', // Will be set after start-call function
         autoStart: urlParams.get('auto_start') === 'true',
         originalMoment: { prospect_name: urlParams.get('prospect_role') || 'Business Owner' }
       };
@@ -80,18 +81,26 @@ const LiveCall = () => {
       originalMoment: JSON.parse(urlParams.get('moment') || '{}')
     };
   });
+
+  // State for call setup process
+  const [isSettingUp, setIsSettingUp] = useState(sessionConfig.replayMode === 'call_simulation' && sessionConfig.autoStart);
+  const [setupError, setSetupError] = useState<string | null>(null);
   
   // Initialize Vapi for call simulation
   useEffect(() => {
     if (sessionConfig.replayMode === 'call_simulation') {
       const initializeCall = async () => {
         try {
+          setIsSettingUp(true);
+          setSetupError(null);
+          
           await vapiService.initialize();
           
           // Set up Vapi event listeners
           vapiService.on('call-start', () => {
             console.log('Call started in LiveCall');
             setIsCallActive(true);
+            setIsSettingUp(false);
           });
           
           vapiService.on('call-end', handleCallSimulationEnd);
@@ -102,16 +111,37 @@ const LiveCall = () => {
             }
           });
 
-          // Auto-start call if configured
-          if (sessionConfig.autoStart && sessionConfig.assistantId) {
-            console.log('Auto-starting call with assistant:', sessionConfig.assistantId);
-            await vapiService.startCall(sessionConfig.assistantId);
+          // If auto-start is enabled, call the start-call function
+          if (sessionConfig.autoStart) {
+            console.log('Setting up call simulation...');
+            
+            const { data, error } = await supabase.functions.invoke('start-call', {
+              body: { 
+                difficulty_level: sessionConfig.difficulty,
+                business_type: sessionConfig.businessType,
+                prospect_role: sessionConfig.prospectRole,
+                call_objective: sessionConfig.callObjective,
+                custom_instructions: sessionConfig.customInstructions
+              }
+            });
+
+            if (error) throw new Error(error.message);
+            if (data.error) throw new Error(data.error);
+
+            // Update session config with the received data
+            sessionConfig.assistantId = data.assistantId;
+            sessionConfig.callRecordId = data.callRecordId;
+            
+            console.log('Starting call with assistant:', data.assistantId);
+            await vapiService.startCall(data.assistantId);
           }
-        } catch (error) {
-          console.error('Error initializing call simulation:', error);
+        } catch (error: any) {
+          console.error('Error setting up call simulation:', error);
+          setSetupError(error.message || 'Failed to set up call');
+          setIsSettingUp(false);
           toast({
-            title: "Call Failed",
-            description: "Failed to initialize call. Please try again.",
+            title: "Call Setup Failed",
+            description: error.message || "Failed to set up call. Please try again.",
             variant: "destructive",
           });
         }
@@ -119,7 +149,7 @@ const LiveCall = () => {
 
       initializeCall();
     }
-  }, [sessionConfig.replayMode, sessionConfig.autoStart, sessionConfig.assistantId]);
+  }, [sessionConfig.replayMode, sessionConfig.autoStart]);
   
   // Timer for call simulation
   useEffect(() => {
@@ -239,6 +269,12 @@ const LiveCall = () => {
 
   const getConnectionStatus = () => {
     if (sessionConfig.replayMode === 'call_simulation') {
+      if (isSettingUp) {
+        return { text: 'Setting up call...', color: 'bg-yellow-500' };
+      }
+      if (setupError) {
+        return { text: 'Setup failed', color: 'bg-red-500' };
+      }
       if (isCallActive) {
         return { text: 'Call Active', color: 'bg-green-500' };
       }
