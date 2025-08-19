@@ -45,7 +45,7 @@ serve(async (req) => {
       hipaaEnabled: false,
       transcriber: {
         provider: "openai",
-        model: "whisper-1",
+        model: "gpt-4o-transcribe",
         language: "en"
       },
       clientMessages: ["conversation-update", "function-call", "hang", "model-output", "speech-update", "status-update", "transcript", "tool-calls", "user-interrupted", "voice-input"]

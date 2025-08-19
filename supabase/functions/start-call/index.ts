@@ -348,7 +348,7 @@ serve(async (req) => {
       responseDelaySeconds,
       transcriber: {
         provider: "openai",
-        model: "whisper-1",
+        model: "gpt-4o-transcribe",
         language: "en"
       },
       clientMessages: [
