@@ -88,7 +88,7 @@ const Challenges = () => {
     }
   };
 
-  const fetchChallengesData = async () => {
+  const fetchChallengesData = async (showCompletionNotifications = false) => {
     if (!user) return;
 
     try {
@@ -202,8 +202,8 @@ const Challenges = () => {
               updated_at: new Date().toISOString()
             });
 
-          // Show completion notification for newly completed challenges
-          if (isNowCompleted && !wasCompleted) {
+          // Show completion notification for newly completed challenges (only when explicitly requested)
+          if (isNowCompleted && !wasCompleted && showCompletionNotifications) {
             toast({
               title: "🎉 Challenge Completed!",
               description: `Claim your ${challenge.reward_credits} credits from the Challenges page!`,
@@ -266,8 +266,8 @@ const Challenges = () => {
           description: `${rewardCredits} credits have been added to your account!`,
         });
         
-        // Refresh challenges data and user profile
-        await fetchChallengesData();
+        // Refresh challenges data and user profile (don't show completion notifications on refresh)
+        await fetchChallengesData(false);
         await refreshProfile();
       }
     } catch (error) {
