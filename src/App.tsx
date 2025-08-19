@@ -43,6 +43,7 @@ const App = () => (
             <Route path="/" element={<Index />} />
             <Route path="/auth" element={<Auth />} />
             <Route path="/call-simulation" element={<ProtectedRoute><CallSimulation /></ProtectedRoute>} />
+            <Route path="/call-simulation-live" element={<ProtectedRoute><LiveCall /></ProtectedRoute>} />
             <Route path="/call-simulation-live/:callRecordId" element={<ProtectedRoute><LiveCall /></ProtectedRoute>} />
             <Route path="/call-results/:callId" element={<ProtectedRoute><CallResults /></ProtectedRoute>} />
             <Route path="/call-coaching/:callId" element={<ProtectedRoute><CallCoaching /></ProtectedRoute>} />
