@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useParams, useNavigate, useLocation } from 'react-router-dom';
 import { useRealtimeAIChat } from '@/hooks/useRealtimeAIChat';
 import { Button } from '@/components/ui/button';
@@ -55,6 +55,9 @@ const LiveCall = () => {
   const [confidence, setConfidence] = useState(75);
   const [responseSpeed, setResponseSpeed] = useState(85);
 
+  // Guard to prevent duplicate analysis triggers
+  const analyzingRef = useRef(false);
+
   // Get session config from URL params or localStorage
   const [sessionConfig] = useState(() => {
     const urlParams = new URLSearchParams(location.search);
@@ -90,25 +93,31 @@ const LiveCall = () => {
   // Initialize Vapi for call simulation
   useEffect(() => {
     if (sessionConfig.replayMode === 'call_simulation') {
+      let handleCallStart: (() => void) | undefined;
+      let handleCallEnd: (() => void) | undefined;
+      let handleMessage: ((message: any) => void) | undefined;
+
       const initializeCall = async () => {
         try {
           setIsSettingUp(true);
           setSetupError(null);
-          
+
           await vapiService.initialize();
-          
-          // Set up Vapi event listeners
-          vapiService.on('call-start', () => {
+
+          // Define event listeners with stable references
+          handleCallStart = () => {
             console.log('Call started in LiveCall');
             setIsCallActive(true);
             setIsSettingUp(false);
-          });
-          
-          vapiService.on('call-end', handleCallSimulationEnd);
-          
-          vapiService.on('message', (message: any) => {
+          };
+
+          handleCallEnd = () => {
+            handleCallSimulationEnd();
+          };
+
+          handleMessage = (message: any) => {
             console.log('Vapi message received:', message);
-            
+
             // Handle different message types for transcript collection
             if (message.type === 'transcript') {
               if (message.transcript && message.transcript.text) {
@@ -117,19 +126,24 @@ const LiveCall = () => {
                 setTranscript(prev => prev + ' ' + message.transcript);
               }
             }
-            
+
             // Also check for speech-update or other transcript formats
             if (message.type === 'speech-update' && message.speech?.text) {
               setTranscript(prev => prev + ' ' + message.speech.text);
             }
-          });
+          };
+
+          // Set up Vapi event listeners
+          vapiService.on('call-start', handleCallStart);
+          vapiService.on('call-end', handleCallEnd);
+          vapiService.on('message', handleMessage);
 
           // If auto-start is enabled, call the start-call function
           if (sessionConfig.autoStart) {
             console.log('Setting up call simulation...');
-            
+
             const { data, error } = await supabase.functions.invoke('start-call', {
-              body: { 
+              body: {
                 difficulty_level: sessionConfig.difficulty,
                 business_type: sessionConfig.businessType,
                 prospect_role: sessionConfig.prospectRole,
@@ -139,28 +153,39 @@ const LiveCall = () => {
             });
 
             if (error) throw new Error(error.message);
-            if (data.error) throw new Error(data.error);
+            if ((data as any).error) throw new Error((data as any).error);
 
             // Update session config with the received data
-            sessionConfig.assistantId = data.assistantId;
-            sessionConfig.callRecordId = data.callRecordId;
-            
-            console.log('Starting call with assistant:', data.assistantId);
-            await vapiService.startCall(data.assistantId);
+            sessionConfig.assistantId = (data as any).assistantId;
+            sessionConfig.callRecordId = (data as any).callRecordId;
+
+            console.log('Starting call with assistant:', (data as any).assistantId);
+            await vapiService.startCall((data as any).assistantId);
           }
         } catch (error: any) {
           console.error('Error setting up call simulation:', error);
           setSetupError(error.message || 'Failed to set up call');
           setIsSettingUp(false);
           toast({
-            title: "Call Setup Failed",
-            description: error.message || "Failed to set up call. Please try again.",
-            variant: "destructive",
+            title: 'Call Setup Failed',
+            description: error.message || 'Failed to set up call. Please try again.',
+            variant: 'destructive',
           });
         }
       };
 
       initializeCall();
+
+      // Clean up listeners on unmount or dependency change
+      return () => {
+        try {
+          if (handleCallStart) vapiService.off('call-start', handleCallStart);
+          if (handleCallEnd) vapiService.off('call-end', handleCallEnd);
+          if (handleMessage) vapiService.off('message', handleMessage);
+        } catch (e) {
+          console.error('Error cleaning up Vapi listeners', e);
+        }
+      };
     }
   }, [sessionConfig.replayMode, sessionConfig.autoStart]);
   
@@ -205,11 +230,12 @@ const LiveCall = () => {
   }, [conversationState.isActive, conversationState.isConnecting, endConversation]);
 
   const handleCallSimulationEnd = async () => {
-    // Prevent duplicate calls
-    if (isAnalyzing) {
+    // Prevent duplicate calls (use ref for immediate guard)
+    if (analyzingRef.current) {
       console.log('Analysis already in progress, skipping duplicate call');
       return;
     }
+    analyzingRef.current = true;
     
     console.log('Call simulation ended');
     setIsCallActive(false);
