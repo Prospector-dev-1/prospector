@@ -615,7 +615,8 @@ const LiveCall = () => {
           </div>
 
           {/* Call Controls */}
-          <div className="fixed bottom-0 left-0 right-0 p-6 bg-background/80 backdrop-blur-sm border-t mobile-safe-bottom">
+          {!isAnalyzing && (
+            <div className="fixed bottom-0 left-0 right-0 p-6 bg-background/80 backdrop-blur-sm border-t mobile-safe-bottom">
             <div className="flex justify-center items-center gap-6">
               {/* Mute Toggle */}
               <Button
@@ -652,6 +653,7 @@ const LiveCall = () => {
               </Button>
             </div>
           </div>
+          )}
 
           {/* Live Transcript Display */}
           {(isCallActive || conversationState.isActive) && (
