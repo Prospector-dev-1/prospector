@@ -2,20 +2,20 @@ import { z } from "zod";
 
 // Web application environment schema
 export const WebEnvSchema = z.object({
-  SUPABASE_URL: z.string().url("Invalid Supabase URL"),
-  SUPABASE_ANON_KEY: z.string().min(10, "Supabase anon key required"),
+  VITE_SUPABASE_URL: z.string().url("Invalid Supabase URL"),
+  VITE_SUPABASE_ANON_KEY: z.string().min(10, "Supabase anon key required"),
 });
 
 export type WebEnv = z.infer<typeof WebEnvSchema>;
 
 /**
  * Validates and returns web environment variables
- * Returns hardcoded values for Lovable project
+ * Throws descriptive error if any required variables are missing
  */
 export function getWebEnv(): WebEnv {
   const env = {
-    SUPABASE_URL: "https://akcxkwbqeehxvwhmrqbb.supabase.co",
-    SUPABASE_ANON_KEY: "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImFrY3hrd2JxZWVoeHZ3aG1ycWJiIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTQzNTgzMTMsImV4cCI6MjA2OTkzNDMxM30.ix6oVIa0vyWg1R_IoUZyEiadZTvCDa6GitEIqRLoIYk"
+    VITE_SUPABASE_URL: import.meta.env.VITE_SUPABASE_URL,
+    VITE_SUPABASE_ANON_KEY: import.meta.env.VITE_SUPABASE_ANON_KEY,
   };
 
   try {

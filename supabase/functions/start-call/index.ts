@@ -377,7 +377,11 @@ serve(async (req) => {
         "transcript",
         "user-interrupted",
         "voice-input"
-      ]
+      ],
+      successEvaluationEnabled: true,
+      successEvaluationRubric: "AutomaticRubric",
+      successEvaluationPrompt: getSuccessEvaluationPrompt(),
+      successEvaluationTimeoutSeconds: 25
     };
 
     console.log('Assistant config:', JSON.stringify(assistantConfig, null, 2));

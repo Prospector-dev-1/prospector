@@ -6,11 +6,19 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { AuthProvider } from "@/contexts/AuthContext";
 import { ErrorBoundary } from "@/components/ErrorBoundary";
+import { getWebEnv } from "@/env";
 import ScrollManager from "@/components/ScrollManager";
 
 // Initialize console capture for development
 if (import.meta.env.DEV) {
   import("@/utils/consoleCapture");
+}
+
+// Validate environment on app start
+try {
+  getWebEnv();
+} catch (error) {
+  console.error("Environment validation failed:", error);
 }
 import Index from "./pages/Index";
 import Auth from "./pages/Auth";

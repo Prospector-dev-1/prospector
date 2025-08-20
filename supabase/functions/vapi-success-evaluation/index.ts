@@ -119,7 +119,8 @@ serve(async (req) => {
       source = 'openai-fallback';
       
       // Call the existing end-call-analysis function directly
-      const analysisPrompt = getSuccessEvaluationPrompt(finalTranscript, { target: 'openai' });
+      const analysisPrompt = getSuccessEvaluationPrompt(finalTranscript);
+      
       // Multiple fallback models for reliability (same as original)
       const models = ['gpt-4o-mini', 'gpt-4o'];
       let openAISuccess = false;

@@ -1,15 +1,11 @@
 // Shared success evaluation prompt used by both Vapi and OpenAI
-export type SuccessEvalTarget = 'openai' | 'vapi';
-export const getSuccessEvaluationPrompt = (transcript?: string, opts?: { target?: SuccessEvalTarget }) => {
-  const target: SuccessEvalTarget = opts?.target ?? 'openai';
+export const getSuccessEvaluationPrompt = (transcript?: string) => {
   const templateTranscript = transcript || '{{transcript}}';
   
-  const transcriptBlock =
-    target === 'vapi' && !transcript
-      ? ''
-      : `\nTRANSCRIPT:\n${templateTranscript}\n`;
-  
-  const base = `Analyze this cold calling transcript and provide detailed, personalized feedback. The transcript shows a conversation between a CALLER (salesperson) and a PROSPECT (business owner).${transcriptBlock}
+  return `Analyze this cold calling transcript and provide detailed, personalized feedback. The transcript shows a conversation between a CALLER (salesperson) and a PROSPECT (business owner).
+
+TRANSCRIPT:
+${templateTranscript}
 
 TASK: Analyze the CALLER'S performance only. Provide scores (1-10) for each category and detailed personalized feedback.
 
@@ -44,9 +40,5 @@ Respond in this EXACT JSON format:
   "overall_score": [1-10 number],
   "successful_sale": [true/false],
   "feedback": "WHAT YOU DID WELL:\\n[Specific examples from the call]\\n\\nAREAS FOR IMPROVEMENT:\\n[Specific issues with quotes]\\n\\nHOW TO IMPROVE:\\n[Actionable advice for next call]"
-}`;
-
-  const vapiSuffix = target === 'vapi' ? '\nReturn raw JSON only (no code fences).' : '';
-
-  return base + vapiSuffix;
+}`
 };
