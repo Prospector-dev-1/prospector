@@ -38,30 +38,10 @@ const LiveCall = () => {
   const location = useLocation();
   const { toast } = useToast();
   
-  const {
-    conversationState,
-    startConversation,
-    endConversation,
-    finalAnalysis
-  } = useRealtimeAIChat();
-  
-  // Call simulation specific state
+  // Call simulation specific state - initialize VapiService first
   const [vapiService] = useState(() => VapiService.getInstance());
-  const [callDuration, setCallDuration] = useState(0);
-  const [isCallActive, setIsCallActive] = useState(false);
-  const [isAnalyzing, setIsAnalyzing] = useState(false);
 
-  const [callStartTime] = useState(Date.now());
-  const [currentTime, setCurrentTime] = useState(Date.now());
-  const [isMuted, setIsMuted] = useState(false);
-  const [volume, setVolume] = useState([80]);
-  const [confidence, setConfidence] = useState(75);
-  const [responseSpeed, setResponseSpeed] = useState(85);
-
-  // Guard to prevent duplicate analysis triggers
-  const analyzingRef = useRef(false);
-
-  // Get session config from URL params or localStorage
+  // Get session config from URL params or localStorage - moved before useRealtimeAIChat
   const [sessionConfig] = useState(() => {
     const urlParams = new URLSearchParams(location.search);
     const mode = urlParams.get('mode') || 'practice';
@@ -88,6 +68,35 @@ const LiveCall = () => {
       originalMoment: JSON.parse(urlParams.get('moment') || '{}')
     };
   });
+
+  // Now initialize useRealtimeAIChat with proper context
+  const {
+    conversationState,
+    startConversation,
+    endConversation,
+    finalAnalysis
+  } = useRealtimeAIChat({ 
+    existingVapiInstance: sessionConfig.replayMode === 'call_simulation' ? (() => {
+      try {
+        return vapiService.getVapi();
+      } catch {
+        return undefined; // If not initialized yet, let the hook create its own
+      }
+    })() : undefined 
+  });
+  const [callDuration, setCallDuration] = useState(0);
+  const [isCallActive, setIsCallActive] = useState(false);
+  const [isAnalyzing, setIsAnalyzing] = useState(false);
+
+  const [callStartTime] = useState(Date.now());
+  const [currentTime, setCurrentTime] = useState(Date.now());
+  const [isMuted, setIsMuted] = useState(false);
+  const [volume, setVolume] = useState([80]);
+  const [confidence, setConfidence] = useState(75);
+  const [responseSpeed, setResponseSpeed] = useState(85);
+
+  // Guard to prevent duplicate analysis triggers
+  const analyzingRef = useRef(false);
 
   // New transcript session management - initialized after sessionConfig
   const transcriptSession = useTranscriptSession(sessionConfig.callRecordId || `session-${Date.now()}`);

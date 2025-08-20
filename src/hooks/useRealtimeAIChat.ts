@@ -47,9 +47,10 @@ export interface FinalAnalysis {
 
 interface UseRealtimeAIChatProps {
   isUploadCallReplay?: boolean;
+  existingVapiInstance?: any; // Optional existing VAPI instance from parent
 }
 
-export const useRealtimeAIChat = ({ isUploadCallReplay = false }: UseRealtimeAIChatProps = {}) => {
+export const useRealtimeAIChat = ({ isUploadCallReplay = false, existingVapiInstance }: UseRealtimeAIChatProps = {}) => {
   const [conversationState, setConversationState] = useState<ConversationState>({
     status: 'idle',
     isConnected: false,
@@ -117,7 +118,14 @@ export const useRealtimeAIChat = ({ isUploadCallReplay = false }: UseRealtimeAIC
 
   const initializeVapi = useCallback(async () => {
     try {
-      // Always create a fresh Vapi instance to avoid connection issues
+      // If we have an existing VAPI instance from parent, use it instead of creating a new one
+      if (existingVapiInstance) {
+        console.log('Using existing VAPI instance from parent component');
+        vapiInstance.current = existingVapiInstance;
+        return existingVapiInstance;
+      }
+
+      // Only create a new instance if no existing one is provided
       if (vapiInstance.current) {
         try {
           await vapiInstance.current.stop();
@@ -219,7 +227,7 @@ export const useRealtimeAIChat = ({ isUploadCallReplay = false }: UseRealtimeAIC
       console.error('Error initializing Vapi:', error);
       throw error;
     }
-  }, []);
+  }, [existingVapiInstance]);
 
   const analyzeUserResponse = useCallback((exchangeCount: number) => {
     const hints = [
@@ -348,8 +356,12 @@ export const useRealtimeAIChat = ({ isUploadCallReplay = false }: UseRealtimeAIC
       sessionTranscript.current = '';
       setFinalAnalysis(null);
 
-      // Always initialize a fresh Vapi instance
-      await initializeVapi();
+      // Initialize or use existing Vapi instance
+      if (!existingVapiInstance) {
+        await initializeVapi();
+      } else {
+        vapiInstance.current = existingVapiInstance;
+      }
 
       sessionConfigRef.current = {
         replayMode,
