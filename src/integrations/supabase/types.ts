@@ -292,6 +292,59 @@ export type Database = {
         }
         Relationships: []
       }
+      call_replays: {
+        Row: {
+          ai_improvements: Json | null
+          call_id: string
+          created_at: string
+          do_over_audio_url: string | null
+          do_over_transcript: Json | null
+          id: string
+          original_audio_url: string | null
+          per_utterance_timestamps: Json | null
+          replay_settings: Json | null
+          synthesized_audio_url: string | null
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          ai_improvements?: Json | null
+          call_id: string
+          created_at?: string
+          do_over_audio_url?: string | null
+          do_over_transcript?: Json | null
+          id?: string
+          original_audio_url?: string | null
+          per_utterance_timestamps?: Json | null
+          replay_settings?: Json | null
+          synthesized_audio_url?: string | null
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          ai_improvements?: Json | null
+          call_id?: string
+          created_at?: string
+          do_over_audio_url?: string | null
+          do_over_transcript?: Json | null
+          id?: string
+          original_audio_url?: string | null
+          per_utterance_timestamps?: Json | null
+          replay_settings?: Json | null
+          synthesized_audio_url?: string | null
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "call_replays_call_id_fkey"
+            columns: ["call_id"]
+            isOneToOne: false
+            referencedRelation: "calls"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       call_uploads: {
         Row: {
           ai_analysis: Json | null
@@ -378,6 +431,7 @@ export type Database = {
           successful_sale: boolean | null
           tone_score: number | null
           transcript: string | null
+          transcript_with_timestamps: Json | null
           user_id: string
         }
         Insert: {
@@ -402,6 +456,7 @@ export type Database = {
           successful_sale?: boolean | null
           tone_score?: number | null
           transcript?: string | null
+          transcript_with_timestamps?: Json | null
           user_id: string
         }
         Update: {
@@ -426,6 +481,7 @@ export type Database = {
           successful_sale?: boolean | null
           tone_score?: number | null
           transcript?: string | null
+          transcript_with_timestamps?: Json | null
           user_id?: string
         }
         Relationships: []
