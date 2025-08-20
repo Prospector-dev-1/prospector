@@ -19,16 +19,17 @@ serve(async (req) => {
     const supabaseUrl = Deno.env.get('SUPABASE_URL');
     const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY');
     
+    
     console.log('Environment check:', {
       vapiApiKey: vapiApiKey ? 'exists' : 'missing',
       supabaseUrl: supabaseUrl ? 'exists' : 'missing',
       supabaseServiceKey: supabaseServiceKey ? 'exists' : 'missing'
     });
+    
 
     if (!vapiApiKey) {
       throw new Error('VAPI_API_KEY not configured');
     }
-
     const { 
       difficulty_level, 
       business_type, 
@@ -93,6 +94,7 @@ serve(async (req) => {
       });
     }
 
+    
     // Deduct credit if not premium
     if (profile.subscription_type !== 'premium') {
       await supabaseService
