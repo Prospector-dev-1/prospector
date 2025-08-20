@@ -72,7 +72,7 @@ const AIReplay = () => {
     return () => {
       endConversation();
     };
-  }, [endConversation]);
+  }, []); // Remove dependency to prevent premature cleanup
   const fetchOriginalCall = async () => {
     try {
       const {
