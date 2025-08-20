@@ -44,8 +44,8 @@ serve(async (req) => {
       recordingEnabled: true,
       hipaaEnabled: false,
       transcriber: {
-        provider: "openai",
-        model: "gpt-4o-transcribe",
+        provider: "deepgram",
+        model: "nova-3-general",
         language: "en"
       },
       clientMessages: ["conversation-update", "function-call", "hang", "model-output", "speech-update", "status-update", "transcript", "tool-calls", "user-interrupted", "voice-input"]

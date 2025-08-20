@@ -123,8 +123,8 @@ serve(async (req) => {
         prospectProfileId: prospectProfile?.id
       },
       transcriber: {
-        provider: "openai",
-        model: "gpt-4o-transcribe",
+        provider: "deepgram",
+        model: "nova-3-general",
         language: "en"
       },
       clientMessages: [
