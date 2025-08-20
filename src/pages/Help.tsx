@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import { z } from "zod";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -73,6 +73,43 @@ const Help: React.FC = () => {
       });
     }
   };
+  const [diagLoading, setDiagLoading] = useState(false);
+
+  const runHealthChecks = async () => {
+    try {
+      setDiagLoading(true);
+      // Invoke test-function
+      const testRes = await supabase.functions.invoke('test-function', { body: {} });
+      if (testRes.error) throw new Error(`test-function: ${testRes.error.message}`);
+      const env = (testRes.data as any)?.env_check || {};
+      console.log('test-function result:', testRes.data);
+
+      // Invoke get-vapi-key
+      const keyRes = await supabase.functions.invoke('get-vapi-key');
+      if (keyRes.error) throw new Error(`get-vapi-key: ${keyRes.error.message}`);
+      const publicKey = (keyRes.data as any)?.publicKey;
+      console.log('get-vapi-key result:', keyRes.data);
+
+      const envSummary = Object.entries(env)
+        .map(([k, v]) => `${k}:${v}`)
+        .join(', ');
+
+      toast({
+        title: 'Diagnostics passed',
+        description: `Env: ${envSummary} • Vapi key: ${publicKey ? 'ok' : 'missing'}`,
+      });
+    } catch (err: any) {
+      console.error('Diagnostics failed:', err);
+      toast({
+        title: 'Diagnostics failed',
+        description: err?.message || 'Unknown error',
+        variant: 'destructive',
+      });
+    } finally {
+      setDiagLoading(false);
+    }
+  };
+
   const faqJsonLd = {
     '@context': 'https://schema.org',
     '@type': 'FAQPage',
@@ -149,6 +186,26 @@ const Help: React.FC = () => {
                 <li>Try a hard refresh or a different browser.</li>
                 <li>Check spam for account emails or magic links.</li>
               </ul>
+            </CardContent>
+          </Card>
+        </section>
+
+        {/* Diagnostics */}
+        <section aria-labelledby="diagnostics">
+          <Card>
+            <CardHeader>
+              <CardTitle id="diagnostics">Backend Diagnostics</CardTitle>
+              <CardDescription>Run quick health checks for Edge Functions</CardDescription>
+            </CardHeader>
+            <CardContent>
+              <div className="flex items-center gap-3">
+                <Button onClick={runHealthChecks} disabled={diagLoading}>
+                  {diagLoading ? "Running..." : "Run Health Checks"}
+                </Button>
+                <p className="text-sm text-muted-foreground">
+                  Calls test-function and get-vapi-key, then reports status.
+                </p>
+              </div>
             </CardContent>
           </Card>
         </section>
