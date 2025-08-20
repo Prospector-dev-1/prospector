@@ -137,7 +137,14 @@ serve(async (req) => {
       ]
     };
 
-    console.log('Assistant config:', JSON.stringify(assistantConfig, null, 2));
+    // Safely log assistant config without potential circular references
+    try {
+      console.log('Assistant config created for session:', sessionId);
+      console.log('Model:', assistantConfig.model.provider, assistantConfig.model.model);
+      console.log('Voice:', assistantConfig.voice.provider, assistantConfig.voice.voiceId);
+    } catch (logError) {
+      console.warn('Error logging assistant config:', logError);
+    }
 
     const response = await fetch('https://api.vapi.ai/assistant', {
       method: 'POST',
