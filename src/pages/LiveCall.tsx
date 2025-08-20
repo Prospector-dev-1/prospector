@@ -337,10 +337,10 @@ const LiveCall = () => {
       return;
     }
 
-    // Trigger proper call analysis using end-call-analysis function
+    // Trigger proper call analysis using vapi-success-evaluation function
     try {
       console.log('Starting call analysis...');
-      const { data, error } = await supabase.functions.invoke('end-call-analysis', {
+      const { data, error } = await supabase.functions.invoke('vapi-success-evaluation', {
         body: {
           callRecordId: sessionConfig.callRecordId,
           transcript: finalTranscript,
@@ -349,7 +349,7 @@ const LiveCall = () => {
       });
       
       if (error) {
-        console.error('Error invoking end-call-analysis:', error);
+        console.error('Error invoking vapi-success-evaluation:', error);
         toast({
           title: "Analysis Failed",
           description: "Call analysis failed. You can retry from the results page.",
