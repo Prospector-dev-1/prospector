@@ -230,21 +230,38 @@ serve(async (req) => {
 
     // Enhanced prospect personality based on call objective
     const getProspectPersonality = (level: number, scenario: ReturnType<typeof generateScenario>, callObjective?: string) => {
-      const base = level <= 3
-        ? 'You are a polite, curious prospect who is open to learning.'
-        : level <= 5
-        ? 'You are a neutral, mildly skeptical prospect who needs proof and specifics.'
-        : level <= 7
-        ? 'You are impatient and challenging. Push back hard and make them earn interest.'
-        : level <= 9
-        ? 'You are hostile and dismissive. Give very little time and cut off weak pitches.'
-        : 'You are brutally harsh and nearly impossible to convince. End the call quickly if they stumble.';
+      // Clamp level to 1-10 to avoid gaps
+      const lvl = Math.max(1, Math.min(10, Math.floor(level)));
 
-      const hangup = level >= 9
-        ? `IMPORTANT HANG-UP INSTRUCTIONS:\nGive the caller only 30–45 seconds to prove themselves. If not convinced, say something like "Pathetic. You're done." then say "goodbye" and end the call.`
-        : level >= 7
-        ? `HANG-UP INSTRUCTIONS:\nIf they are not persuasive and confident within 30–60 seconds, dismiss them and say "goodbye" to end the call.`
-        : '';
+      // Explicit per-level personality so no levels are "missing"
+      const baseByLevel: Record<number, string> = {
+        1: 'You are a very polite, curious prospect who is open to learning.',
+        2: 'You are a polite, curious prospect who is open to learning.',
+        3: 'You are polite and open-minded but still expect clarity.',
+        4: 'You are a neutral, mildly skeptical prospect who needs proof and specifics.',
+        5: 'You are neutral and time-conscious; ask for specifics and proof.',
+        6: 'You are impatient and challenging. Push back and make them earn interest.',
+        7: 'You are impatient and challenging. Push back hard and make them earn interest.',
+        8: 'You are hostile and dismissive. Give very little time and cut off weak pitches.',
+        9: 'You are hostile and dismissive. Give very little time and cut off weak pitches.',
+        10: 'You are brutally harsh and nearly impossible to convince. End the call quickly if they stumble.'
+      };
+
+      const hangupByLevel: Record<number, string> = {
+        1: '',
+        2: '',
+        3: '',
+        4: '',
+        5: '',
+        6: '',
+        7: 'HANG-UP INSTRUCTIONS:\nIf they are not persuasive and confident within 30–60 seconds, dismiss them and say "goodbye" to end the call.',
+        8: 'HANG-UP INSTRUCTIONS:\nIf they are not persuasive and confident within 30–60 seconds, dismiss them and say "goodbye" to end the call.',
+        9: 'IMPORTANT HANG-UP INSTRUCTIONS:\nGive the caller only 30–45 seconds to prove themselves. If not convinced, say something like "Pathetic. You\'re done." then say "goodbye" and end the call.',
+        10: 'IMPORTANT HANG-UP INSTRUCTIONS:\nGive the caller only 30–45 seconds to prove themselves. If not convinced, say something like "Pathetic. You\'re done." then say "goodbye" and end the call.'
+      };
+
+      const base = baseByLevel[lvl];
+      const hangup = hangupByLevel[lvl];
 
       const objectionsLine = scenario.primaryObjections.length
         ? `Use ${scenario.primaryObjections.join(', ')} as your primary objections at natural moments.`
