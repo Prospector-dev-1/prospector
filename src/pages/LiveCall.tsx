@@ -1,8 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useParams, useNavigate, useLocation } from 'react-router-dom';
 import { useRealtimeAIChat } from '@/hooks/useRealtimeAIChat';
-import { useTranscriptSession } from '@/hooks/useTranscriptSession';
-import { TranscriptDisplay } from '@/components/TranscriptDisplay';
 import { Button } from '@/components/ui/button';
 import { Progress } from '@/components/ui/progress';
 import { Badge } from '@/components/ui/badge';
@@ -99,8 +97,8 @@ const LiveCall = () => {
   const analyzingRef = useRef(false);
   const analyzed = new Set<string>();
 
-  // New transcript session management - initialized after sessionConfig
-  const transcriptSession = useTranscriptSession(sessionConfig.callRecordId || `session-${Date.now()}`);
+  // Store final transcript for post-call analysis
+  const finalTranscriptRef = useRef('');
 
   // State for call setup process
   const [isSettingUp, setIsSettingUp] = useState(sessionConfig.replayMode === 'call_simulation' && sessionConfig.autoStart);
@@ -130,47 +128,15 @@ const LiveCall = () => {
             }
           };
 
-          // Set up stable event listeners - SINGLE message handler only
+          // Set up stable event listeners - minimal for call management only
           vapiService.on('call-start', eventHandlers.onCallStart);
           vapiService.on('call-end', eventHandlers.onCallEnd);
-          vapiService.on('message', (message: any) => {
-            console.log('Raw VAPI message in LiveCall:', message.type);
-            transcriptSession.processVapiMessage(message);
-          });
-          // Attach explicit transcript-related events as fallback (SDK variants)
-          vapiService.on('transcript', (evt: any) => {
-            console.log('VAPI transcript event:', evt);
-            transcriptSession.processVapiMessage({ type: 'transcript', ...evt });
-          });
-          vapiService.on('transcript.partial', (evt: any) => {
-            console.log('VAPI transcript.partial event:', evt);
-            transcriptSession.processVapiMessage({ type: 'transcript', isFinal: false, ...evt });
-          });
-          vapiService.on('transcript.final', (evt: any) => {
-            console.log('VAPI transcript.final event:', evt);
-            transcriptSession.processVapiMessage({ type: 'transcript', isFinal: true, ...evt });
-          });
-          vapiService.on('speech-update', (evt: any) => {
-            console.log('VAPI speech-update event:', evt);
-            transcriptSession.processVapiMessage({ type: 'speech-update', ...evt });
-          });
-          vapiService.on('conversation-update', (evt: any) => {
-            console.log('VAPI conversation-update event:', evt);
-            transcriptSession.processVapiMessage({ type: 'conversation-update', ...evt });
-          });
 
           // Store cleanup function
             cleanup = () => {
               try {
                 vapiService.off('call-start', eventHandlers.onCallStart);
                 vapiService.off('call-end', eventHandlers.onCallEnd);
-                vapiService.off('message');
-                vapiService.off('transcript');
-                vapiService.off('transcript.partial');
-                vapiService.off('transcript.final');
-                vapiService.off('speech-update');
-                vapiService.off('conversation-update');
-                transcriptSession.clear();
                 console.log('VAPI listeners cleaned up successfully');
               } catch (e) {
                 console.error('Error cleaning up VAPI listeners:', e);
@@ -222,8 +188,6 @@ const LiveCall = () => {
             sessionConfig.assistantId = (data as any).assistantId;
             sessionConfig.callRecordId = (data as any).callRecordId;
 
-            // Set transcript session status to active
-            transcriptSession.setStatus('active');
 
             console.log('Starting call with assistant:', (data as any).assistantId);
             await vapiService.startCall((data as any).assistantId);
@@ -300,16 +264,14 @@ const LiveCall = () => {
     setIsCallActive(false);
     setIsAnalyzing(true);
     
-    // Finalize transcript and get the cleaned version
-    const finalTranscript = await transcriptSession.finalize();
+    // Get final transcript from Vapi service (simplified approach)
+    const finalTranscript = finalTranscriptRef.current || '';
     const finalDuration = Math.max(callDuration, 1); // Ensure minimum duration
 
-    // B) Overwrite transcript session with canonical version
-    if (finalTranscript.trim()) {
-      transcriptSession.setFinalTranscript(finalTranscript);
-    }
+    // Store for post-call analysis
+    finalTranscriptRef.current = finalTranscript;
 
-    // Persist the finalized transcript
+    // Persist the final transcript
     if (finalTranscript.trim() && sessionConfig.callRecordId) {
       const wordCount = finalTranscript.split(/\s+/).length;
       const checksum = generateTranscriptChecksum(finalTranscript);
@@ -319,7 +281,7 @@ const LiveCall = () => {
         finalTranscript,
         wordCount,
         checksum,
-        timeline: transcriptSession.state.timeline
+        timeline: []
       });
     }
     
