@@ -44,6 +44,10 @@ class TranscriptSessionManager {
   private state: TranscriptSessionState;
   private chunkHashes = new Set<string>();
   private eventListeners = new Set<(state: TranscriptSessionState) => void>();
+  private finalIds = new Set<string>(); // Single-source deduplication
+  private assistantSpeaking = false; // Half-duplex gate
+  private speakTailUntil = 0; // Half-duplex tail
+  private lastByRole: Record<'user' | 'prospect', {text: string, timestamp: number} | undefined> = { user: undefined, prospect: undefined }; // Near-duplicate filter
   
   constructor(callSessionId: string) {
     this.state = {
@@ -129,61 +133,81 @@ class TranscriptSessionManager {
   public processVapiMessage(message: VapiTranscriptMessage | any) {
     if (!message) return;
 
-    // Some SDKs emit direct transcript events without type
-    if (!message.type && (message.transcript || message.text)) {
-      const text = message.transcript?.text || message.text || '';
-      const role = message.role === 'assistant' ? 'prospect' : 'user';
-      const isFinal = !!message.isFinal;
-      const timestamp = message.timestamp || Date.now();
-      const source = message.source || 'vapi';
-      if (isFinal) this.addFinalTranscript(text, role, timestamp, source);
-      else this.addInterimTranscript(text, role, timestamp, source);
-      return;
-    }
-
-    // Normalize message
     const type = message.type;
 
+    // A) Single-source transcript handling with filters
     if (type === 'transcript') {
+      // Only persist final transcript chunks from primary source
+      if (!message.is_final) {
+        // Interim transcripts are for UI state only
+        this.updateUiState(message);
+        return;
+      }
+
+      // Check for chunk_id deduplication
+      if (message.chunk_id && this.finalIds.has(message.chunk_id)) {
+        console.log(`⚠️ Skipping duplicate chunk_id: ${message.chunk_id}`);
+        return;
+      }
+
+      if (message.chunk_id) {
+        this.finalIds.add(message.chunk_id);
+      }
+
       let text = '';
       if (typeof message.transcript === 'string') text = message.transcript;
       else if (message.transcript?.text) text = message.transcript.text;
       else if (message.transcript?.content) text = message.transcript.content;
+      else if (message.text) text = message.text;
 
-      if (!text?.trim()) return;
+      text = (text || '').trim();
+      if (!text) return;
 
-      const speaker = message.role === 'assistant' ? 'prospect' : 'user';
-      const isFinal = message.isFinal ?? (message.transcriptType === 'final');
-      const timestamp = message.timestamp || Date.now();
-      const source = message.source || 'vapi';
-
-      if (isFinal) this.addFinalTranscript(text, speaker, timestamp, source);
-      else this.addInterimTranscript(text, speaker, timestamp, source);
-      return;
-    }
-
-    if (type === 'speech-update' && message.speech?.text) {
-      const text = message.speech.text as string;
-      const speaker = message.role === 'assistant' ? 'prospect' : 'user';
-      this.addFinalTranscript(text, speaker, message.timestamp || Date.now(), 'vapi-speech');
-      return;
-    }
-
-    if (type === 'conversation-update' && message.conversation) {
-      try {
-        message.conversation.forEach((entry: any) => {
-          if (entry.content && typeof entry.content === 'string') {
-            const sp = entry.role === 'assistant' ? 'prospect' : 'user';
-            this.addFinalTranscript(entry.content, sp, Date.now(), 'vapi-conversation');
-          }
-        });
-      } catch (e) {
-        console.warn('Failed to process conversation-update:', e);
+      // Filter out system/context lines
+      if (/^role\s*and\s*context/i.test(text)) {
+        console.log('🚫 Filtered system prompt line:', text.substring(0, 50));
+        return;
       }
+
+      const speaker = message.role === 'assistant' ? 'prospect' : 'user';
+      const timestamp = message.timestamp || message.ts || Date.now();
+
+      // C) Half-duplex gate for echo control
+      if (speaker === 'user' && (this.assistantSpeaking || performance.now() < this.speakTailUntil)) {
+        console.log('🔇 Dropped user utterance during assistant speech (echo control)');
+        return;
+      }
+
+      this.persistUtterance({
+        role: speaker,
+        text,
+        timestamp,
+        chunkId: message.chunk_id,
+        source: message.source || 'vapi'
+      });
       return;
     }
 
-    // Fallback log
+    // Handle speech-update for half-duplex gating
+    if (type === 'speech-update' && message.role === 'assistant') {
+      if (message.status === 'started') {
+        this.assistantSpeaking = true;
+        console.log('🎤 Assistant started speaking - enabling echo gate');
+      }
+      if (message.status === 'stopped') {
+        this.assistantSpeaking = false;
+        this.speakTailUntil = performance.now() + 350; // 350ms tail
+        console.log('🔊 Assistant stopped speaking - 350ms echo tail active');
+      }
+    }
+
+    // B) UI/state-only message types (never persisted)
+    if (['conversation-update', 'voice-input', 'speech-update', 'status-update'].includes(type)) {
+      this.updateUiState(message);
+      return;
+    }
+
+    // Fallback log for unhandled types
     console.log('Unhandled VAPI message type:', type, message);
   }
 
@@ -212,13 +236,33 @@ class TranscriptSessionManager {
     this.notifyListeners();
   }
 
-  private addFinalTranscript(text: string, speaker: 'user' | 'prospect', timestamp: number, source: string) {
+  // F) Near-duplicate filter with persistUtterance
+  private persistUtterance({role, text, timestamp, chunkId, source}: {
+    role: 'user' | 'prospect';
+    text: string;
+    timestamp: number;
+    chunkId?: string;
+    source: string;
+  }) {
     const normalizedText = this.normalizeText(text);
     const deduplicatedText = this.deduplicateTokens(normalizedText);
     
     if (!deduplicatedText.trim()) return;
 
-    const hash = this.generateHash(deduplicatedText, speaker, timestamp);
+    // Near-duplicate filter
+    const prev = this.lastByRole[role];
+    if (prev) {
+      const prevNorm = this.normalizeForComparison(prev.text);
+      const currentNorm = this.normalizeForComparison(deduplicatedText);
+      if (prevNorm === currentNorm && (timestamp - prev.timestamp) < 2000) {
+        console.log(`🔄 Dropped near-duplicate within 2s for ${role}`);
+        return;
+      }
+    }
+
+    this.lastByRole[role] = { text: deduplicatedText, timestamp };
+
+    const hash = this.generateHash(deduplicatedText, role, timestamp);
     
     // Idempotent append - skip if already processed
     if (this.chunkHashes.has(hash)) {
@@ -229,9 +273,9 @@ class TranscriptSessionManager {
     this.chunkHashes.add(hash);
 
     const finalChunk: FinalChunk = {
-      id: `${this.state.callSessionId}-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
+      id: chunkId || `${this.state.callSessionId}-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
       text: deduplicatedText,
-      speaker,
+      speaker: role,
       timestamp,
       source,
       hash
@@ -239,13 +283,52 @@ class TranscriptSessionManager {
 
     this.state.finalChunks.push(finalChunk);
     
-    // Clear related interim from live buffer
-    this.state.liveBuffer = this.state.liveBuffer.filter(
-      b => !(b.speaker === speaker && b.source === source && !b.isFinal)
-    );
-
-    console.log(`✅ Final: ${speaker} said "${deduplicatedText.substring(0, 50)}..."`);
+    console.log(`✅ Final: ${role} said "${deduplicatedText.substring(0, 50)}..."`);
     this.notifyListeners();
+  }
+
+  private normalizeForComparison(text: string): string {
+    return text.toLowerCase().replace(/[^\w\s]/g,'').replace(/\s+/g,' ').trim();
+  }
+
+  private updateUiState(message: any) {
+    // Handle UI state updates without persisting transcript
+    // This is for interim transcripts, conversation-update, voice-input, etc.
+    console.log(`🎨 UI state update: ${message.type}`);
+    
+    // Only update interim transcripts in live buffer for UI display
+    if (message.type === 'transcript' && !message.is_final) {
+      let text = '';
+      if (typeof message.transcript === 'string') text = message.transcript;
+      else if (message.transcript?.text) text = message.transcript.text;
+      else if (message.transcript?.content) text = message.transcript.content;
+      else if (message.text) text = message.text;
+
+      if (text?.trim()) {
+        const normalizedText = this.normalizeText(text);
+        const speaker = message.role === 'assistant' ? 'prospect' : 'user';
+        const timestamp = message.timestamp || message.ts || Date.now();
+        const source = message.source || 'vapi';
+        const hash = this.generateHash(normalizedText, speaker, timestamp);
+        
+        const buffer: TranscriptBuffer = {
+          text: normalizedText,
+          isFinal: false,
+          speaker,
+          source,
+          hash,
+          t0: timestamp
+        };
+
+        // Replace any existing interim from same source/speaker
+        this.state.liveBuffer = this.state.liveBuffer.filter(
+          b => !(b.speaker === speaker && b.source === source && !b.isFinal)
+        );
+        
+        this.state.liveBuffer.push(buffer);
+        this.notifyListeners();
+      }
+    }
   }
 
   public async finalize(): Promise<string> {
@@ -254,7 +337,12 @@ class TranscriptSessionManager {
     // Flush any remaining interim buffers as final
     const remainingInterims = this.state.liveBuffer.filter(b => !b.isFinal && b.text.trim());
     for (const interim of remainingInterims) {
-      this.addFinalTranscript(interim.text, interim.speaker, interim.t0 || Date.now(), interim.source);
+      this.persistUtterance({
+        role: interim.speaker,
+        text: interim.text,
+        timestamp: interim.t0 || Date.now(),
+        source: interim.source
+      });
     }
 
     // Clear live buffer
@@ -313,6 +401,15 @@ class TranscriptSessionManager {
     return { ...this.state };
   }
 
+  // B) Overwrite with canonical post-call transcript
+  public setFinalTranscript(finalTranscript: string) {
+    console.log(`📝 Overwriting transcript with canonical version (${finalTranscript.length} chars)`);
+    this.state.finalTranscript = finalTranscript;
+    this.state.liveBuffer = []; // Clear live buffer
+    this.state.finalChunks = []; // Clear processed chunks since we have canonical version
+    this.notifyListeners();
+  }
+
   public clear() {
     this.state = {
       callSessionId: this.state.callSessionId,
@@ -323,6 +420,10 @@ class TranscriptSessionManager {
       timeline: []
     };
     this.chunkHashes.clear();
+    this.finalIds.clear();
+    this.lastByRole = { user: undefined, prospect: undefined };
+    this.assistantSpeaking = false;
+    this.speakTailUntil = 0;
     this.notifyListeners();
   }
 }
@@ -367,11 +468,16 @@ export const useTranscriptSession = (callSessionId: string) => {
     managerRef.current?.clear();
   }, []);
 
+  const setFinalTranscript = useCallback((finalTranscript: string) => {
+    managerRef.current?.setFinalTranscript(finalTranscript);
+  }, []);
+
   return {
     state,
     processVapiMessage,
     setStatus,
     finalize,
-    clear
+    clear,
+    setFinalTranscript
   };
 };

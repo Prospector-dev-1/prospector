@@ -1,5 +1,8 @@
 import Vapi from '@vapi-ai/web';
 
+// D) Krisp singleton management
+let krispInstance: any = null;
+
 class VapiService {
   private static instance: VapiService;
   private vapi: Vapi | null = null;
@@ -57,8 +60,37 @@ class VapiService {
         }
       }
       
-      // Initialize VAPI with basic setup to avoid audio processing issues
+      // D) Krisp singleton initialization (exclude Replay)
+      const isReplayScreen = window.location.pathname.includes('/replay') || window.location.pathname.includes('/ai-replay');
+      if (!krispInstance && !isReplayScreen) {
+        console.log('🎧 Initializing Krisp SDK singleton');
+        // Krisp will be initialized by Vapi internally, we just track it
+        krispInstance = 'initialized';
+      } else if (isReplayScreen) {
+        console.log('🚫 Skipping Krisp initialization on Replay screen');
+      }
+      
+      // Initialize VAPI with echo control constraints
       this.vapi = new Vapi(this.publicKey);
+      
+      // C) Request mic with browser echo controls (only for non-replay)
+      if (!isReplayScreen) {
+        try {
+          await navigator.mediaDevices.getUserMedia({
+            audio: { 
+              echoCancellation: true, 
+              noiseSuppression: true, 
+              autoGainControl: true, 
+              channelCount: 1, 
+              sampleRate: 16000 
+            },
+            video: false
+          });
+          console.log('🎤 Microphone configured with echo controls');
+        } catch (micError) {
+          console.warn('Could not configure microphone constraints:', micError);
+        }
+      }
       
       console.log('VAPI initialized successfully');
     } catch (error) {
@@ -145,6 +177,22 @@ class VapiService {
         console.warn('Error during VAPI cleanup:', error);
       } finally {
         this.vapi = null;
+      }
+    }
+    
+    // D) Safe Krisp teardown
+    if (krispInstance && krispInstance !== 'initialized') {
+      try {
+        if (krispInstance?.isReady) {
+          await krispInstance.unload();
+          console.log('🎧 Krisp SDK safely unloaded');
+        }
+      } catch (error: any) {
+        if (!String(error?.message).includes('WASM_OR_WORKER_NOT_READY')) {
+          console.warn('Krisp cleanup warning:', error);
+        }
+      } finally {
+        krispInstance = null;
       }
     }
   }

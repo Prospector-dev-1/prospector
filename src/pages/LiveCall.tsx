@@ -95,8 +95,9 @@ const LiveCall = () => {
   const [confidence, setConfidence] = useState(75);
   const [responseSpeed, setResponseSpeed] = useState(85);
 
-  // Guard to prevent duplicate analysis triggers
+  // E) Idempotent analysis trigger
   const analyzingRef = useRef(false);
+  const analyzed = new Set<string>();
 
   // New transcript session management - initialized after sessionConfig
   const transcriptSession = useTranscriptSession(sessionConfig.callRecordId || `session-${Date.now()}`);
@@ -187,10 +188,12 @@ const LiveCall = () => {
                   echoCancellation: true,
                   noiseSuppression: true,
                   autoGainControl: true,
+                  channelCount: 1,
+                  sampleRate: 16000
                 },
               });
               stream.getTracks().forEach((t) => t.stop());
-              console.log('Microphone access granted');
+              console.log('Microphone access granted with echo controls');
             } catch (micErr) {
               console.error('Microphone access denied or failed:', micErr);
               setIsSettingUp(false);
@@ -284,12 +287,14 @@ const LiveCall = () => {
   }, [endConversation]);
 
   const handleCallSimulationEnd = async () => {
-    // Prevent duplicate calls (use ref for immediate guard)
-    if (analyzingRef.current) {
-      console.log('Analysis already in progress, skipping duplicate call');
+    // E) Idempotent analysis - prevent duplicate calls
+    const callId = sessionConfig.callRecordId;
+    if (analyzingRef.current || analyzed.has(callId)) {
+      console.log('Analysis already in progress or completed, skipping duplicate call');
       return;
     }
     analyzingRef.current = true;
+    analyzed.add(callId);
     
     console.log('Call simulation ended');
     setIsCallActive(false);
@@ -298,6 +303,11 @@ const LiveCall = () => {
     // Finalize transcript and get the cleaned version
     const finalTranscript = await transcriptSession.finalize();
     const finalDuration = Math.max(callDuration, 1); // Ensure minimum duration
+
+    // B) Overwrite transcript session with canonical version
+    if (finalTranscript.trim()) {
+      transcriptSession.setFinalTranscript(finalTranscript);
+    }
 
     // Persist the finalized transcript
     if (finalTranscript.trim() && sessionConfig.callRecordId) {
