@@ -50,7 +50,17 @@ class VapiService {
 
   async stopCall(): Promise<void> {
     if (this.vapi) {
-      return this.vapi.stop();
+      try {
+        await this.vapi.stop();
+      } catch (error) {
+        // Suppress Krisp processor errors during cleanup
+        if (error instanceof Error && error.message.includes('WASM_OR_WORKER_NOT_READY')) {
+          console.warn('Krisp processor cleanup warning (expected):', error.message);
+        } else {
+          console.error('Error stopping Vapi call:', error);
+          throw error;
+        }
+      }
     }
   }
 

@@ -392,8 +392,17 @@ export const useRealtimeAIChat = () => {
 
       if (vapiInstance.current) {
         console.log('Stopping Vapi instance...');
-        await vapiInstance.current.stop();
-        console.log('Vapi instance stopped');
+        try {
+          await vapiInstance.current.stop();
+          console.log('Vapi instance stopped');
+        } catch (error) {
+          // Suppress Krisp processor errors during cleanup
+          if (error instanceof Error && error.message.includes('WASM_OR_WORKER_NOT_READY')) {
+            console.warn('Krisp processor cleanup warning (expected):', error.message);
+          } else {
+            console.error('Error stopping Vapi instance:', error);
+          }
+        }
         
         // Clear the Vapi instance to prevent further use
         vapiInstance.current = null;
