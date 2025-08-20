@@ -171,14 +171,36 @@ const LiveCall = () => {
           if (sessionConfig.autoStart) {
             console.log('Setting up call simulation...');
 
+            // Pre-flight: ensure microphone permission to avoid processor/WASM init errors
+            try {
+              const stream = await navigator.mediaDevices.getUserMedia({
+                audio: {
+                  echoCancellation: true,
+                  noiseSuppression: true,
+                  autoGainControl: true,
+                },
+              });
+              stream.getTracks().forEach((t) => t.stop());
+              console.log('Microphone access granted');
+            } catch (micErr) {
+              console.error('Microphone access denied or failed:', micErr);
+              setIsSettingUp(false);
+              toast({
+                title: 'Microphone Required',
+                description: 'Please allow microphone access to start the call.',
+                variant: 'destructive',
+              });
+              throw new Error('Microphone access is required');
+            }
+
             const { data, error } = await supabase.functions.invoke('start-call', {
               body: {
                 difficulty_level: sessionConfig.difficulty,
                 business_type: sessionConfig.businessType,
                 prospect_role: sessionConfig.prospectRole,
                 call_objective: sessionConfig.callObjective,
-                custom_instructions: sessionConfig.customInstructions
-              }
+                custom_instructions: sessionConfig.customInstructions,
+              },
             });
 
             if (error) throw new Error(error.message);
