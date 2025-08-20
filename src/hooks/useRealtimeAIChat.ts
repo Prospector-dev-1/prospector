@@ -113,10 +113,21 @@ export const useRealtimeAIChat = () => {
 
   const initializeVapi = useCallback(async () => {
     try {
+      // Always create a fresh Vapi instance to avoid connection issues
+      if (vapiInstance.current) {
+        try {
+          await vapiInstance.current.stop();
+        } catch (error) {
+          console.warn('Error stopping previous Vapi instance:', error);
+        }
+        vapiInstance.current = null;
+      }
+
       const { data, error } = await supabase.functions.invoke('get-vapi-key');
       
       if (error) throw error;
 
+      console.log('Vapi initialized with public key');
       const { default: Vapi } = await import('@vapi-ai/web');
       const vapi = new Vapi(data.publicKey);
 
@@ -152,6 +163,25 @@ export const useRealtimeAIChat = () => {
 
       vapi.on('speech-end', () => {
         console.log('User stopped speaking');
+      });
+
+      vapi.on('error', (error: any) => {
+        console.error('Vapi error:', error);
+        // Don't end the call for minor errors like Krisp processor issues
+        if (error?.message?.includes('WASM_OR_WORKER_NOT_READY') || 
+            error?.message?.includes('krisp processor')) {
+          console.warn('Ignoring Krisp processor error:', error.message);
+          return;
+        }
+        
+        // For other errors, end the conversation
+        setConversationState(prev => ({
+          ...prev,
+          status: 'ended',
+          isConnected: false,
+          isActive: false,
+          isConnecting: false
+        }));
       });
 
       vapi.on('message', (message: any) => {
@@ -296,6 +326,8 @@ export const useRealtimeAIChat = () => {
     customProspectId?: string
   ) => {
     try {
+      console.log('Starting conversation with session:', sessionId);
+      
       setConversationState(prev => ({
         ...prev,
         status: 'connecting',
@@ -312,9 +344,8 @@ export const useRealtimeAIChat = () => {
       sessionTranscript.current = '';
       setFinalAnalysis(null);
 
-      if (!vapiInstance.current) {
-        await initializeVapi();
-      }
+      // Always initialize a fresh Vapi instance
+      await initializeVapi();
 
       sessionConfigRef.current = {
         replayMode,
@@ -324,6 +355,8 @@ export const useRealtimeAIChat = () => {
         sessionId
       };
 
+      console.log('Calling start-enhanced-ai-conversation...');
+      
       // Use enhanced AI conversation start
       const { data, error } = await supabase.functions.invoke('start-enhanced-ai-conversation', {
         body: {
@@ -338,6 +371,8 @@ export const useRealtimeAIChat = () => {
 
       if (error) throw error;
 
+      console.log('Enhanced AI conversation configured, starting Vapi call...');
+
       // Store prospect profile in state
       setConversationState(prev => ({
         ...prev,
@@ -345,7 +380,13 @@ export const useRealtimeAIChat = () => {
         personalityState: 'initial'
       }));
 
-      await vapiInstance.current?.start(data.assistantId);
+      // Start the actual call
+      if (!vapiInstance.current) {
+        throw new Error('Vapi instance not initialized');
+      }
+
+      await vapiInstance.current.start(data.assistantId);
+      console.log('Vapi call started with assistant:', data.assistantId);
 
       // Start with personality-specific coaching
       setTimeout(() => {
