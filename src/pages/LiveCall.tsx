@@ -264,54 +264,69 @@ const LiveCall = () => {
     setIsCallActive(false);
     setIsAnalyzing(true);
     
-    // Webhook will handle transcript capture, so we just wait and poll
-    if (!sessionConfig.callRecordId) {
-      console.log('No callRecordId available, skipping');
+    // Get final transcript from Vapi service (simplified approach)
+    const finalTranscript = finalTranscriptRef.current || '';
+    const finalDuration = Math.max(callDuration, 1); // Ensure minimum duration
+
+    // Store for post-call analysis
+    finalTranscriptRef.current = finalTranscript;
+
+    // Persist the final transcript
+    if (finalTranscript.trim() && sessionConfig.callRecordId) {
+      const wordCount = finalTranscript.split(/\s+/).length;
+      const checksum = generateTranscriptChecksum(finalTranscript);
+      
+      await persistTranscript({
+        callSessionId: sessionConfig.callRecordId,
+        finalTranscript,
+        wordCount,
+        checksum,
+        timeline: []
+      });
+    }
+    
+    console.log('Final transcript length:', finalTranscript.length);
+    console.log('Final duration:', finalDuration);
+    
+    // Update call record with transcript and duration first, with validation
+    try {
+      // Skip update if callRecordId is not available
+      if (!sessionConfig.callRecordId) {
+        console.log('No callRecordId available, skipping call record update');
+        setIsAnalyzing(false);
+        return;
+      }
+
+      const updateData = {
+        transcript: finalTranscript,
+        duration_seconds: finalDuration,
+        call_status: finalTranscript.length > 0 ? 'analyzing' : 'failed'
+      };
+      
+      const { error: updateError } = await supabase
+        .from('calls')
+        .update(updateData)
+        .eq('id', sessionConfig.callRecordId);
+      
+      if (updateError) {
+        throw updateError;
+      }
+      
+      console.log('Updated call record with transcript and duration');
+    } catch (error) {
+      console.error('Error updating call record:', error);
+      toast({
+        title: "Update Failed",
+        description: "Failed to save call data. Please try again.",
+        variant: "destructive",
+      });
       setIsAnalyzing(false);
       return;
     }
 
-    // Poll for transcript to be received via webhook
-    console.log('Waiting for webhook to provide final transcript...');
-    let transcriptReceived = false;
-    let attempts = 0;
-    const maxAttempts = 30; // 30 seconds max wait
-    
-    while (!transcriptReceived && attempts < maxAttempts) {
-      await new Promise(resolve => setTimeout(resolve, 1000)); // Wait 1 second
-      attempts++;
-      
-      try {
-        const { data: callRecord, error } = await supabase
-          .from('calls')
-          .select('transcript, call_status')
-          .eq('id', sessionConfig.callRecordId)
-          .single();
-          
-        if (error) {
-          console.error('Error checking call record:', error);
-          continue;
-        }
-        
-        // Check if webhook provided transcript
-        if (callRecord?.transcript && callRecord.transcript.trim().length > 0) {
-          console.log('Transcript received via webhook!');
-          transcriptReceived = true;
-          
-          // If webhook hasn't triggered analysis yet, we can navigate directly
-          if (callRecord.call_status === 'completed') {
-            console.log('Call completed, navigating to results');
-            navigate(`/call-results/${sessionConfig.callRecordId}`, { replace: true });
-            return;
-          }
-        }
-      } catch (error) {
-        console.error('Error polling for transcript:', error);
-      }
-    }
-    
-    if (!transcriptReceived) {
-      console.log('Transcript not received via webhook after 30 seconds');
+    // Only proceed with analysis if we have a valid transcript
+    if (finalTranscript.length === 0) {
+      console.log('No transcript captured, skipping analysis');
       toast({
         title: "No Transcript",
         description: "No conversation was captured. Please try speaking during the call.",
@@ -321,8 +336,44 @@ const LiveCall = () => {
       navigate(`/call-results/${sessionConfig.callRecordId}`, { replace: true });
       return;
     }
+
+    // Trigger proper call analysis using end-call-analysis function
+    try {
+      console.log('Starting call analysis...');
+      const { data, error } = await supabase.functions.invoke('end-call-analysis', {
+        body: {
+          callRecordId: sessionConfig.callRecordId,
+          transcript: finalTranscript,
+          duration: finalDuration
+        }
+      });
+      
+      if (error) {
+        console.error('Error invoking end-call-analysis:', error);
+        toast({
+          title: "Analysis Failed",
+          description: "Call analysis failed. You can retry from the results page.",
+          variant: "destructive",
+        });
+      } else {
+        console.log('Call analysis completed successfully');
+        toast({
+          title: "Analysis Started",
+          description: "Processing your call performance...",
+        });
+      }
+    } catch (error) {
+      console.error('Error analyzing call:', error);
+      toast({
+        title: "Analysis Failed", 
+        description: "Call analysis failed. You can retry from the results page.",
+        variant: "destructive",
+      });
+    } finally {
+      setIsAnalyzing(false);
+    }
     
-    // Navigate to results
+    // Navigate immediately after analysis starts
     navigate(`/call-results/${sessionConfig.callRecordId}`, { replace: true });
   };
 
