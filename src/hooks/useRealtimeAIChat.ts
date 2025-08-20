@@ -45,7 +45,11 @@ export interface FinalAnalysis {
   conversationFlow?: any;
 }
 
-export const useRealtimeAIChat = () => {
+interface UseRealtimeAIChatProps {
+  isUploadCallReplay?: boolean;
+}
+
+export const useRealtimeAIChat = ({ isUploadCallReplay = false }: UseRealtimeAIChatProps = {}) => {
   const [conversationState, setConversationState] = useState<ConversationState>({
     status: 'idle',
     isConnected: false,
@@ -355,17 +359,30 @@ export const useRealtimeAIChat = () => {
         sessionId
       };
 
-      console.log('Calling start-enhanced-ai-conversation...');
+      // Choose the appropriate edge function based on call type
+      const functionName = isUploadCallReplay ? 'start-replay-conversation' : 'start-enhanced-ai-conversation';
+      console.log(`Using edge function: ${functionName}`);
       
-      // Use enhanced AI conversation start
-      const { data, error } = await supabase.functions.invoke('start-enhanced-ai-conversation', {
+      // Use the appropriate AI conversation start function
+      const { data, error } = await supabase.functions.invoke(functionName, {
         body: {
           sessionId,
           originalMoment: selectedMoment,
           replayMode,
           prospectPersonality,
           gamificationMode,
-          customProspectId
+          customProspectId,
+          // For replay conversations, include session configuration
+          ...(isUploadCallReplay && {
+            transcript: '', // Will be populated during conversation
+            exchangeCount: 0,
+            sessionConfig: {
+              replayMode,
+              prospectPersonality,
+              gamificationMode,
+              originalMoment: selectedMoment
+            }
+          })
         }
       });
 
@@ -484,10 +501,11 @@ export const useRealtimeAIChat = () => {
         return;
       }
 
-      console.log('Analyzing enhanced conversation...');
+      console.log('Analyzing conversation...');
 
-      // Use enhanced conversation analysis
-      const { data, error } = await supabase.functions.invoke('analyze-enhanced-conversation', {
+      // Use the appropriate analysis function
+      const analysisFunction = isUploadCallReplay ? 'analyze-replay-conversation' : 'analyze-enhanced-conversation';
+      const { data, error } = await supabase.functions.invoke(analysisFunction, {
         body: {
           transcript: sessionTranscript.current,
           exchangeCount: conversationState.exchangeCount,
@@ -495,7 +513,8 @@ export const useRealtimeAIChat = () => {
             replayMode: sessionConfigRef.current.replayMode,
             prospectPersonality: sessionConfigRef.current.prospectPersonality,
             gamificationMode: sessionConfigRef.current.gamificationMode,
-            prospectProfile: conversationState.prospectProfile
+            prospectProfile: conversationState.prospectProfile,
+            originalMoment: conversationState.selectedMoment
           },
           sessionId: sessionConfigRef.current.sessionId
         }

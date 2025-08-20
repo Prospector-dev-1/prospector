@@ -12,7 +12,7 @@ import MobileLayout from '@/components/MobileLayout';
 import SmartBackButton from '@/components/SmartBackButton';
 import MomentsTimeline, { type Moment } from '@/components/MomentsTimeline';
 import ReplayModeControls from '@/components/ReplayModeControls';
-import { type ReplayMode, type ProspectPersonality, type GamificationMode } from '@/hooks/useRealtimeAIChat';
+import { useRealtimeAIChat, type ReplayMode, type ProspectPersonality, type GamificationMode } from '@/hooks/useRealtimeAIChat';
 
 interface CallRecord {
   id: string;
@@ -40,6 +40,14 @@ const AIReplaySetup = () => {
   const [replayMode, setReplayMode] = useState<ReplayMode>('detailed');
   const [prospectPersonality, setProspectPersonality] = useState<ProspectPersonality>('professional');
   const [gamificationMode, setGamificationMode] = useState<GamificationMode>('none');
+
+  // AI conversation hook for practice calls (not upload replay)
+  const {
+    conversationState,
+    startConversation,
+    endConversation,
+    clearHints
+  } = useRealtimeAIChat({ isUploadCallReplay: false });
 
   useEffect(() => {
     if (!callId || !user) return;

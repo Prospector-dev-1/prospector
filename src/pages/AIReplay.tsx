@@ -55,13 +55,13 @@ const AIReplay = () => {
   const [prospectPersonality, setProspectPersonality] = useState<ProspectPersonality>('professional');
   const [gamificationMode, setGamificationMode] = useState<GamificationMode>('none');
 
-  // AI conversation hook
+  // AI conversation hook for upload call replay
   const {
     conversationState,
     startConversation,
     endConversation,
     clearHints
-  } = useRealtimeAIChat();
+  } = useRealtimeAIChat({ isUploadCallReplay: true });
   useEffect(() => {
     if (!uploadId || !user) return;
     fetchOriginalCall();
