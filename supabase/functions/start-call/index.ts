@@ -346,6 +346,7 @@ serve(async (req) => {
       maxDurationSeconds: 600, // 10 minutes max
       silenceTimeoutSeconds: 30,
       responseDelaySeconds,
+      serverUrl: `${supabaseUrl}/functions/v1/vapi-webhook`,
       transcriber: {
         provider: "deepgram",
         model: "nova-3-general",
@@ -398,6 +399,16 @@ serve(async (req) => {
       })
       .select()
       .single();
+
+    if (callError) {
+      console.error('Error creating call record:', callError);
+      throw new Error('Failed to create call record');
+    }
+
+    // Add metadata to assistant config for webhook identification
+    assistantConfig.metadata = {
+      callRecordId: callRecord.id
+    };
 
     if (callError) {
       console.error('Error creating call record:', callError);
