@@ -1,10 +1,25 @@
+import React from "react";
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { AuthProvider } from "@/contexts/AuthContext";
+import { ErrorBoundary } from "@/components/ErrorBoundary";
+import { getWebEnv } from "@/env";
 import ScrollManager from "@/components/ScrollManager";
+
+// Initialize console capture for development
+if (import.meta.env.DEV) {
+  import("@/utils/consoleCapture");
+}
+
+// Validate environment on app start
+try {
+  getWebEnv();
+} catch (error) {
+  console.error("Environment validation failed:", error);
+}
 import Index from "./pages/Index";
 import Auth from "./pages/Auth";
 import CallSimulation from "./pages/CallSimulation";
@@ -28,16 +43,18 @@ import NotFound from "./pages/NotFound";
 import Help from "./pages/Help";
 import Privacy from "./pages/Privacy";
 import ProtectedRoute from "@/components/ProtectedRoute";
+const AuditPage = React.lazy(() => import("./pages/__audit"));
 
 const queryClient = new QueryClient();
 
 const App = () => (
-  <QueryClientProvider client={queryClient}>
-    <AuthProvider>
-      <TooltipProvider>
-        <Toaster />
-        <Sonner />
-        <BrowserRouter>
+  <ErrorBoundary>
+    <QueryClientProvider client={queryClient}>
+      <AuthProvider>
+        <TooltipProvider>
+          <Toaster />
+          <Sonner />
+          <BrowserRouter>
           <ScrollManager />
           <Routes>
             <Route path="/" element={<Index />} />
@@ -63,6 +80,9 @@ const App = () => (
               <Route path="/custom-script" element={<ProtectedRoute><CustomScriptGenerator /></ProtectedRoute>} />
             <Route path="/help" element={<Help />} />
             <Route path="/privacy" element={<Privacy />} />
+            {import.meta.env.DEV && (
+              <Route path="/__audit" element={<ProtectedRoute><React.Suspense fallback={<div>Loading...</div>}><AuditPage /></React.Suspense></ProtectedRoute>} />
+            )}
             {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
             <Route path="*" element={<NotFound />} />
           </Routes>
@@ -70,6 +90,7 @@ const App = () => (
       </TooltipProvider>
     </AuthProvider>
   </QueryClientProvider>
+  </ErrorBoundary>
 );
 
 export default App;

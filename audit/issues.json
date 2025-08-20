@@ -1,0 +1,92 @@
+[
+  {
+    "id": "ISSUE-001",
+    "category": "security",
+    "severity": "blocker",
+    "where": ".env:1-4",
+    "summary": "Secrets exposed in git repository",
+    "evidence": {
+      "console": "Supabase keys and project ID visible in version control"
+    },
+    "fix": {
+      "strategy": "Remove .env from git, create env validation with Zod schemas",
+      "changes": ["Add .env to .gitignore", "Create env/.env.example", "Add Zod validation in src/env.ts"],
+      "tests": ["Unit test env parsing", "Verify build fails without required env vars"]
+    }
+  },
+  {
+    "id": "ISSUE-002", 
+    "category": "correctness",
+    "severity": "high",
+    "where": "src/utils/vapiService.ts:KrispSDK",
+    "summary": "KrispSDK duplication causing call failures",
+    "evidence": {
+      "console": "KrispSDK - The KrispSDK is duplicated. Please ensure that the SDK is only imported once."
+    },
+    "fix": {
+      "strategy": "Centralize VAPI instance management through singleton pattern",
+      "changes": ["Modified useRealtimeAIChat to accept existing instance", "Updated LiveCall to pass VapiService instance"],
+      "tests": ["E2E test call start/end flow", "Verify single VAPI instance creation"]
+    }
+  },
+  {
+    "id": "ISSUE-003",
+    "category": "maintainability", 
+    "severity": "medium",
+    "where": "tsconfig.json:compilerOptions",
+    "summary": "TypeScript not in strict mode",
+    "evidence": {
+      "console": "strict: false allows unsafe type operations"
+    },
+    "fix": {
+      "strategy": "Enable strict TypeScript and fix resulting type errors",
+      "changes": ["Set strict: true", "Fix null/undefined handling", "Add proper type annotations"],
+      "tests": ["TypeScript compilation passes", "No any types in production code"]
+    }
+  },
+  {
+    "id": "ISSUE-004",
+    "category": "dx",
+    "severity": "medium", 
+    "where": "eslint.config.js:rules",
+    "summary": "Unused variables allowed despite being disabled",
+    "evidence": {
+      "console": "@typescript-eslint/no-unused-vars: off"
+    },
+    "fix": {
+      "strategy": "Re-enable unused variable checking with appropriate exceptions",
+      "changes": ["Update ESLint config", "Remove unused imports/variables", "Add underscored exceptions"],
+      "tests": ["ESLint passes with zero warnings", "Build process includes linting"]
+    }
+  },
+  {
+    "id": "ISSUE-005",
+    "category": "correctness",
+    "severity": "high",
+    "where": "src/App.tsx:routing",
+    "summary": "No error boundaries for runtime error handling",
+    "evidence": {
+      "console": "Unhandled runtime errors cause white screen of death"
+    },
+    "fix": {
+      "strategy": "Add React error boundaries at app and page levels",
+      "changes": ["Create AppErrorBoundary component", "Wrap routes in error boundaries", "Add error reporting"],
+      "tests": ["Error boundary catches errors", "Fallback UI renders correctly"]
+    }
+  },
+  {
+    "id": "ISSUE-006",
+    "category": "security",
+    "severity": "high",
+    "where": "supabase/functions/*/index.ts",
+    "summary": "Edge functions lack proper environment validation",
+    "evidence": {
+      "console": "Runtime errors when env vars missing"
+    },
+    "fix": {
+      "strategy": "Add Zod schemas for edge function environment validation",
+      "changes": ["Create env validation per function", "Fail fast with clear errors", "Add runtime checks"],
+      "tests": ["Functions fail gracefully without env", "Proper error codes returned"]
+    }
+  }
+]
