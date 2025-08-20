@@ -340,8 +340,7 @@ serve(async (req) => {
 
     // For any participation, use AI analysis for rigorous scoring
     console.log('Participation detected, proceeding with rigorous AI analysis');
-    const analysisPrompt = getSuccessEvaluationPrompt(cleanedTranscript);
-
+    const analysisPrompt = getSuccessEvaluationPrompt(cleanedTranscript, { target: 'openai' });
     console.log('Sending analysis prompt to OpenAI...');
     
     // Multiple fallback models for reliability
