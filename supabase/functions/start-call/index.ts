@@ -344,7 +344,7 @@ serve(async (req) => {
       endCallPhrases: ['goodbye', 'hang up', 'end call', 'we are done here'],
       recordingEnabled: true,
       maxDurationSeconds: 600, // 10 minutes max
-      silenceTimeoutSeconds: 30,
+      silenceTimeoutSeconds: 15,
       responseDelaySeconds,
       transcriber: {
         provider: "deepgram",
