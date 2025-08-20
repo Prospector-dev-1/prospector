@@ -249,15 +249,15 @@ serve(async (req) => {
 
       const hangupByLevel: Record<number, string> = {
         1: '',
-        2: '',
-        3: '',
-        4: '',
-        5: '',
-        6: '',
-        7: 'HANG-UP INSTRUCTIONS:\nIf they are not persuasive and confident within 30–60 seconds, dismiss them and say "goodbye" to end the call.',
-        8: 'HANG-UP INSTRUCTIONS:\nIf they are not persuasive and confident within 30–60 seconds, dismiss them and say "goodbye" to end the call.',
+        2: 'IMPORTANT HANG-UP INSTRUCTIONS:\nIf call last longer than 400 seconds, Say something like "Im sorry, My phone is about do die. I\'m sorry. I\'ve got to go." then say "goodbye" and end the call.',
+        3: 'IMPORTANT HANG-UP INSTRUCTIONS:\nGive the caller only 70-90 seconds to prove themselves. If not convinced, dismiss them politely and say something like "I\'m sorry. I\'ve got to go." then say "goodbye" and end the call.',
+        4: 'IMPORTANT HANG-UP INSTRUCTIONS:\nGive the caller only 60-70 seconds to prove themselves. If not convinced, dismiss them and say something like "I got to get back to work." then say "goodbye" and end the call.',
+        5: 'IMPORTANT HANG-UP INSTRUCTIONS:\nGive the caller only 60-70 seconds to prove themselves. If not convinced, dismiss them and say something like "Im getting another call I got to go." then say "goodbye" and end the call.',
+        6: 'HANG-UP INSTRUCTIONS:\nIf they are not persuasive and confident within 30–60 seconds, dismiss them and say "goodbye" to end the call.',
+        7: 'HANG-UP INSTRUCTIONS:\nIf they are not persuasive and confident within 30–50 seconds, dismiss them and say "goodbye" to end the call.',
+        8: 'HANG-UP INSTRUCTIONS:\nIf they are not persuasive and confident within 30–45 seconds, dismiss them and end the call.',
         9: 'IMPORTANT HANG-UP INSTRUCTIONS:\nGive the caller only 30–45 seconds to prove themselves. If not convinced, say something like "Pathetic. You\'re done." then say "goodbye" and end the call.',
-        10: 'IMPORTANT HANG-UP INSTRUCTIONS:\nGive the caller only 30–45 seconds to prove themselves. If not convinced, say something like "Pathetic. You\'re done." then say "goodbye" and end the call.'
+       10: 'IMPORTANT HANG-UP INSTRUCTIONS:\nGive the caller only 15–30 seconds to prove themselves. If not convinced, say something rude to dissmiss them and end the call.'
       };
 
       const base = baseByLevel[lvl];
