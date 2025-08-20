@@ -4,6 +4,7 @@ class VapiService {
   private static instance: VapiService;
   private vapi: Vapi | null = null;
   private publicKey: string | null = null;
+  private isInitializing: boolean = false;
 
   private constructor() {}
 
@@ -18,6 +19,16 @@ class VapiService {
     if (this.vapi) {
       return; // Already initialized
     }
+
+    if (this.isInitializing) {
+      // Wait for existing initialization to complete
+      while (this.isInitializing) {
+        await new Promise(resolve => setTimeout(resolve, 100));
+      }
+      return;
+    }
+
+    this.isInitializing = true;
 
     try {
       console.log('Fetching VAPI public key...');
@@ -37,6 +48,15 @@ class VapiService {
 
       this.publicKey = data.publicKey;
       
+      // Clean up any existing instance to prevent KrispSDK duplication
+      if (this.vapi) {
+        try {
+          await this.cleanup();
+        } catch (e) {
+          console.warn('Error cleaning up previous VAPI instance:', e);
+        }
+      }
+      
       // Initialize VAPI with basic setup to avoid audio processing issues
       this.vapi = new Vapi(this.publicKey);
       
@@ -44,6 +64,8 @@ class VapiService {
     } catch (error) {
       console.error('Failed to initialize VAPI:', error);
       throw new Error(`VAPI initialization failed: ${error instanceof Error ? error.message : 'Unknown error'}`);
+    } finally {
+      this.isInitializing = false;
     }
   }
 
@@ -78,10 +100,10 @@ class VapiService {
         console.log('Detected audio processor issue, attempting recovery...');
         
         try {
-          // Reinitialize without the problematic audio settings
-          this.vapi = null;
+          // Clean up and reinitialize to prevent KrispSDK duplication
+          await this.cleanup();
           this.vapi = new Vapi(this.publicKey!);
-          console.log('Retrying call start with basic VAPI setup...');
+          console.log('Retrying call start with fresh VAPI instance...');
           return await this.vapi.start(assistantId);
         } catch (retryError) {
           console.error('Recovery attempt failed:', retryError);
@@ -102,13 +124,27 @@ class VapiService {
         if (error instanceof Error && (
           error.message.includes('WASM_OR_WORKER_NOT_READY') ||
           error.message.includes('Krisp') ||
-          error.message.includes('processor')
+          error.message.includes('processor') ||
+          error.message.includes('didInitError')
         )) {
           console.warn('Audio processor cleanup warning (expected during shutdown):', error.message);
         } else {
           console.error('Error stopping Vapi call:', error);
           throw error;
         }
+      }
+    }
+  }
+
+  async cleanup(): Promise<void> {
+    if (this.vapi) {
+      try {
+        await this.vapi.stop();
+      } catch (error) {
+        // Suppress cleanup errors
+        console.warn('Error during VAPI cleanup:', error);
+      } finally {
+        this.vapi = null;
       }
     }
   }
