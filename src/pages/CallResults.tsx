@@ -163,8 +163,8 @@ const CallResults = () => {
         throw updateError;
       }
 
-      // Invoke vapi-success-evaluation with the saved transcript and duration
-      const { data, error: analysisError } = await supabase.functions.invoke('vapi-success-evaluation', {
+      // Invoke end-call-analysis with the saved transcript and duration
+      const { data, error: analysisError } = await supabase.functions.invoke('end-call-analysis', {
         body: {
           callRecordId: callId,
           transcript: callData.transcript,

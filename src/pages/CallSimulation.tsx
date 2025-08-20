@@ -301,7 +301,7 @@ const CallSimulation = () => {
         console.log('Starting background analysis - Duration from ref:', finalDuration, 'Transcript:', transcriptRef.current);
         
         // Send transcript for analysis (even if empty) - don't await
-        supabase.functions.invoke('vapi-success-evaluation', {
+        supabase.functions.invoke('end-call-analysis', {
           body: {
             callRecordId: currentCallRecordId,
             transcript: transcriptRef.current || 'No transcript available',

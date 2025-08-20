@@ -1,8 +1,5 @@
 project_id = "akcxkwbqeehxvwhmrqbb"
 
-[functions.vapi-success-evaluation]
-verify_jwt = false
-
 [functions.send-help]
 verify_jwt = false
 

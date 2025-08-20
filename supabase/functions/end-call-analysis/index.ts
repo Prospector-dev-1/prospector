@@ -1,7 +1,6 @@
 import "https://deno.land/x/xhr@0.1.0/mod.ts";
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.45.0";
-import { getSuccessEvaluationPrompt } from "../_shared/success-evaluation-prompt.ts";
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -340,7 +339,46 @@ serve(async (req) => {
 
     // For any participation, use AI analysis for rigorous scoring
     console.log('Participation detected, proceeding with rigorous AI analysis');
-    const analysisPrompt = getSuccessEvaluationPrompt(cleanedTranscript);
+    const analysisPrompt = `
+Analyze this cold calling transcript and provide detailed, personalized feedback. The transcript shows a conversation between a CALLER (salesperson) and a PROSPECT (business owner).
+
+TRANSCRIPT:
+${cleanedTranscript}
+
+TASK: Analyze the CALLER'S performance only. Provide scores (1-10) for each category and detailed personalized feedback.
+
+SCORING GUIDELINES:
+- 1-3: Poor performance, major issues
+- 4-6: Average performance, needs improvement  
+- 7-8: Good performance, minor tweaks needed
+- 9-10: Excellent performance, professional level
+
+ANALYSIS REQUIREMENTS:
+1. Quote specific things the caller said (good and bad)
+2. Identify what the caller did well
+3. Identify specific areas for improvement
+4. Give actionable advice for next time
+
+IMPORTANT: Set "successful_sale" to TRUE if any of these occurred:
+- Prospect agreed to an appointment, meeting, or call
+- Prospect said they're interested and want to schedule something
+- Prospect gave availability/times they're free
+- Prospect said "yes", "sounds good", "that works", "perfect" in response to scheduling
+- Any form of commitment to next steps was made
+
+Respond in this EXACT JSON format:
+{
+  "confidence_score": [1-10 number],
+  "objection_handling_score": [1-10 number], 
+  "clarity_score": [1-10 number],
+  "persuasiveness_score": [1-10 number],
+  "tone_score": [1-10 number],
+  "overall_pitch_score": [1-10 number],
+  "closing_score": [1-10 number],
+  "overall_score": [1-10 number],
+  "successful_sale": [true/false],
+  "feedback": "WHAT YOU DID WELL:\\n[Specific examples from the call]\\n\\nAREAS FOR IMPROVEMENT:\\n[Specific issues with quotes]\\n\\nHOW TO IMPROVE:\\n[Actionable advice for next call]"
+}`;
 
     console.log('Sending analysis prompt to OpenAI...');
     
