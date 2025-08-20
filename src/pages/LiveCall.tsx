@@ -250,7 +250,7 @@ const LiveCall = () => {
         endConversation();
       }
     };
-  }, [conversationState.isActive, conversationState.isConnecting, endConversation]);
+  }, [endConversation]);
 
   const handleCallSimulationEnd = async () => {
     // Prevent duplicate calls (use ref for immediate guard)
