@@ -29,6 +29,7 @@ export interface ConversationState {
   sessionId?: string;
   prospectProfile?: any;
   personalityState?: string;
+  sessionConfig?: any;
   // Backward compatibility
   isActive: boolean;
   isConnecting: boolean;
@@ -337,6 +338,9 @@ export const useRealtimeAIChat = ({ isUploadCallReplay = false, existingVapiInst
     gamificationMode: GamificationMode = 'none',
     customProspectId?: string
   ) => {
+    // Choose the appropriate edge function based on call type
+    const functionName = isUploadCallReplay ? 'start-replay-conversation' : 'start-enhanced-ai-conversation';
+    
     try {
       console.log('Starting conversation with session:', sessionId);
       
@@ -371,8 +375,6 @@ export const useRealtimeAIChat = ({ isUploadCallReplay = false, existingVapiInst
         sessionId
       };
 
-      // Choose the appropriate edge function based on call type
-      const functionName = isUploadCallReplay ? 'start-replay-conversation' : 'start-enhanced-ai-conversation';
       console.log(`Using edge function: ${functionName}`);
       
       // Use the appropriate AI conversation start function
@@ -400,14 +402,27 @@ export const useRealtimeAIChat = ({ isUploadCallReplay = false, existingVapiInst
 
       if (error) throw error;
 
-      console.log('Enhanced AI conversation configured, starting Vapi call...');
+      console.log(`${functionName} configured successfully, starting Vapi call...`);
 
-      // Store prospect profile in state
-      setConversationState(prev => ({
-        ...prev,
-        prospectProfile: data.sessionConfig.prospectProfile,
-        personalityState: 'initial'
-      }));
+      // For upload call replay, the response structure is different
+      if (isUploadCallReplay) {
+        if (!data.assistantId) {
+          throw new Error('No assistant ID returned from replay conversation function');
+        }
+        
+        // Store replay session config
+        setConversationState(prev => ({
+          ...prev,
+          sessionConfig: data.sessionConfig
+        }));
+      } else {
+        // Store prospect profile in state (for enhanced conversations)
+        setConversationState(prev => ({
+          ...prev,
+          prospectProfile: data.sessionConfig?.prospectProfile,
+          personalityState: 'initial'
+        }));
+      }
 
       // Start the actual call
       if (!vapiInstance.current) {
@@ -417,7 +432,7 @@ export const useRealtimeAIChat = ({ isUploadCallReplay = false, existingVapiInst
       await vapiInstance.current.start(data.assistantId);
       console.log('Vapi call started with assistant:', data.assistantId);
 
-      // Start with personality-specific coaching
+      // Add personality-specific coaching (for both types)
       setTimeout(() => {
         const personalityGuidance = getPersonalityGuidance(prospectPersonality);
         addCoachingHint(
@@ -438,7 +453,7 @@ export const useRealtimeAIChat = ({ isUploadCallReplay = false, existingVapiInst
       }
 
     } catch (error) {
-      console.error('Error starting enhanced conversation:', error);
+      console.error(`Error starting ${functionName}:`, error);
       setConversationState(prev => ({
         ...prev,
         status: 'idle',
