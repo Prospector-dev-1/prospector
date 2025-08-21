@@ -103,6 +103,47 @@ serve(async (req) => {
   const eventType = payload?.type || payload?.event || "unknown";
   const callId = payload?.callId || payload?.call_id || payload?.id;
   console.log("[vapi-webhook] Event received", { eventType, callId });
+// 1) Find the call id we should update (we sent this to Vapi as metadata)
+const meta = payload?.metadata ?? payload?.data?.metadata ?? {};
+const callRecordId = meta?.callRecordId ?? payload?.callRecordId ?? null;
+
+// 2) Collect transcript pieces from common Vapi shapes
+const segments: Array<{ role?: string; text?: string; type?: string }> =
+  payload?.transcript?.segments ??
+  payload?.data?.transcript?.segments ??
+  payload?.messages ??
+  [];
+
+// 3) Build the final transcript text (prefer "final" segments)
+let transcriptText = "";
+try {
+  const finals = segments.filter(
+    (s) => (s?.type ?? "").toLowerCase() === "final" && (s?.text ?? "").trim()
+  );
+  const use = finals.length ? finals : segments;
+  for (const seg of use) {
+    const role = seg?.role === "user" || seg?.role === "assistant" ? seg.role : "assistant";
+    const text = (seg?.text ?? "").trim();
+    if (!text) continue;
+    transcriptText += `${role === "assistant" ? "Prospect said: " : "You said: "}${text}\n`;
+  }
+} catch (e) {
+  console.warn("[vapi-webhook] Could not parse segments", e);
+}
+
+// 4) Save it to the database if we have both an id and some text
+if (callRecordId && transcriptText.trim()) {
+  const { error: dbErr } = await supabase
+    .from("calls")
+    .update({ transcript_text: transcriptText, call_status: "ended" })
+    .eq("id", callRecordId);
+
+  if (dbErr) {
+    console.error("[vapi-webhook] Failed to store transcript", dbErr);
+  } else {
+    console.log("[vapi-webhook] Transcript stored for call", callRecordId);
+  }
+}
 
   // TODO: Add your handling logic here (e.g., persist updates, trigger flows)
 
