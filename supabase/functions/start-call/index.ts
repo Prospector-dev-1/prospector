@@ -502,16 +502,7 @@ const assistantConfig = {
   ]
 };
 
-      // Optional metadata for your logs/analysis
-      metadata: {
-        attemptId,
-        userId,
-        level: difficulty_level,
-        business_type: business_type ?? null,
-        prospect_role: prospect_role ?? null,
-        call_objective: call_objective ?? null
-      }
-    };
+
 
     console.log('Assistant config:', JSON.stringify(assistantConfig, null, 2));
 
@@ -535,52 +526,28 @@ const assistantConfig = {
     const vapiData = await vapiResponse.json();
     console.log('Vapi response data:', vapiData);
 
-    // Create call record
-    const { data: callRecord, error: callError } = await supabaseService
-      .from('calls')
-      .insert({
-        user_id: userId,
-        difficulty_level,
-        business_type,
-        prospect_role,
-        call_objective,
-        custom_instructions,
-        scenario_data: {
-          ...scenario,
-          attemptId
-        },
-        call_status: 'started'
-      })
-      .select()
-      .single();
+    // Update the call row we created earlier (Step 5)
+const { error: callUpdateError } = await supabaseService
+  .from('calls')
+  .update({
+    scenario_data: scenario,
+    call_status: 'started',
+    assistant_id: vapiData.id
+  })
+  .eq('id', callRecordId);
 
-    if (callError) {
-      console.error('Error creating call record:', callError);
-    }
+if (callUpdateError) {
+  console.error('Error updating call record:', callUpdateError);
+} else {
+  console.log('Call record updated:', callRecordId);
+}
 
-    console.log('Call record created:', callRecord?.id);
-
-    return new Response(JSON.stringify({
-      success: true,
-      assistantId: vapiData.id,
-      callRecordId: callRecord?.id
-    }), {
-      headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-    });
-
-  } catch (error) {
-    console.error('Error in start-call function:', error);
-    console.error('Error details:', {
-      message: (error as any).message,
-      stack: (error as any).stack,
-      name: (error as any).name
-    });
-    return new Response(JSON.stringify({
-      error: (error as any).message,
-      details: (error as any).stack
-    }), {
-      status: 500,
-      headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-    });
+return new Response(JSON.stringify({
+  success: true,
+  assistantId: vapiData.id,
+  callRecordId
+}), {
+  headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+});
   }
 });
