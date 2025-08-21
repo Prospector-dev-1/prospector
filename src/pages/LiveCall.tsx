@@ -657,6 +657,7 @@ const LiveCall = () => {
                           source: chunk.source || 'vapi',
                           hash: `${chunk.timestamp}-${chunk.role}-${chunk.text.slice(0,10)}`
                         }))}
+                        liveBuffer={[]}
                         showLive={true}
                         className="text-xs"
                       />
