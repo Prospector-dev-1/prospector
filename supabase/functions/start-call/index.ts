@@ -157,7 +157,9 @@ serve(async (req) => {
 const vapiApiKey = Deno.env.get('VAPI_API_KEY');
 const supabaseUrl = Deno.env.get('SUPABASE_URL');
 const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY');
-const webhookUrl = `${supabaseUrl}/functions/v1/vapi-webhook`;  
+const supabaseFunctionsUrl = (supabaseUrl ?? '').replace('.supabase.co', '.functions.supabase.co');
+const webhookUrl = `${supabaseFunctionsUrl}/vapi-webhook`;
+ 
 
 
     console.log('Environment check:', {
@@ -549,5 +551,19 @@ return new Response(JSON.stringify({
 }), {
   headers: { ...corsHeaders, 'Content-Type': 'application/json' },
 });
-  }
+}catch (error) {
+  console.error('Error in start-call function:', error);
+  console.error('Error details:', {
+    message: (error as any).message,
+    stack: (error as any).stack,
+    name: (error as any).name
+  });
+  return new Response(JSON.stringify({
+    error: (error as any).message,
+    details: (error as any).stack
+  }), {
+    status: 500,
+    headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+  });
+}
 });
