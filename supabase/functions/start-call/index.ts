@@ -354,6 +354,29 @@ const webhookUrl = `${supabaseUrl}/functions/v1/vapi-webhook`;
     // Build scenario
     const scenario = generateScenario(difficulty_level, business_type, prospect_role, custom_instructions);
     console.log('Generated scenario:', scenario);
+    // Create the call row first so we have its ID
+const { data: createdCall, error: callInsertError } = await supabaseService
+  .from('calls')
+  .insert({
+    user_id: userId,
+    difficulty_level,
+    business_type,
+    prospect_role,
+    call_objective,
+    custom_instructions,
+    scenario_data: scenario,
+    call_status: 'starting'
+  })
+  .select()
+  .single();
+
+if (callInsertError || !createdCall) {
+  console.error('Failed to create call record before starting assistant:', callInsertError);
+  throw new Error('Failed to create call record');
+}
+
+const callRecordId = createdCall.id; // <-- we’ll use this in the next step
+
 
     // Attempt seed to enforce novelty across retries
     const attemptId = (crypto as any).randomUUID?.() ?? String(Date.now());
