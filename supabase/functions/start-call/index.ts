@@ -501,7 +501,10 @@ const assistantConfig = {
     "transcript",
     "user-interrupted",
     "voice-input"
-  ]
+  ],
+
+  // Send transcript events to our webhook
+  serverUrl: `${supabaseUrl.replace('.supabase.co', '.functions.supabase.co')}/vapi-webhook`
 };
 
 

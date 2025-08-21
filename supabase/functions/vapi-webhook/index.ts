@@ -133,16 +133,20 @@ try {
 
 // 4) Save it to the database if we have both an id and some text
 if (callRecordId && transcriptText.trim()) {
+  console.log(`[vapi-webhook] Saving transcript for call ${callRecordId}, ${transcriptText.split('\n').length} lines, ${transcriptText.length} chars`);
+  
   const { error: dbErr } = await supabase
     .from("calls")
-    .update({ transcript_text: transcriptText, call_status: "ended" })
+    .update({ transcript: transcriptText, call_status: "ended" })
     .eq("id", callRecordId);
 
   if (dbErr) {
     console.error("[vapi-webhook] Failed to store transcript", dbErr);
   } else {
-    console.log("[vapi-webhook] Transcript stored for call", callRecordId);
+    console.log(`[vapi-webhook] Successfully stored transcript for call ${callRecordId}`);
   }
+} else {
+  console.log(`[vapi-webhook] No transcript to store - callRecordId: ${callRecordId}, transcript length: ${transcriptText.length}`);
 }
 
   // TODO: Add your handling logic here (e.g., persist updates, trigger flows)

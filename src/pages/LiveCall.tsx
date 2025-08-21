@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useParams, useNavigate, useLocation } from 'react-router-dom';
 import { useRealtimeAIChat } from '@/hooks/useRealtimeAIChat';
+import { useTranscriptManager } from '@/hooks/useTranscriptManager';
 import { Button } from '@/components/ui/button';
 import { Progress } from '@/components/ui/progress';
 import { Badge } from '@/components/ui/badge';
@@ -9,6 +10,7 @@ import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import MobileLayout from '@/components/MobileLayout';
 import SEO from '@/components/SEO';
 import CoachingHints from '@/components/CoachingHints';
+import { TranscriptDisplay } from '@/components/TranscriptDisplay';
 import { Slider } from "@/components/ui/slider";
 import SmartBackButton from '@/components/SmartBackButton';
 import { useToast } from '@/components/ui/use-toast';
@@ -100,6 +102,15 @@ const LiveCall = () => {
   // Store final transcript for post-call analysis
   const finalTranscriptRef = useRef('');
 
+  // Transcript management for real-time display and persistence
+  const {
+    transcript,
+    chunks,
+    handleVapiMessage,
+    flushPendingChunks,
+    clearTranscript
+  } = useTranscriptManager();
+
   // State for call setup process
   const [isSettingUp, setIsSettingUp] = useState(sessionConfig.replayMode === 'call_simulation' && sessionConfig.autoStart);
   const [setupError, setSetupError] = useState<string | null>(null);
@@ -125,18 +136,24 @@ const LiveCall = () => {
             },
             onCallEnd: () => {
               handleCallSimulationEnd();
+            },
+            onMessage: (message: any) => {
+              console.log('Processing Vapi message for transcript:', message.type);
+              handleVapiMessage(message);
             }
           };
 
-          // Set up stable event listeners - minimal for call management only
+          // Set up stable event listeners for call management and transcript capture
           vapiService.on('call-start', eventHandlers.onCallStart);
           vapiService.on('call-end', eventHandlers.onCallEnd);
+          vapiService.on('message', eventHandlers.onMessage);
 
           // Store cleanup function
             cleanup = () => {
               try {
                 vapiService.off('call-start', eventHandlers.onCallStart);
                 vapiService.off('call-end', eventHandlers.onCallEnd);
+                vapiService.off('message', eventHandlers.onMessage);
                 console.log('VAPI listeners cleaned up successfully');
               } catch (e) {
                 console.error('Error cleaning up VAPI listeners:', e);
@@ -264,12 +281,26 @@ const LiveCall = () => {
     setIsCallActive(false);
     setIsAnalyzing(true);
     
-    // Get final transcript from Vapi service (simplified approach)
-    const finalTranscript = finalTranscriptRef.current || '';
+    // Flush any pending transcript chunks and assemble final transcript
+    console.log('Flushing pending transcript chunks...');
+    flushPendingChunks();
+    
+    // Assemble labeled transcript from chunks
+    let assembledTranscript = '';
+    if (chunks.length > 0) {
+      console.log(`Assembling transcript from ${chunks.length} chunks`);
+      chunks.forEach(chunk => {
+        const role = chunk.role === 'user' ? 'You said: ' : 'Prospect said: ';
+        assembledTranscript += `${role}${chunk.text}\n`;
+      });
+    }
+    
+    const finalTranscript = assembledTranscript || finalTranscriptRef.current || '';
     const finalDuration = Math.max(callDuration, 1); // Ensure minimum duration
 
-    // Store for post-call analysis
+    // Store for post-call analysis  
     finalTranscriptRef.current = finalTranscript;
+    console.log(`Final transcript: ${finalTranscript.length} chars, ${finalTranscript.split('\n').length} lines`);
 
     // Persist the final transcript
     if (finalTranscript.trim() && sessionConfig.callRecordId) {
@@ -326,16 +357,48 @@ const LiveCall = () => {
 
     // Only proceed with analysis if we have a valid transcript
     if (finalTranscript.length === 0) {
-      console.log('No transcript captured, skipping analysis');
-      toast({
-        title: "No Transcript",
-        description: "No conversation was captured. Please try speaking during the call.",
-        variant: "destructive",
-      });
-      setIsAnalyzing(false);
-      navigate(`/call-results/${sessionConfig.callRecordId}`, { replace: true });
+      console.log('No transcript captured, attempting fallback from webhook...');
+      
+      // Wait 2-3 seconds and try to fetch from DB (webhook fallback)
+      setTimeout(async () => {
+        try {
+          const { data: callData } = await supabase
+            .from('calls')
+            .select('transcript')
+            .eq('id', sessionConfig.callRecordId)
+            .single();
+            
+          const webhookTranscript = callData?.transcript || '';
+          if (webhookTranscript.length > 0) {
+            console.log('Retrieved transcript from webhook fallback');
+            finalTranscriptRef.current = webhookTranscript;
+            // Continue with analysis using webhook transcript
+            proceedWithAnalysis(webhookTranscript, finalDuration);
+          } else {
+            console.log('No transcript from webhook either, proceeding without analysis');
+            toast({
+              title: "No Transcript",
+              description: "No conversation was captured. Please try speaking during the call.",
+              variant: "destructive",
+            });
+            setIsAnalyzing(false);
+            navigate(`/call-results/${sessionConfig.callRecordId}`, { replace: true });
+          }
+        } catch (error) {
+          console.error('Error fetching webhook transcript:', error);
+          setIsAnalyzing(false);
+          navigate(`/call-results/${sessionConfig.callRecordId}`, { replace: true });
+        }
+      }, 2500);
       return;
     }
+
+    // Proceed with analysis immediately if we have transcript
+    await proceedWithAnalysis(finalTranscript, finalDuration);
+  };
+
+  const proceedWithAnalysis = async (transcript: string, duration: number) => {
+    if (!sessionConfig.callRecordId) return;
 
     // Trigger proper call analysis using end-call-analysis function
     try {
@@ -343,8 +406,8 @@ const LiveCall = () => {
       const { data, error } = await supabase.functions.invoke('end-call-analysis', {
         body: {
           callRecordId: sessionConfig.callRecordId,
-          transcript: finalTranscript,
-          duration: finalDuration
+          transcript: transcript,
+          duration: duration
         }
       });
       
@@ -576,6 +639,32 @@ const LiveCall = () => {
 
             {/* Progress Indicators */}
             <div className="w-full max-w-md space-y-4">
+              {/* Live Transcript Display */}
+              {(isCallActive || conversationState.isActive) && (
+                <Card className="p-4">
+                  <div className="space-y-2">
+                    <div className="flex items-center gap-2 text-sm font-medium">
+                      <Signal className="h-3 w-3" />
+                      Live Transcript
+                    </div>
+                    <div className="max-h-32 overflow-y-auto text-xs bg-muted/50 rounded p-2">
+                      <TranscriptDisplay
+                        finalChunks={chunks.map((chunk, index) => ({
+                          id: `${chunk.timestamp}-${index}`,
+                          text: chunk.text,
+                          timestamp: chunk.timestamp,
+                          speaker: chunk.role === 'assistant' ? 'prospect' : 'user',
+                          source: chunk.source || 'vapi',
+                          hash: `${chunk.timestamp}-${chunk.role}-${chunk.text.slice(0,10)}`
+                        }))}
+                        showLive={true}
+                        className="text-xs"
+                      />
+                    </div>
+                  </div>
+                </Card>
+              )}
+              
               <div className="space-y-2">
                 <div className="flex justify-between text-sm">
                   <span>Conversation Progress</span>
