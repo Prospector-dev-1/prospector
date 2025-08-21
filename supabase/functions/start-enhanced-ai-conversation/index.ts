@@ -112,6 +112,7 @@ serve(async (req) => {
         voiceId: voiceId
       },
       firstMessage: generateContextualFirstMessage(originalMoment, prospectProfile),
+      serverUrl: 'https://akcxkwbqeehxvwhmrqbb.supabase.co/functions/v1/vapi-webhook',
       recordingEnabled: false,
       endCallMessage: "Thank you for the practice session. Your performance will be analyzed shortly.",
       metadata: {

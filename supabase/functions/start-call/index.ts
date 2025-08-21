@@ -468,7 +468,7 @@ const assistantConfig = {
   firstMessage: scenario.opener,
 
   // 👇 tell Vapi where to send the transcript (your webhook “mailbox”)
-  
+  serverUrl: 'https://akcxkwbqeehxvwhmrqbb.supabase.co/functions/v1/vapi-webhook',
 
   // 👇 tag the call so the webhook knows which DB row to update
   metadata: {
