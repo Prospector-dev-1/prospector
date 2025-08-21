@@ -1,0 +1,106 @@
+{
+  "generated": "2025-01-21T00:00:00Z",
+  "scannedFiles": {
+    "total": 120,
+    "src": 89,
+    "edgeFunctions": 31
+  },
+  "findings": {
+    "unusedFiles": [],
+    "duplicateTranscriptLogic": [
+      {
+        "type": "transcript-processing",
+        "files": [
+          "src/hooks/useTranscriptProcessor.ts",
+          "src/hooks/useTranscriptManager.ts",
+          "src/utils/transcriptPersistence.ts"
+        ],
+        "description": "Multiple transcript processing systems with overlapping deduplication and management logic",
+        "severity": "⚠️"
+      },
+      {
+        "type": "transcript-display",
+        "files": [
+          "src/components/TranscriptDisplay.tsx",
+          "src/components/EnhancedTranscriptDisplay.tsx"
+        ],
+        "description": "Two similar transcript display components with different interfaces",
+        "severity": "⚠️"
+      }
+    ],
+    "transcriptListeners": [
+      {
+        "file": "src/hooks/useTranscriptManager.ts",
+        "method": "handleVapiMessage",
+        "types": ["transcript", "conversation-update", "speech-update"]
+      },
+      {
+        "file": "src/hooks/useCallEventManager.ts", 
+        "method": "extractTranscriptFromMessage",
+        "types": ["transcript"]
+      },
+      {
+        "file": "src/hooks/useRealtimeAIChat.ts",
+        "method": "vapi.on('message')",
+        "types": ["transcript"]
+      }
+    ],
+    "unreferencedEdgeFunctions": [
+      {
+        "function": "analyze-call-coaching-enhanced",
+        "referenced": false,
+        "severity": "✅"
+      },
+      {
+        "function": "analyze-enhanced-conversation", 
+        "referenced": false,
+        "severity": "✅"
+      },
+      {
+        "function": "analyze-replay-conversation",
+        "referenced": false,
+        "severity": "✅"
+      },
+      {
+        "function": "check-subscription",
+        "referenced": false,
+        "severity": "✅"
+      },
+      {
+        "function": "create-call-replay",
+        "referenced": false,
+        "severity": "✅"
+      },
+      {
+        "function": "generate-custom-script-enhanced",
+        "referenced": false,
+        "severity": "✅"
+      },
+      {
+        "function": "start-enhanced-ai-conversation",
+        "referenced": false,
+        "severity": "✅"
+      },
+      {
+        "function": "start-replay-conversation",
+        "referenced": false,
+        "severity": "✅"
+      }
+    ],
+    "deadRoutes": [],
+    "unusedExports": [
+      {
+        "file": "src/utils/consoleCapture.ts",
+        "export": "ConsoleCapture class constructor", 
+        "severity": "❓"
+      }
+    ],
+    "oldBackupFiles": []
+  },
+  "summary": {
+    "totalIssues": 15,
+    "safeToRemove": 8,
+    "needsReview": 5,
+    "uncertain": 2
+  }
+}

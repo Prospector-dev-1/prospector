@@ -45,6 +45,7 @@ import Help from "./pages/Help";
 import Privacy from "./pages/Privacy";
 import ProtectedRoute from "@/components/ProtectedRoute";
 const AuditPage = React.lazy(() => import("./pages/__audit"));
+const CleanupReport = React.lazy(() => import("./pages/CleanupReport"));
 
 const queryClient = new QueryClient();
 
@@ -83,7 +84,10 @@ const App = () => (
             <Route path="/help" element={<Help />} />
             <Route path="/privacy" element={<Privacy />} />
             {import.meta.env.DEV && (
-              <Route path="/__audit" element={<ProtectedRoute><React.Suspense fallback={<div>Loading...</div>}><AuditPage /></React.Suspense></ProtectedRoute>} />
+              <>
+                <Route path="/__audit" element={<ProtectedRoute><React.Suspense fallback={<div>Loading...</div>}><AuditPage /></React.Suspense></ProtectedRoute>} />
+                <Route path="/__cleanup-report" element={<ProtectedRoute><React.Suspense fallback={<div>Loading...</div>}><CleanupReport /></React.Suspense></ProtectedRoute>} />
+              </>
             )}
             {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
             <Route path="*" element={<NotFound />} />
