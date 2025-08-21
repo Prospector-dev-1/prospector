@@ -639,33 +639,6 @@ const LiveCall = () => {
 
             {/* Progress Indicators */}
             <div className="w-full max-w-md space-y-4">
-              {/* Live Transcript Display */}
-              {(isCallActive || conversationState.isActive) && (
-                <Card className="p-4">
-                  <div className="space-y-2">
-                    <div className="flex items-center gap-2 text-sm font-medium">
-                      <Signal className="h-3 w-3" />
-                      Live Transcript
-                    </div>
-                    <div className="max-h-32 overflow-y-auto text-xs bg-muted/50 rounded p-2">
-                      <TranscriptDisplay
-                        finalChunks={chunks.map((chunk, index) => ({
-                          id: `${chunk.timestamp}-${index}`,
-                          text: chunk.text,
-                          timestamp: chunk.timestamp,
-                          speaker: chunk.role === 'assistant' ? 'prospect' : 'user',
-                          source: chunk.source || 'vapi',
-                          hash: `${chunk.timestamp}-${chunk.role}-${chunk.text.slice(0,10)}`
-                        }))}
-                        liveBuffer={[]}
-                        showLive={true}
-                        className="text-xs"
-                      />
-                    </div>
-                  </div>
-                </Card>
-              )}
-              
               <div className="space-y-2">
                 <div className="flex justify-between text-sm">
                   <span>Conversation Progress</span>
