@@ -154,9 +154,11 @@ serve(async (req) => {
     console.log('Start-call function called');
 
     // Env checks
-    const vapiApiKey = Deno.env.get('VAPI_API_KEY');
-    const supabaseUrl = Deno.env.get('SUPABASE_URL');
-    const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY');
+const vapiApiKey = Deno.env.get('VAPI_API_KEY');
+const supabaseUrl = Deno.env.get('SUPABASE_URL');
+const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY');
+const webhookUrl = `${supabaseUrl}/functions/v1/vapi-webhook`;  
+
 
     console.log('Environment check:', {
       vapiApiKey: vapiApiKey ? 'exists' : 'missing',
