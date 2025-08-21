@@ -6,6 +6,9 @@ const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type, x-vapi-signature, x-signature",
 };
+const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
+const supabaseServiceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
+const supabase = createClient(supabaseUrl, supabaseServiceKey, { auth: { persistSession: false } });
 
 async function verifySignatureIfPresent(rawBody: string, req: Request) {
   const secret = Deno.env.get("VAPI_WEBHOOK_SECRET");
