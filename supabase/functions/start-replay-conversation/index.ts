@@ -40,7 +40,6 @@ serve(async (req) => {
         voiceId: getVoiceForPersonality(prospectPersonality)
       },
       firstMessage: generateFirstMessage(replayMode, originalMoment),
-      serverUrl: 'https://akcxkwbqeehxvwhmrqbb.supabase.co/functions/v1/vapi-webhook',
       endCallFunctionEnabled: false,
       recordingEnabled: true,
       hipaaEnabled: false,
