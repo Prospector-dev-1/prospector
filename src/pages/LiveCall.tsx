@@ -43,8 +43,10 @@ const LiveCall = () => {
 
   // Get session config from URL params or localStorage - moved before useRealtimeAIChat
   const [sessionConfig] = useState(() => {
+    console.log('LiveCall: Parsing session config from URL:', location.search);
     const urlParams = new URLSearchParams(location.search);
     const mode = urlParams.get('mode') || 'practice';
+    console.log('LiveCall: Mode detected:', mode);
     
     if (mode === 'call_simulation') {
       return {
@@ -61,11 +63,24 @@ const LiveCall = () => {
       };
     }
     
+    // AI Replay mode - parse query parameters safely
+    let parsedMoment = {};
+    const momentParam = urlParams.get('moment');
+    if (momentParam) {
+      try {
+        parsedMoment = JSON.parse(momentParam);
+        console.log('Successfully parsed moment:', parsedMoment);
+      } catch (error) {
+        console.error('Error parsing moment parameter:', error);
+        console.log('Raw moment parameter:', momentParam);
+      }
+    }
+    
     return {
       replayMode: mode,
       prospectPersonality: urlParams.get('personality') || 'professional',
       gamificationMode: urlParams.get('gamification') || 'streak_builder',
-      originalMoment: JSON.parse(urlParams.get('moment') || '{}')
+      originalMoment: parsedMoment
     };
   });
 
@@ -248,12 +263,18 @@ const LiveCall = () => {
 
   // Auto-start conversation when component mounts (only for AI replay)
   useEffect(() => {
+    console.log('LiveCall: Auto-start effect triggered, mode:', sessionConfig.replayMode);
+    console.log('LiveCall: Original moment:', sessionConfig.originalMoment);
+    
     if (sessionConfig.replayMode !== 'call_simulation') {
+      console.log('LiveCall: Starting AI conversation for replay mode');
       const timer = setTimeout(() => {
         handleStartConversation();
       }, 1000);
       
       return () => clearTimeout(timer);
+    } else {
+      console.log('LiveCall: Skipping auto-start for call simulation mode');
     }
   }, [sessionConfig.replayMode]);
 
@@ -479,6 +500,10 @@ const LiveCall = () => {
   };
 
   const handleStartConversation = async () => {
+    console.log('LiveCall: handleStartConversation called');
+    console.log('LiveCall: Session config:', sessionConfig);
+    console.log('LiveCall: Session ID:', sessionId);
+    
     try {
       await startConversation(
         sessionId || 'default-session',
@@ -487,7 +512,9 @@ const LiveCall = () => {
         sessionConfig.prospectPersonality as any,
         sessionConfig.gamificationMode as any
       );
+      console.log('LiveCall: AI conversation started successfully');
     } catch (error) {
+      console.error('LiveCall: Error starting conversation:', error);
       toast({
         title: "Connection Error",
         description: "Failed to start the conversation. Please try again.",
@@ -608,7 +635,10 @@ const LiveCall = () => {
             {/* Prospect Info */}
             <div className="text-center space-y-2">
               <h2 className="text-xl sm:text-2xl font-bold">
-                {sessionConfig.originalMoment?.prospect_name || 'AI Prospect'}
+                {sessionConfig.replayMode === 'call_simulation' 
+                  ? (sessionConfig.originalMoment as any)?.prospect_name || 'AI Prospect'
+                  : (sessionConfig.originalMoment as any)?.type || 'AI Prospect'
+                }
               </h2>
               <p className="text-muted-foreground">
                 {sessionConfig.replayMode === 'call_simulation' 

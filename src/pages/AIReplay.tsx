@@ -123,9 +123,18 @@ const AIReplay = () => {
     }
   };
   const handleStartConversation = async () => {
-    if (!selectedMoment) return;
+    if (!selectedMoment) {
+      console.log('AIReplay: No moment selected, cannot start conversation');
+      return;
+    }
     const moment = moments.find(m => m.id === selectedMoment);
-    if (!moment) return;
+    if (!moment) {
+      console.log('AIReplay: Moment not found:', selectedMoment);
+      return;
+    }
+
+    console.log('AIReplay: Starting conversation with moment:', moment);
+    console.log('AIReplay: Replay config:', { replayMode, prospectPersonality, gamificationMode });
 
     // Generate session ID and navigate to live call page
     const sessionId = `session_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
@@ -135,7 +144,11 @@ const AIReplay = () => {
       gamification: gamificationMode,
       moment: JSON.stringify(moment)
     });
-    navigate(`/live-call/${sessionId}?${queryParams.toString()}`);
+    
+    const navigateUrl = `/live-call/${sessionId}?${queryParams.toString()}`;
+    console.log('AIReplay: Navigating to:', navigateUrl);
+    
+    navigate(navigateUrl);
   };
   const handleEndConversation = () => {
     endConversation();

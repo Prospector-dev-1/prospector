@@ -61,6 +61,8 @@ const App = () => (
             <Route path="/call-coaching/:callId" element={<ProtectedRoute><CallCoaching /></ProtectedRoute>} />
             <Route path="/call-upload" element={<ProtectedRoute><CallUpload /></ProtectedRoute>} />
             <Route path="/call-review/:uploadId" element={<ProtectedRoute><CallReview /></ProtectedRoute>} />
+            {/* Redirect /ai-replay without uploadId to dashboard */}
+            <Route path="/ai-replay" element={<ProtectedRoute><Index /></ProtectedRoute>} />
             <Route path="/ai-replay/:uploadId" element={<ProtectedRoute><AIReplay /></ProtectedRoute>} />
             <Route path="/ai-replay-setup/:callId" element={<ProtectedRoute><AIReplaySetup /></ProtectedRoute>} />
             <Route path="/enhanced-ai-replay/:callId" element={<ProtectedRoute><EnhancedAIReplay /></ProtectedRoute>} />
