@@ -2,6 +2,9 @@ import { useState, useRef, useCallback } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { detectObjections, getObjectionCoaching, getPersonalityGuidance } from '@/utils/objectionDetection';
 import { getMomentSpecificCoaching } from '@/utils/momentCoaching';
+import { getAudioConfig } from '@/config/audioConfig';
+import { waitUntil, waitForKrispReady, safePromise } from '@/utils/async';
+import { audioLogger, AUDIO_PHASES } from '@/utils/audioLogger';
 
 
 export type ReplayMode = 'detailed' | 'quick' | 'focused';
@@ -46,12 +49,20 @@ export interface FinalAnalysis {
   conversationFlow?: any;
 }
 
+// Teardown state machine
+type TeardownState = 'idle' | 'initializing' | 'ready' | 'tearing_down' | 'done';
+
 interface UseRealtimeAIChatProps {
   isUploadCallReplay?: boolean;
   existingVapiInstance?: any; // Optional existing VAPI instance from parent
+  useCase?: 'live' | 'replay'; // Audio processing use case
 }
 
-export const useRealtimeAIChat = ({ isUploadCallReplay = false, existingVapiInstance }: UseRealtimeAIChatProps = {}) => {
+export const useRealtimeAIChat = ({ 
+  isUploadCallReplay = false, 
+  existingVapiInstance,
+  useCase = 'live'
+}: UseRealtimeAIChatProps = {}) => {
   const [conversationState, setConversationState] = useState<ConversationState>({
     status: 'idle',
     isConnected: false,
@@ -65,6 +76,8 @@ export const useRealtimeAIChat = ({ isUploadCallReplay = false, existingVapiInst
   });
 
   const [finalAnalysis, setFinalAnalysis] = useState<FinalAnalysis | null>(null);
+  
+  // Core refs
   const vapiInstance = useRef<any>(null);
   const sessionTranscript = useRef<string>('');
   const sessionConfigRef = useRef<{
@@ -74,6 +87,14 @@ export const useRealtimeAIChat = ({ isUploadCallReplay = false, existingVapiInst
     customProspectId?: string;
     sessionId?: string;
   } | null>(null);
+
+  // Audio processing state management
+  const krispState = useRef<TeardownState>('idle');
+  const isStopping = useRef(false);
+  const krispProcessor = useRef<any>(null);
+  const mediaStream = useRef<MediaStream | null>(null);
+  const audioContext = useRef<AudioContext | null>(null);
+  const audioConfig = getAudioConfig(useCase);
 
   const addCoachingHint = useCallback((
     message: string, 
@@ -464,9 +485,112 @@ export const useRealtimeAIChat = ({ isUploadCallReplay = false, existingVapiInst
     }
   }, [initializeVapi, addCoachingHint]);
 
+  // Safe Krisp unloading with state management
+  const safeUnloadKrisp = useCallback(async (): Promise<void> => {
+    const currentState = krispState.current;
+    audioLogger.info(AUDIO_PHASES.TEARDOWN, 'Safe Krisp unload start', { state: currentState });
+
+    if (!krispProcessor.current || currentState === 'done') {
+      audioLogger.info(AUDIO_PHASES.TEARDOWN, 'Krisp already unloaded or not initialized');
+      return;
+    }
+
+    if (currentState === 'initializing') {
+      audioLogger.info(AUDIO_PHASES.TEARDOWN, 'Waiting for Krisp initialization to complete');
+      // Short backoff-and-try (max ~1s), then bail silently
+      try {
+        await waitUntil(
+          () => krispState.current === 'ready',
+          { timeout: audioConfig.KRISP_INIT_TIMEOUT, interval: audioConfig.KRISP_READY_CHECK_INTERVAL }
+        );
+      } catch (e) {
+        audioLogger.warn(AUDIO_PHASES.TEARDOWN, 'Timeout waiting for Krisp ready', { error: (e as Error).message });
+        return;
+      }
+    }
+
+    if (krispState.current !== 'ready') {
+      audioLogger.warn(AUDIO_PHASES.TEARDOWN, 'Krisp not ready, skipping unload');
+      return;
+    }
+
+    try {
+      krispState.current = 'tearing_down';
+      if (krispProcessor.current?.unload) {
+        await krispProcessor.current.unload();
+      }
+      audioLogger.info(AUDIO_PHASES.TEARDOWN, 'Krisp unloaded successfully');
+    } catch (e) {
+      audioLogger.warn(AUDIO_PHASES.TEARDOWN, 'Krisp unload skipped', { error: (e as Error).message });
+    } finally {
+      krispState.current = 'done';
+      krispProcessor.current = null;
+    }
+  }, [audioConfig]);
+
+  // Idempotent stop function
+  const stop = useCallback(async (reason?: string): Promise<void> => {
+    if (isStopping.current) {
+      audioLogger.info(AUDIO_PHASES.TEARDOWN, 'Stop already in progress');
+      return;
+    }
+
+    isStopping.current = true;
+    audioLogger.info(AUDIO_PHASES.TEARDOWN, 'Call stop begin', { reason });
+
+    try {
+      // 1) Stop realtime/vapi session
+      if (vapiInstance.current) {
+        await safePromise(vapiInstance.current.stop());
+        audioLogger.info(AUDIO_PHASES.TEARDOWN, 'Vapi stopped');
+      }
+
+      // 2) Stop mic tracks
+      if (mediaStream.current) {
+        mediaStream.current.getTracks().forEach((track) => {
+          try {
+            track.stop();
+          } catch (e) {
+            audioLogger.warn(AUDIO_PHASES.TEARDOWN, 'Track stop failed', { error: (e as Error).message });
+          }
+        });
+        mediaStream.current = null;
+        audioLogger.info(AUDIO_PHASES.TEARDOWN, 'Media tracks stopped');
+      }
+
+      // 3) Disconnect audio nodes in reverse order
+      // This should be implemented based on your audio graph structure
+      // disconnectGraph();
+
+      // 4) Close owned AudioContext (if we created it)
+      if (audioContext.current && audioContext.current.state !== 'closed') {
+        await safePromise(audioContext.current.close());
+        audioContext.current = null;
+        audioLogger.info(AUDIO_PHASES.TEARDOWN, 'AudioContext closed');
+      }
+
+      // 5) Unload Krisp ONLY if ready and enabled
+      if (audioConfig.enableKrisp) {
+        await safeUnloadKrisp();
+      }
+
+      audioLogger.info(AUDIO_PHASES.TEARDOWN, 'Call stop done');
+    } catch (error) {
+      audioLogger.error(AUDIO_PHASES.TEARDOWN, 'Stop failed', { error: (error as Error).message });
+    } finally {
+      isStopping.current = false;
+      
+      // Clear the Vapi instance to prevent further use
+      vapiInstance.current = null;
+    }
+  }, [audioConfig.enableKrisp, safeUnloadKrisp]);
+
   const endConversation = useCallback(async () => {
     try {
-      console.log('endConversation called, current status:', conversationState.status);
+      audioLogger.info(AUDIO_PHASES.TEARDOWN, 'End conversation called', { 
+        status: conversationState.status,
+        useCase 
+      });
       
       setConversationState(prev => ({
         ...prev,
@@ -475,23 +599,8 @@ export const useRealtimeAIChat = ({ isUploadCallReplay = false, existingVapiInst
         isConnecting: false
       }));
 
-      if (vapiInstance.current) {
-        console.log('Stopping Vapi instance...');
-        try {
-          await vapiInstance.current.stop();
-          console.log('Vapi instance stopped');
-        } catch (error) {
-          // Suppress Krisp processor errors during cleanup
-          if (error instanceof Error && error.message.includes('WASM_OR_WORKER_NOT_READY')) {
-            console.warn('Krisp processor cleanup warning (expected):', error.message);
-          } else {
-            console.error('Error stopping Vapi instance:', error);
-          }
-        }
-        
-        // Clear the Vapi instance to prevent further use
-        vapiInstance.current = null;
-      }
+      // Use the idempotent stop function
+      await stop('end-conversation');
 
       // Force final state update
       setTimeout(() => {

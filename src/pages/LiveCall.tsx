@@ -283,10 +283,17 @@ const LiveCall = () => {
     return () => {
       if (conversationState.isActive || conversationState.isConnecting) {
         console.log('LiveCall unmounting, ending conversation...');
+        
+        // Show user-friendly toast
+        toast({
+          title: "Ending call...",
+          description: "Cleaning up audio resources",
+        });
+        
         endConversation();
       }
     };
-  }, [endConversation]);
+  }, [endConversation, conversationState.isActive, conversationState.isConnecting, toast]);
 
   const handleCallSimulationEnd = async () => {
     // E) Idempotent analysis - prevent duplicate calls
@@ -464,11 +471,23 @@ const LiveCall = () => {
   const handleEndCall = async () => {
     try {
       if (sessionConfig.replayMode === 'call_simulation') {
+        // Show ending toast for call simulation
+        toast({
+          title: "Ending call...",
+          description: "Processing call data",
+        });
+        
         // End Vapi call
         await vapiService.stopCall();
         await handleCallSimulationEnd();
       } else {
-        // End AI conversation
+        // Show ending toast for AI conversation
+        toast({
+          title: "Ending call...",
+          description: "Saving conversation progress",
+        });
+        
+        // End AI conversation with proper teardown
         await endConversation();
         navigate(`/call-analysis/${sessionId}`, {
           replace: true, // Prevent going back to ended call
@@ -500,26 +519,39 @@ const LiveCall = () => {
   };
 
   const handleStartConversation = async () => {
-    console.log('LiveCall: handleStartConversation called');
-    console.log('LiveCall: Session config:', sessionConfig);
-    console.log('LiveCall: Session ID:', sessionId);
-    
+    if (sessionConfig.replayMode === 'call_simulation') {
+      // This is handled by the initialization effect
+      return;
+    }
+
     try {
+      console.log('LiveCall: handleStartConversation called');
+      
+      // Show connecting toast
+      toast({
+        title: "Connecting...",
+        description: "Initializing AI conversation",
+      });
+
       await startConversation(
         sessionId || 'default-session',
-        sessionConfig.originalMoment,
-        sessionConfig.replayMode as any,
-        sessionConfig.prospectPersonality as any,
-        sessionConfig.gamificationMode as any
+        sessionConfig.originalMoment || {},
+        sessionConfig.replayMode as any || 'detailed',
+        sessionConfig.prospectPersonality as any || 'professional',
+        sessionConfig.gamificationMode as any || 'streak_builder'
       );
+      
       console.log('LiveCall: AI conversation started successfully');
     } catch (error) {
       console.error('LiveCall: Error starting conversation:', error);
+      
       toast({
-        title: "Connection Error",
-        description: "Failed to start the conversation. Please try again.",
+        title: "Connection Failed",
+        description: "Failed to start AI conversation. Please try again.",
         variant: "destructive",
       });
+      
+      navigate(-1);
     }
   };
 
