@@ -874,6 +874,36 @@ export type Database = {
       }
     }
     Views: {
+      pii_access_log: {
+        Row: {
+          action: string | null
+          created_at: string | null
+          id: string | null
+          ip_address: string | null
+          pii_fields_accessed: string | null
+          target_id: string | null
+          user_id: string | null
+        }
+        Insert: {
+          action?: string | null
+          created_at?: string | null
+          id?: string | null
+          ip_address?: string | null
+          pii_fields_accessed?: never
+          target_id?: string | null
+          user_id?: string | null
+        }
+        Update: {
+          action?: string | null
+          created_at?: string | null
+          id?: string | null
+          ip_address?: string | null
+          pii_fields_accessed?: never
+          target_id?: string | null
+          user_id?: string | null
+        }
+        Relationships: []
+      }
       profiles_masked: {
         Row: {
           avatar_url: string | null

@@ -55,6 +55,21 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         return;
       }
 
+      // Log profile access for security auditing
+      supabase.from('audit_logs').insert({
+        user_id: userId,
+        action: 'profile_view',
+        target_id: userId,
+        details: {
+          pii_accessed: ['email', 'first_name', 'last_name', 'phone_number'],
+          context: 'auth_context_fetch'
+        }
+      }).then(result => {
+        if (result.error) {
+          console.warn('Failed to log profile access:', result.error);
+        }
+      });
+
       setProfile(data);
     } catch (error) {
       console.error('Error fetching profile:', error);

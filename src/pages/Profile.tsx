@@ -88,11 +88,28 @@ const Profile = () => {
   }, [user, navigate]);
   const fetchProfile = async () => {
     try {
+      // Use the masked view for better security
       const {
         data,
         error
-      } = await supabase.from('profiles').select('*').eq('user_id', user?.id).single();
+      } = await supabase.from('profiles_masked').select('*').eq('user_id', user?.id).single();
       if (error) throw error;
+      
+      // Log profile access for security auditing
+      supabase.from('audit_logs').insert({
+        user_id: user?.id || '',
+        action: 'profile_view',
+        target_id: user?.id || '',
+        details: {
+          pii_accessed: ['email', 'first_name', 'last_name', 'phone_number'],
+          context: 'profile_page_view'
+        }
+      }).then(result => {
+        if (result.error) {
+          console.warn('Failed to log profile access:', result.error);
+        }
+      });
+
       setProfile(data);
       setEditForm({
         first_name: data.first_name || '',
@@ -306,12 +323,32 @@ const Profile = () => {
   };
   const handleDataExport = async () => {
     try {
-      // Get user profile and call history
-      const [profileData, callsData] = await Promise.all([supabase.from('profiles').select('*').eq('user_id', user?.id), supabase.from('calls').select('*').eq('user_id', user?.id)]);
+      // Log data export attempt for security auditing
+      supabase.from('audit_logs').insert({
+        user_id: user?.id || '',
+        action: 'data_export',
+        target_id: user?.id || '',
+        details: {
+          pii_accessed: ['email', 'first_name', 'last_name', 'phone_number', 'full_call_history'],
+          export_type: 'full_user_data'
+        }
+      }).then(result => {
+        if (result.error) {
+          console.warn('Failed to log data export:', result.error);
+        }
+      });
+
+      // Get user profile and call history (use regular table since user owns the data)
+      const [profileData, callsData] = await Promise.all([
+        supabase.from('profiles').select('*').eq('user_id', user?.id), 
+        supabase.from('calls').select('*').eq('user_id', user?.id)
+      ]);
+      
       const exportData = {
         profile: profileData.data?.[0] || {},
         calls: callsData.data || [],
-        exported_at: new Date().toISOString()
+        exported_at: new Date().toISOString(),
+        security_note: 'This export contains your personal data. Please handle securely.'
       };
 
       // Create and download file
