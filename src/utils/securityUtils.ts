@@ -7,23 +7,18 @@ export class SecurityLogger {
     targetId?: string
   ) {
     try {
-      const { data: { user } } = await supabase.auth.getUser();
-      
-      if (!user) {
-        console.warn('Cannot log security event: No authenticated user');
-        return;
-      }
-
-      await supabase.from('audit_logs').insert({
-        user_id: user.id,
-        action,
-        target_id: targetId,
-        details,
-        ip_address: await this.getClientIP(),
-        user_agent: navigator.userAgent
+      // Use server-side audit logging function for security
+      const { error } = await supabase.rpc('log_security_event', {
+        action_name: action,
+        event_details: details,
+        target_user_id: targetId || null
       });
-    } catch (error) {
-      console.error('Failed to log security event:', error);
+
+      if (error) {
+        console.error('Failed to log security event:', error);
+      }
+    } catch (err) {
+      console.error('Security logging error:', err);
     }
   }
 
