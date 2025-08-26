@@ -300,21 +300,24 @@ const CallSimulation = () => {
         const finalDuration = callDurationRef.current;
         console.log('Starting background analysis - Duration from ref:', finalDuration, 'Transcript:', transcriptRef.current);
         
-        // Send transcript for analysis (even if empty) - don't await
-        supabase.functions.invoke('end-call-analysis', {
-          body: {
-            callRecordId: currentCallRecordId,
-            transcript: transcriptRef.current || 'No transcript available',
-            duration: finalDuration
+        // Send transcript for analysis (even if empty) - run in background
+        (async () => {
+          try {
+            const { data, error } = await supabase.functions.invoke('end-call-analysis', {
+              body: {
+                callRecordId: currentCallRecordId,
+                transcript: transcriptRef.current || 'No transcript available',
+                duration: finalDuration
+              }
+            });
+            console.log('Background analysis completed:', { data, error });
+            if (error) {
+              console.error('Error analyzing call:', error);
+            }
+          } catch (error) {
+            console.error('Error in background analysis:', error);
           }
-        }).then(({ data, error }) => {
-          console.log('Background analysis completed:', { data, error });
-          if (error) {
-            console.error('Error analyzing call:', error);
-          }
-        }).catch(error => {
-          console.error('Error in background analysis:', error);
-        });
+        })();
 
       } catch (error) {
         console.error('Error starting background analysis:', error);

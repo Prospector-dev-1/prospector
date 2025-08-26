@@ -36,7 +36,13 @@ serve(async (req) => {
 
     if (usersError) {
       console.error('Error fetching users:', usersError);
-      throw usersError;
+      return new Response(JSON.stringify({ 
+        error: 'Failed to fetch leaderboard users',
+        details: usersError.message 
+      }), {
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        status: 500
+      });
     }
 
     console.log(`Processing ${allUsers?.length || 0} users for leaderboard`);

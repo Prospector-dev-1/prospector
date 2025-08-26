@@ -52,6 +52,13 @@ export interface FinalAnalysis {
 // Teardown state machine
 type TeardownState = 'idle' | 'initializing' | 'ready' | 'tearing_down' | 'done';
 
+// Global teardown tracking to prevent concurrent audio operations
+declare global {
+  interface Window {
+    teardownInProgress?: boolean;
+  }
+}
+
 interface UseRealtimeAIChatProps {
   isUploadCallReplay?: boolean;
   existingVapiInstance?: any; // Optional existing VAPI instance from parent
@@ -359,6 +366,11 @@ export const useRealtimeAIChat = ({
     gamificationMode: GamificationMode = 'none',
     customProspectId?: string
   ) => {
+    // Prevent starting if teardown is in progress
+    if (window.teardownInProgress || isStopping.current) {
+      console.warn('Cannot start conversation: teardown in progress');
+      throw new Error('Audio teardown in progress. Please wait before starting a new session.');
+    }
     // Choose the appropriate edge function based on call type
     const functionName = isUploadCallReplay ? 'start-replay-conversation' : 'start-enhanced-ai-conversation';
     
@@ -530,17 +542,18 @@ export const useRealtimeAIChat = ({
 
   // Idempotent stop function
   const stop = useCallback(async (reason?: string): Promise<void> => {
-    if (isStopping.current) {
+    if (isStopping.current || window.teardownInProgress) {
       audioLogger.info(AUDIO_PHASES.TEARDOWN, 'Stop already in progress');
       return;
     }
 
     isStopping.current = true;
+    window.teardownInProgress = true;
     audioLogger.info(AUDIO_PHASES.TEARDOWN, 'Call stop begin', { reason });
 
     try {
       // 1) Stop realtime/vapi session
-      if (vapiInstance.current) {
+      if (vapiInstance.current && typeof vapiInstance.current.stop === 'function') {
         await safePromise(vapiInstance.current.stop());
         audioLogger.info(AUDIO_PHASES.TEARDOWN, 'Vapi stopped');
       }
@@ -579,6 +592,7 @@ export const useRealtimeAIChat = ({
       audioLogger.error(AUDIO_PHASES.TEARDOWN, 'Stop failed', { error: (error as Error).message });
     } finally {
       isStopping.current = false;
+      window.teardownInProgress = false;
       
       // Clear the Vapi instance to prevent further use
       vapiInstance.current = null;
