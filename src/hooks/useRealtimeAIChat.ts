@@ -366,10 +366,23 @@ export const useRealtimeAIChat = ({
     gamificationMode: GamificationMode = 'none',
     customProspectId?: string
   ) => {
-    // Prevent starting if teardown is in progress
-    if (window.teardownInProgress || isStopping.current) {
+    // Enhanced prevention of replay starting during teardown
+    if (window.teardownInProgress || isStopping.current || krispState.current === 'tearing_down') {
       console.warn('Cannot start conversation: teardown in progress');
       throw new Error('Audio teardown in progress. Please wait before starting a new session.');
+    }
+    
+    // Wait for any previous teardown to complete
+    if (krispState.current !== 'idle' && krispState.current !== 'ready') {
+      console.warn('Waiting for previous teardown to complete before starting new session');
+      try {
+        await waitUntil(
+          () => krispState.current === 'idle' || krispState.current === 'ready',
+          { timeout: 3000, interval: 100 }
+        );
+      } catch (e) {
+        throw new Error('Previous audio session did not terminate cleanly. Please refresh the page.');
+      }
     }
     // Choose the appropriate edge function based on call type
     const functionName = isUploadCallReplay ? 'start-replay-conversation' : 'start-enhanced-ai-conversation';
@@ -502,7 +515,8 @@ export const useRealtimeAIChat = ({
     const currentState = krispState.current;
     audioLogger.info(AUDIO_PHASES.TEARDOWN, 'Safe Krisp unload start', { state: currentState });
 
-    if (!krispProcessor.current || currentState === 'done') {
+    // Enhanced null checks - prevent "Krisp already unloaded or not initialized" errors
+    if (!krispProcessor.current || currentState === 'done' || currentState === 'tearing_down') {
       audioLogger.info(AUDIO_PHASES.TEARDOWN, 'Krisp already unloaded or not initialized');
       return;
     }
@@ -528,19 +542,26 @@ export const useRealtimeAIChat = ({
 
     try {
       krispState.current = 'tearing_down';
-      if (krispProcessor.current?.unload) {
+      // Additional safety check before unloading
+      if (krispProcessor.current?.unload && typeof krispProcessor.current.unload === 'function') {
         await krispProcessor.current.unload();
       }
       audioLogger.info(AUDIO_PHASES.TEARDOWN, 'Krisp unloaded successfully');
     } catch (e) {
-      audioLogger.warn(AUDIO_PHASES.TEARDOWN, 'Krisp unload skipped', { error: (e as Error).message });
+      // More specific error handling for Krisp unload failures
+      const error = e as Error;
+      if (error.message.includes('already unloaded') || error.message.includes('not initialized')) {
+        audioLogger.info(AUDIO_PHASES.TEARDOWN, 'Krisp was already unloaded');
+      } else {
+        audioLogger.warn(AUDIO_PHASES.TEARDOWN, 'Krisp unload failed', { error: error.message });
+      }
     } finally {
       krispState.current = 'done';
       krispProcessor.current = null;
     }
   }, [audioConfig]);
 
-  // Idempotent stop function
+  // Idempotent stop function with enhanced error handling
   const stop = useCallback(async (reason?: string): Promise<void> => {
     if (isStopping.current || window.teardownInProgress) {
       audioLogger.info(AUDIO_PHASES.TEARDOWN, 'Stop already in progress');
@@ -552,17 +573,24 @@ export const useRealtimeAIChat = ({
     audioLogger.info(AUDIO_PHASES.TEARDOWN, 'Call stop begin', { reason });
 
     try {
-      // 1) Stop realtime/vapi session
+      // 1) Stop realtime/vapi session with enhanced error handling
       if (vapiInstance.current && typeof vapiInstance.current.stop === 'function') {
-        await safePromise(vapiInstance.current.stop());
-        audioLogger.info(AUDIO_PHASES.TEARDOWN, 'Vapi stopped');
+        try {
+          await vapiInstance.current.stop();
+          audioLogger.info(AUDIO_PHASES.TEARDOWN, 'Vapi stopped');
+        } catch (e) {
+          const error = e as Error;
+          audioLogger.warn(AUDIO_PHASES.TEARDOWN, 'Vapi stop failed', { error: error.message });
+        }
       }
 
-      // 2) Stop mic tracks
+      // 2) Stop mic tracks with individual error handling
       if (mediaStream.current) {
         mediaStream.current.getTracks().forEach((track) => {
           try {
-            track.stop();
+            if (track.readyState !== 'ended') {
+              track.stop();
+            }
           } catch (e) {
             audioLogger.warn(AUDIO_PHASES.TEARDOWN, 'Track stop failed', { error: (e as Error).message });
           }
@@ -575,11 +603,16 @@ export const useRealtimeAIChat = ({
       // This should be implemented based on your audio graph structure
       // disconnectGraph();
 
-      // 4) Close owned AudioContext (if we created it)
+      // 4) Close owned AudioContext (if we created it) with proper state check
       if (audioContext.current && audioContext.current.state !== 'closed') {
-        await safePromise(audioContext.current.close());
-        audioContext.current = null;
-        audioLogger.info(AUDIO_PHASES.TEARDOWN, 'AudioContext closed');
+        try {
+          await audioContext.current.close();
+          audioContext.current = null;
+          audioLogger.info(AUDIO_PHASES.TEARDOWN, 'AudioContext closed');
+        } catch (e) {
+          audioLogger.warn(AUDIO_PHASES.TEARDOWN, 'AudioContext close failed', { error: (e as Error).message });
+          audioContext.current = null; // Clear anyway
+        }
       }
 
       // 5) Unload Krisp ONLY if ready and enabled

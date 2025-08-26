@@ -159,7 +159,11 @@ const CallSimulation = () => {
 
     return () => {
       if (vapiRef.current) {
-        vapiRef.current.stop();
+        try {
+          vapiRef.current.stop();
+        } catch (error) {
+          console.warn('Error stopping Vapi during cleanup:', error);
+        }
       }
       if (timerRef.current) {
         clearInterval(timerRef.current);
@@ -259,8 +263,12 @@ const CallSimulation = () => {
     try {
       if (vapiRef.current) {
         console.log('Stopping Vapi call...');
-        await vapiRef.current.stop();
-        console.log('Vapi call stopped successfully');
+        try {
+          await vapiRef.current.stop();
+          console.log('Vapi call stopped successfully');
+        } catch (stopError) {
+          console.warn('Error stopping Vapi call:', stopError);
+        }
       }
       
       // Force cleanup if call doesn't end naturally

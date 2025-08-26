@@ -173,26 +173,17 @@ class VapiService {
       try {
         await this.vapi.stop();
       } catch (error) {
-        // Suppress cleanup errors
-        console.warn('Error during VAPI cleanup:', error);
+        // Enhanced cleanup error handling
+        const err = error as Error;
+        if (err.message.includes('already unloaded') || 
+            err.message.includes('not initialized') ||
+            err.message.includes('Krisp')) {
+          console.warn('Audio cleanup - object was already cleaned up:', err.message);
+        } else {
+          console.warn('Error during VAPI cleanup:', err.message);
+        }
       } finally {
         this.vapi = null;
-      }
-    }
-    
-    // D) Safe Krisp teardown
-    if (krispInstance && krispInstance !== 'initialized') {
-      try {
-        if (krispInstance?.isReady) {
-          await krispInstance.unload();
-          console.log('🎧 Krisp SDK safely unloaded');
-        }
-      } catch (error: any) {
-        if (!String(error?.message).includes('WASM_OR_WORKER_NOT_READY')) {
-          console.warn('Krisp cleanup warning:', error);
-        }
-      } finally {
-        krispInstance = null;
       }
     }
   }

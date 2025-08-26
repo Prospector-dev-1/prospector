@@ -12,7 +12,7 @@ export const ContentSecurityPolicy = () => {
       "font-src 'self' https://fonts.gstatic.com",
       "img-src 'self' data: https: blob:",
       "media-src 'self' data: https: blob:",
-      "connect-src 'self' https://*.supabase.co wss://*.supabase.co https://api.vapi.ai https://api.ipify.org https://checkout.stripe.com",
+      "connect-src 'self' https://*.supabase.co wss://*.supabase.co https://api.vapi.ai https://c.daily.co https://api.ipify.org https://checkout.stripe.com",
       "frame-src 'self' https://js.stripe.com https://checkout.stripe.com",
       "frame-ancestors 'self' https://*.lovable.app https://*.lovable.dev",
       "object-src 'none'",
