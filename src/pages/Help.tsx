@@ -4,14 +4,17 @@ import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
+import { useAuth } from "@/contexts/AuthContext";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Form, FormControl, FormDescription, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
+import { Progress } from "@/components/ui/progress";
+import { Badge } from "@/components/ui/badge";
 import { Link } from "react-router-dom";
-import { ArrowLeft } from "lucide-react";
+import { ArrowLeft, CheckCircle, XCircle, AlertCircle, Copy, Loader2 } from "lucide-react";
 import SEO from "@/components/SEO";
 import SmartBackButton from '@/components/SmartBackButton';
 const contactSchema = z.object({
@@ -21,10 +24,18 @@ const contactSchema = z.object({
   message: z.string().min(10, "Message should be at least 10 characters")
 });
 type ContactFormValues = z.infer<typeof contactSchema>;
+
+interface HealthCheckResult {
+  test: string;
+  status: 'pass' | 'fail' | 'warning';
+  message: string;
+  duration?: number;
+  details?: string;
+}
+
 const Help: React.FC = () => {
-  const {
-    toast
-  } = useToast();
+  const { toast } = useToast();
+  const { user } = useAuth();
 
   const faqs = useMemo(() => [{
     q: "How are credits used?",
@@ -74,30 +85,136 @@ const Help: React.FC = () => {
     }
   };
   const [diagLoading, setDiagLoading] = useState(false);
+  const [healthResults, setHealthResults] = useState<HealthCheckResult[]>([]);
+  const [healthProgress, setHealthProgress] = useState(0);
+
+  const runSingleTest = async (testName: string, testFn: () => Promise<void>): Promise<HealthCheckResult> => {
+    const startTime = Date.now();
+    try {
+      await testFn();
+      const duration = Date.now() - startTime;
+      return {
+        test: testName,
+        status: 'pass',
+        message: 'Success',
+        duration
+      };
+    } catch (error: any) {
+      const duration = Date.now() - startTime;
+      return {
+        test: testName,
+        status: 'fail',
+        message: error.message || 'Unknown error',
+        duration,
+        details: error.stack
+      };
+    }
+  };
 
   const runHealthChecks = async () => {
+    if (!user) {
+      toast({
+        title: 'Authentication required',
+        description: 'Please sign in to run diagnostics',
+        variant: 'destructive',
+      });
+      return;
+    }
+
     try {
       setDiagLoading(true);
-      // Invoke test-function
-      const testRes = await supabase.functions.invoke('test-function', { body: {} });
-      if (testRes.error) throw new Error(`test-function: ${testRes.error.message}`);
-      const env = (testRes.data as any)?.env_check || {};
-      console.log('test-function result:', testRes.data);
+      setHealthResults([]);
+      setHealthProgress(0);
 
-      // Invoke get-vapi-key
-      const keyRes = await supabase.functions.invoke('get-vapi-key');
-      if (keyRes.error) throw new Error(`get-vapi-key: ${keyRes.error.message}`);
-      const publicKey = (keyRes.data as any)?.publicKey;
-      console.log('get-vapi-key result:', keyRes.data);
+      const tests = [
+        {
+          name: 'Database Connection',
+          test: async () => {
+            const { error } = await supabase.from('profiles').select('count').limit(1);
+            if (error) throw error;
+          }
+        },
+        {
+          name: 'Authentication Service',
+          test: async () => {
+            const { data, error } = await supabase.auth.getUser();
+            if (error || !data.user) throw new Error('Auth service unavailable');
+          }
+        },
+        {
+          name: 'Profile Access (RLS)',
+          test: async () => {
+            const { error } = await supabase.from('profiles').select('*').eq('user_id', user.id).limit(1);
+            if (error) throw error;
+          }
+        },
+        {
+          name: 'Calls Table (RLS)',
+          test: async () => {
+            // Test if we can read our own calls
+            const { error } = await supabase.from('calls').select('id').eq('user_id', user.id).limit(1);
+            if (error) throw error;
+          }
+        },
+        {
+          name: 'Security Event Logging',
+          test: async () => {
+            const { error } = await supabase.rpc('log_security_event', {
+              action_name: 'health_check_test',
+              event_details: { timestamp: new Date().toISOString() }
+            });
+            if (error) throw error;
+          }
+        },
+        {
+          name: 'Storage Service',
+          test: async () => {
+            const { error } = await supabase.storage.listBuckets();
+            if (error) throw error;
+          }
+        },
+        {
+          name: 'Edge Functions - Test Function',
+          test: async () => {
+            const { error } = await supabase.functions.invoke('test-function', { body: {} });
+            if (error) throw error;
+          }
+        },
+        {
+          name: 'Edge Functions - Vapi Key',
+          test: async () => {
+            const { data, error } = await supabase.functions.invoke('get-vapi-key');
+            if (error) throw error;
+            if (!(data as any)?.publicKey) throw new Error('Vapi key not configured');
+          }
+        },
+        {
+          name: 'AI Analysis Cache',
+          test: async () => {
+            const { error } = await supabase.from('ai_analysis_cache').select('count').limit(1);
+            if (error) throw error;
+          }
+        }
+      ];
 
-      const envSummary = Object.entries(env)
-        .map(([k, v]) => `${k}:${v}`)
-        .join(', ');
+      const results: HealthCheckResult[] = [];
+      
+      for (let i = 0; i < tests.length; i++) {
+        const result = await runSingleTest(tests[i].name, tests[i].test);
+        results.push(result);
+        setHealthResults([...results]);
+        setHealthProgress(((i + 1) / tests.length) * 100);
+      }
+
+      const passed = results.filter(r => r.status === 'pass').length;
+      const failed = results.filter(r => r.status === 'fail').length;
 
       toast({
-        title: 'Diagnostics passed',
-        description: `Env: ${envSummary} • Vapi key: ${publicKey ? 'ok' : 'missing'}`,
+        title: failed === 0 ? 'All diagnostics passed' : 'Some diagnostics failed',
+        description: `${passed}/${tests.length} tests passed`,
+        variant: failed === 0 ? 'default' : 'destructive',
       });
+
     } catch (err: any) {
       console.error('Diagnostics failed:', err);
       toast({
@@ -108,6 +225,20 @@ const Help: React.FC = () => {
     } finally {
       setDiagLoading(false);
     }
+  };
+
+  const copyDiagnostics = () => {
+    const report = healthResults.map(r => 
+      `${r.test}: ${r.status.toUpperCase()} - ${r.message}${r.duration ? ` (${r.duration}ms)` : ''}`
+    ).join('\n');
+    
+    const fullReport = `Supabase Health Check Report\nGenerated: ${new Date().toISOString()}\nUser: ${user?.email || 'Unknown'}\n\n${report}`;
+    
+    navigator.clipboard.writeText(fullReport);
+    toast({
+      title: 'Diagnostics copied',
+      description: 'Report copied to clipboard'
+    });
   };
 
   const faqJsonLd = {
@@ -194,18 +325,143 @@ const Help: React.FC = () => {
         <section aria-labelledby="diagnostics">
           <Card>
             <CardHeader>
-              <CardTitle id="diagnostics">Backend Diagnostics</CardTitle>
-              <CardDescription>Run quick health checks for Edge Functions</CardDescription>
+              <CardTitle id="diagnostics">Supabase Health Diagnostics</CardTitle>
+              <CardDescription>Comprehensive connectivity and functionality tests for all Supabase services</CardDescription>
             </CardHeader>
-            <CardContent>
-              <div className="flex items-center gap-3">
-                <Button onClick={runHealthChecks} disabled={diagLoading}>
-                  {diagLoading ? "Running..." : "Run Health Checks"}
+            <CardContent className="space-y-6">
+              <div className="flex flex-col sm:flex-row items-start sm:items-center gap-4">
+                <Button 
+                  onClick={runHealthChecks} 
+                  disabled={diagLoading || !user}
+                  className="w-full sm:w-auto"
+                >
+                  {diagLoading ? (
+                    <>
+                      <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                      Running Diagnostics...
+                    </>
+                  ) : (
+                    'Run Complete Health Check'
+                  )}
                 </Button>
-                <p className="text-sm text-muted-foreground">
-                  Calls test-function and get-vapi-key, then reports status.
-                </p>
+                
+                {healthResults.length > 0 && !diagLoading && (
+                  <Button
+                    variant="outline"
+                    onClick={copyDiagnostics}
+                    className="w-full sm:w-auto"
+                  >
+                    <Copy className="w-4 h-4 mr-2" />
+                    Copy Report
+                  </Button>
+                )}
+                
+                {!user && (
+                  <p className="text-sm text-muted-foreground">
+                    Sign in required to run diagnostics
+                  </p>
+                )}
               </div>
+
+              {diagLoading && (
+                <div className="space-y-2">
+                  <div className="flex items-center justify-between text-sm">
+                    <span>Running tests...</span>
+                    <span>{Math.round(healthProgress)}%</span>
+                  </div>
+                  <Progress value={healthProgress} className="w-full" />
+                </div>
+              )}
+
+              {healthResults.length > 0 && (
+                <div className="space-y-4">
+                  <div className="flex items-center gap-4">
+                    <div className="flex items-center gap-2">
+                      <CheckCircle className="w-4 h-4 text-green-600" />
+                      <span className="text-sm font-medium">
+                        {healthResults.filter(r => r.status === 'pass').length} Passed
+                      </span>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <XCircle className="w-4 h-4 text-red-600" />
+                      <span className="text-sm font-medium">
+                        {healthResults.filter(r => r.status === 'fail').length} Failed
+                      </span>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <AlertCircle className="w-4 h-4 text-yellow-600" />
+                      <span className="text-sm font-medium">
+                        {healthResults.filter(r => r.status === 'warning').length} Warnings
+                      </span>
+                    </div>
+                  </div>
+
+                  <div className="space-y-3">
+                    {healthResults.map((result, index) => (
+                      <div
+                        key={index}
+                        className="flex items-center justify-between p-3 border border-border rounded-lg bg-card"
+                      >
+                        <div className="flex items-center gap-3">
+                          {result.status === 'pass' && <CheckCircle className="w-4 h-4 text-green-600" />}
+                          {result.status === 'fail' && <XCircle className="w-4 h-4 text-red-600" />}
+                          {result.status === 'warning' && <AlertCircle className="w-4 h-4 text-yellow-600" />}
+                          
+                          <div>
+                            <p className="text-sm font-medium">{result.test}</p>
+                            <p className={`text-xs ${
+                              result.status === 'pass' ? 'text-green-600' :
+                              result.status === 'fail' ? 'text-red-600' :
+                              'text-yellow-600'
+                            }`}>
+                              {result.message}
+                            </p>
+                          </div>
+                        </div>
+                        
+                        <div className="flex items-center gap-2">
+                          {result.duration && (
+                            <Badge variant="secondary" className="text-xs">
+                              {result.duration}ms
+                            </Badge>
+                          )}
+                          <Badge 
+                            variant={
+                              result.status === 'pass' ? 'default' :
+                              result.status === 'fail' ? 'destructive' :
+                              'secondary'
+                            }
+                          >
+                            {result.status.toUpperCase()}
+                          </Badge>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+
+                  {healthResults.some(r => r.details) && (
+                    <Accordion type="single" collapsible className="w-full">
+                      <AccordionItem value="error-details">
+                        <AccordionTrigger className="text-sm">View Error Details</AccordionTrigger>
+                        <AccordionContent>
+                          <div className="space-y-3">
+                            {healthResults
+                              .filter(r => r.details)
+                              .map((result, index) => (
+                                <div key={index} className="p-3 bg-muted rounded-lg">
+                                  <p className="text-sm font-medium mb-2">{result.test}</p>
+                                  <pre className="text-xs text-muted-foreground whitespace-pre-wrap overflow-x-auto">
+                                    {result.details}
+                                  </pre>
+                                </div>
+                              ))}
+                          </div>
+                        </AccordionContent>
+                      </AccordionItem>
+                    </Accordion>
+                  )}
+                </div>
+              )}
             </CardContent>
           </Card>
         </section>
