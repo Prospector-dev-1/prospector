@@ -941,6 +941,14 @@ export type Database = {
         }
         Returns: boolean
       }
+      log_security_event: {
+        Args: {
+          action_name: string
+          event_details: Json
+          target_user_id?: string
+        }
+        Returns: undefined
+      }
       mask_sensitive_data: {
         Args: { input_email?: string; input_phone?: string; is_admin?: boolean }
         Returns: Json
