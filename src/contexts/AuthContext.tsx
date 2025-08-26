@@ -120,20 +120,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   }, []);
 
   const signUp = async (email: string, password: string, firstName?: string, lastName?: string) => {
-    // Check if email already exists using our database function
-    const { data: emailExists, error: checkError } = await supabase
-      .rpc('check_email_exists', { email_to_check: email });
-    
-    if (checkError) {
-      console.error('Error checking email:', checkError);
-    } else if (emailExists) {
-      toast({
-        title: "Email Already Exists",
-        description: "This email is already in the database. Please log in instead.",
-        variant: "destructive",
-      });
-      return { error: { message: "Email already exists" } };
-    }
+    // Remove email enumeration check for security - let Supabase handle duplicate emails
     
     const redirectUrl = `${window.location.origin}/`;
     

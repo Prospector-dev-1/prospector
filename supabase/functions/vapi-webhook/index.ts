@@ -17,8 +17,17 @@ async function verifySignatureIfPresent(rawBody: string, req: Request) {
     req.headers.get("x-signature") ||
     req.headers.get("vapi-signature");
 
-  // If no secret configured or no signature provided, skip verification
-  if (!secret || !signatureHeader) return { verified: false, skipped: true };
+  // If no secret configured, reject the request for security
+  if (!secret) {
+    console.error("[vapi-webhook] VAPI_WEBHOOK_SECRET not configured - rejecting request");
+    return { verified: false, skipped: false, error: "Webhook secret not configured" };
+  }
+  
+  // If no signature provided, reject the request
+  if (!signatureHeader) {
+    console.error("[vapi-webhook] No signature header provided - rejecting request");
+    return { verified: false, skipped: false, error: "No signature provided" };
+  }
 
   try {
     const encoder = new TextEncoder();
@@ -77,12 +86,12 @@ serve(async (req) => {
     );
   }
 
-  // Optional signature verification (if VAPI_WEBHOOK_SECRET set)
+  // Mandatory signature verification 
   const verification = await verifySignatureIfPresent(rawBody, req);
-  if (!verification.skipped && !verification.verified) {
-    console.warn("[vapi-webhook] Signature verification failed");
+  if (!verification.verified) {
+    console.warn("[vapi-webhook] Signature verification failed:", verification.error || "Invalid signature");
     return new Response(
-      JSON.stringify({ error: "Invalid signature" }),
+      JSON.stringify({ error: verification.error || "Invalid signature" }),
       { status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" } }
     );
   }

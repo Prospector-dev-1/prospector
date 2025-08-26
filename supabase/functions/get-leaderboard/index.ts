@@ -28,10 +28,11 @@ serve(async (req) => {
       { auth: { persistSession: false } }
     );
 
-    // Get all users with only non-sensitive data needed for leaderboard
+    // Get users who opt-in to leaderboard with only non-sensitive data needed
     const { data: allUsers, error: usersError } = await supabaseService
       .from('profiles')
-      .select('user_id, first_name, last_name, avatar_url');
+      .select('user_id, first_name, last_name, avatar_url, show_on_leaderboard')
+      .eq('show_on_leaderboard', true);
 
     if (usersError) {
       console.error('Error fetching users:', usersError);
