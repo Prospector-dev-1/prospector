@@ -889,6 +889,10 @@ export type Database = {
         Args: Record<PropertyKey, never>
         Returns: undefined
       }
+      cleanup_old_sensitive_data: {
+        Args: Record<PropertyKey, never>
+        Returns: undefined
+      }
       deduct_credits: {
         Args: { amount_param: number; user_id_param: string }
         Returns: undefined
@@ -899,6 +903,10 @@ export type Database = {
           _user_id: string
         }
         Returns: boolean
+      }
+      mask_sensitive_data: {
+        Args: { input_email?: string; input_phone?: string; is_admin?: boolean }
+        Returns: Json
       }
       reset_monthly_limits: {
         Args: Record<PropertyKey, never>
