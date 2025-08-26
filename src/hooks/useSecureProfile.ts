@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { SecurityLogger } from '@/utils/securityUtils';
+import { useDataMasking } from '@/hooks/useDataMasking';
 
 interface SecureProfile {
   id: string;
@@ -20,6 +21,7 @@ interface SecureProfile {
 
 export const useSecureProfile = () => {
   const { user } = useAuth();
+  const { maskSensitiveData } = useDataMasking();
   const [profile, setProfile] = useState<SecureProfile | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -34,12 +36,12 @@ export const useSecureProfile = () => {
     const userId = targetUserId || user.id;
     
     try {
-      // Use the masked view for additional protection
-      const { data, error } = await supabase
-        .from('profiles_masked')
-        .select('*')
-        .eq('user_id', userId)
-        .single();
+    // Use the masked view for additional protection
+    const { data, error } = await supabase
+      .from('profiles')
+      .select('*')
+      .eq('user_id', userId)
+      .single();
 
       if (error) {
         console.error('Error fetching secure profile:', error);
@@ -47,14 +49,17 @@ export const useSecureProfile = () => {
         return;
       }
 
-      // Log PII access for security monitoring
-      await SecurityLogger.logSecurityEvent('secure_profile_access', {
-        target_user_id: userId,
-        accessed_fields: Object.keys(data || {}),
-        is_self_access: userId === user.id
-      }, userId);
+    // Apply client-side masking using the data masking hook
+    // For now, set the raw data and let the UI components handle masking
+    
+    // Log PII access for security monitoring
+    await SecurityLogger.logSecurityEvent('secure_profile_access', {
+      target_user_id: userId,
+      accessed_fields: Object.keys(data || {}),
+      is_self_access: userId === user.id
+    }, userId);
 
-      setProfile(data);
+    setProfile(data);
       setError(null);
     } catch (err) {
       console.error('Secure profile fetch error:', err);

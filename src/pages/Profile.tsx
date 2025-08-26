@@ -88,33 +88,35 @@ const Profile = () => {
   }, [user, navigate]);
   const fetchProfile = async () => {
     try {
-      // Use the masked view for better security
-      const {
-        data,
-        error
-      } = await supabase.from('profiles_masked').select('*').eq('user_id', user?.id).single();
+      // Fetch profile from profiles table and use server-side audit logging
+      const { data, error } = await supabase
+        .from('profiles')
+        .select('*')
+        .eq('user_id', user?.id)
+        .maybeSingle();
+        
       if (error) throw error;
       
-      // Log profile access for security auditing
-      supabase.from('audit_logs').insert({
-        user_id: user?.id || '',
-        action: 'profile_view',
-        target_id: user?.id || '',
-        details: {
-          pii_accessed: ['email', 'first_name', 'last_name', 'phone_number'],
-          context: 'profile_page_view'
-        }
-      }).then(result => {
-        if (result.error) {
-          console.warn('Failed to log profile access:', result.error);
-        }
-      });
+      // Log profile access using the secure server-side function
+      try {
+        // @ts-ignore - Function exists but types haven't been updated yet
+        await supabase.rpc('log_security_event', {
+          action_name: 'pii_access',
+          event_details: {
+            pii_accessed: ['email', 'first_name', 'last_name', 'phone_number'],
+            context: 'profile_page_view'
+          },
+          target_user_id: user?.id || null
+        });
+      } catch (logError) {
+        console.warn('Failed to log profile access:', logError);
+      }
 
       setProfile(data);
       setEditForm({
-        first_name: data.first_name || '',
-        last_name: data.last_name || '',
-        phone_number: data.phone_number || ''
+        first_name: data?.first_name || '',
+        last_name: data?.last_name || '',
+        phone_number: data?.phone_number || ''
       });
     } catch (error) {
       console.error('Error fetching profile:', error);
@@ -323,20 +325,20 @@ const Profile = () => {
   };
   const handleDataExport = async () => {
     try {
-      // Log data export attempt for security auditing
-      supabase.from('audit_logs').insert({
-        user_id: user?.id || '',
-        action: 'data_export',
-        target_id: user?.id || '',
-        details: {
-          pii_accessed: ['email', 'first_name', 'last_name', 'phone_number', 'full_call_history'],
-          export_type: 'full_user_data'
-        }
-      }).then(result => {
-        if (result.error) {
-          console.warn('Failed to log data export:', result.error);
-        }
-      });
+      // Log data export attempt using secure server-side function
+      try {
+        // @ts-ignore - Function exists but types haven't been updated yet
+        await supabase.rpc('log_security_event', {
+          action_name: 'data_export_request',
+          event_details: {
+            pii_accessed: ['email', 'first_name', 'last_name', 'phone_number', 'full_call_history'],
+            export_type: 'full_user_data'
+          },
+          target_user_id: user?.id || null
+        });
+      } catch (logError) {
+        console.warn('Failed to log data export:', logError);
+      }
 
       // Get user profile and call history (use regular table since user owns the data)
       const [profileData, callsData] = await Promise.all([
