@@ -874,9 +874,75 @@ export type Database = {
       }
     }
     Views: {
-      [_ in never]: never
+      profiles_masked: {
+        Row: {
+          avatar_url: string | null
+          billing_cycle_start: string | null
+          created_at: string | null
+          credits: number | null
+          email: string | null
+          first_name: string | null
+          id: string | null
+          last_name: string | null
+          monthly_coaching_unlimited: boolean | null
+          monthly_credits_limit: number | null
+          monthly_credits_used: number | null
+          monthly_custom_scripts_limit: number | null
+          monthly_custom_scripts_used: number | null
+          phone_number: string | null
+          subscription_end: string | null
+          subscription_type: string | null
+          updated_at: string | null
+          user_id: string | null
+        }
+        Insert: {
+          avatar_url?: string | null
+          billing_cycle_start?: string | null
+          created_at?: string | null
+          credits?: number | null
+          email?: never
+          first_name?: never
+          id?: string | null
+          last_name?: never
+          monthly_coaching_unlimited?: boolean | null
+          monthly_credits_limit?: number | null
+          monthly_credits_used?: number | null
+          monthly_custom_scripts_limit?: number | null
+          monthly_custom_scripts_used?: number | null
+          phone_number?: never
+          subscription_end?: string | null
+          subscription_type?: string | null
+          updated_at?: string | null
+          user_id?: string | null
+        }
+        Update: {
+          avatar_url?: string | null
+          billing_cycle_start?: string | null
+          created_at?: string | null
+          credits?: number | null
+          email?: never
+          first_name?: never
+          id?: string | null
+          last_name?: never
+          monthly_coaching_unlimited?: boolean | null
+          monthly_credits_limit?: number | null
+          monthly_credits_used?: number | null
+          monthly_custom_scripts_limit?: number | null
+          monthly_custom_scripts_used?: number | null
+          phone_number?: never
+          subscription_end?: string | null
+          subscription_type?: string | null
+          updated_at?: string | null
+          user_id?: string | null
+        }
+        Relationships: []
+      }
     }
     Functions: {
+      can_view_pii: {
+        Args: { target_user_id: string }
+        Returns: boolean
+      }
       check_email_exists: {
         Args: { email_to_check: string }
         Returns: boolean
