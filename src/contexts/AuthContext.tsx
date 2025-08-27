@@ -48,22 +48,21 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         .from('profiles')
         .select('*')
         .eq('user_id', userId)
-        .single();
+        .maybeSingle();
 
       if (error) {
         console.error('Error fetching profile:', error);
         return;
       }
 
-      // Log profile access for security auditing
-      supabase.from('audit_logs').insert({
-        user_id: userId,
-        action: 'profile_view',
-        target_id: userId,
-        details: {
+      // Log profile access for security auditing - use RPC for proper permissions
+      supabase.rpc('log_security_event', {
+        action_name: 'profile_view',
+        event_details: {
           pii_accessed: ['email', 'first_name', 'last_name', 'phone_number'],
           context: 'auth_context_fetch'
-        }
+        },
+        target_user_id: userId
       }).then(result => {
         if (result.error) {
           console.warn('Failed to log profile access:', result.error);

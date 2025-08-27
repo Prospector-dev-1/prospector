@@ -8,26 +8,16 @@ export class SecurityLogger {
   ) {
     try {
       // Use server-side audit logging function for security
-      const { error } = await supabase.rpc('log_security_event' as any, {
+      const { error } = await supabase.rpc('log_security_event', {
         action_name: action,
         event_details: details,
         target_user_id: targetId || null
       });
 
       if (error) {
-        console.error('Failed to log security event:', error);
-        // Fallback to direct insert if RPC fails
-        const { data: { user } } = await supabase.auth.getUser();
-        if (user) {
-          await supabase.from('audit_logs').insert({
-            user_id: user.id,
-            action,
-            target_id: targetId,
-            details,
-            ip_address: 'client-side',
-            user_agent: navigator.userAgent
-          });
-        }
+        console.warn('Security logging failed, continuing without audit log:', error);
+        // Don't fallback to direct insert as it may cause permission issues
+        // Security logging is important but should not block user operations
       }
     } catch (err) {
       console.error('Security logging error:', err);

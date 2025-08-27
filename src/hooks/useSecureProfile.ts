@@ -41,7 +41,7 @@ export const useSecureProfile = () => {
       .from('profiles')
       .select('*')
       .eq('user_id', userId)
-      .single();
+      .maybeSingle();
 
       if (error) {
         console.error('Error fetching secure profile:', error);
