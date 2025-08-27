@@ -121,30 +121,8 @@ serve(async (req) => {
         gamificationMode,
         customProspectId,
         prospectProfileId: prospectProfile?.id
-      },
-      transcriber: {
-        provider: "deepgram",
-        model: "nova-3-general",
-        language: "en"
-      },
-      clientMessages: [
-        "conversation-update",
-        "speech-update",
-        "status-update",
-        "transcript",
-        "user-interrupted",
-        "voice-input"
-      ]
+      }
     };
-
-    // Safely log assistant config without potential circular references
-    try {
-      console.log('Assistant config created for session:', sessionId);
-      console.log('Model:', assistantConfig.model.provider, assistantConfig.model.model);
-      console.log('Voice:', assistantConfig.voice.provider, assistantConfig.voice.voiceId);
-    } catch (logError) {
-      console.warn('Error logging assistant config:', logError);
-    }
 
     const response = await fetch('https://api.vapi.ai/assistant', {
       method: 'POST',

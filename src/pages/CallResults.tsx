@@ -11,7 +11,6 @@ import SEO from '@/components/SEO';
 import { useToast } from '@/hooks/use-toast';
 import MobileLayout from '@/components/MobileLayout';
 import SmartBackButton from '@/components/SmartBackButton';
-import { TranscriptDisplay } from '@/components/TranscriptDisplay';
 interface CallRecord {
   id: string;
   difficulty_level: number;
@@ -136,57 +135,25 @@ const CallResults = () => {
     setLoading(true);
     setAnalysisError(null);
     try {
-      // First fetch the call record to get transcript and duration
-      const { data: callData, error: fetchError } = await supabase
-        .from('calls')
-        .select('transcript, duration_seconds')
-        .eq('id', callId)
-        .eq('user_id', user.id)
-        .single();
-      
-      if (fetchError) {
-        throw new Error('Failed to fetch call data for retry');
+      // Reset call status to trigger reanalysis
+      const {
+        error
+      } = await supabase.from('calls').update({
+        call_status: 'started'
+      }).eq('id', callId).eq('user_id', user.id);
+      if (error) {
+        throw error;
       }
 
-      if (!callData?.transcript || callData.transcript.trim().length === 0) {
-        throw new Error('No transcript available for analysis. The call may have been too short or no speech was detected.');
-      }
-
-      // Update status to analyzing
-      const { error: updateError } = await supabase
-        .from('calls')
-        .update({ call_status: 'analyzing' })
-        .eq('id', callId)
-        .eq('user_id', user.id);
-      
-      if (updateError) {
-        throw updateError;
-      }
-
-      // Invoke end-call-analysis with the saved transcript and duration
-      const { data, error: analysisError } = await supabase.functions.invoke('end-call-analysis', {
-        body: {
-          callRecordId: callId,
-          transcript: callData.transcript,
-          duration: callData.duration_seconds || 0
-        }
-      });
-
-      if (analysisError) {
-        console.error('Analysis invocation error:', analysisError);
-        throw new Error(`Analysis failed: ${analysisError.message}`);
-      }
-
+      // Start polling again
+      pollForAnalysisCompletion();
       toast({
         title: "Analysis restarted",
         description: "We're processing your call again. This may take a moment."
       });
-
-      // Start polling again
-      pollForAnalysisCompletion();
     } catch (error) {
       console.error('Error retrying analysis:', error);
-      setAnalysisError(error instanceof Error ? error.message : 'Failed to restart analysis. Please try again.');
+      setAnalysisError('Failed to restart analysis. Please try again.');
       setLoading(false);
     }
   };
@@ -516,13 +483,23 @@ const CallResults = () => {
             </Card>
 
             {/* Call Transcript */}
-            <TranscriptDisplay
-              finalChunks={[]}
-              liveBuffer={[]}
-              finalTranscript={callRecord.transcript}
-              showLive={false}
-              className="mb-8"
-            />
+            {callRecord.transcript && (
+              <Card className="mb-8">
+                <CardHeader>
+                  <CardTitle>Call Transcript</CardTitle>
+                  <CardDescription>
+                    Complete conversation from your practice session
+                  </CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <div className="bg-muted p-4 rounded-lg max-h-96 overflow-y-auto">
+                    <p className="text-sm whitespace-pre-wrap">
+                      {callRecord.transcript}
+                    </p>
+                  </div>
+                </CardContent>
+              </Card>
+            )}
 
             {/* Objection Coaching */}
             <Card className="mb-8">

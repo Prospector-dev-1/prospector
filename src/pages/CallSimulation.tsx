@@ -51,11 +51,6 @@ const CallSimulation = () => {
         
         if (keyError || !keyData?.publicKey) {
           console.error('Failed to get Vapi public key:', keyError);
-          toast({
-            title: "Initialization Error",
-            description: "Failed to initialize call system. Please refresh and try again.",
-            variant: "destructive",
-          });
           return;
         }
 
@@ -159,11 +154,7 @@ const CallSimulation = () => {
 
     return () => {
       if (vapiRef.current) {
-        try {
-          vapiRef.current.stop();
-        } catch (error) {
-          console.warn('Error stopping Vapi during cleanup:', error);
-        }
+        vapiRef.current.stop();
       }
       if (timerRef.current) {
         clearInterval(timerRef.current);
@@ -230,19 +221,24 @@ const CallSimulation = () => {
     setCallStarted(true);
     
     try {
-      // Navigate immediately after credit check with call configuration
-      const sessionConfig = new URLSearchParams({
-        mode: 'call_simulation',
-        business_type: businessType,
-        prospect_role: prospectRole,
-        call_objective: callObjective === 'Custom' ? customObjective : callObjective,
-        difficulty: difficultyLevel[0].toString(),
-        custom_instructions: customInstructions || '',
-        auto_start: 'true'
+      const { data, error } = await supabase.functions.invoke('start-call', {
+        body: { 
+          difficulty_level: difficultyLevel[0],
+          business_type: businessType,
+          prospect_role: prospectRole,
+          call_objective: callObjective === 'Custom' ? customObjective : callObjective,
+          custom_instructions: customInstructions
+        }
       });
+
+      if (error) throw new Error(error.message);
+      if (data.error) throw new Error(data.error);
+
+      setCallRecordId(data.callRecordId);
+      callRecordIdRef.current = data.callRecordId;
       
-      // Navigate immediately - the LiveCall page will handle the setup
-      navigate(`/call-simulation-live?${sessionConfig.toString()}`);
+      await vapiRef.current.start(data.assistantId);
+      await refreshProfile();
 
     } catch (error: any) {
       console.error('Error starting call:', error);
@@ -263,12 +259,8 @@ const CallSimulation = () => {
     try {
       if (vapiRef.current) {
         console.log('Stopping Vapi call...');
-        try {
-          await vapiRef.current.stop();
-          console.log('Vapi call stopped successfully');
-        } catch (stopError) {
-          console.warn('Error stopping Vapi call:', stopError);
-        }
+        await vapiRef.current.stop();
+        console.log('Vapi call stopped successfully');
       }
       
       // Force cleanup if call doesn't end naturally
@@ -300,7 +292,7 @@ const CallSimulation = () => {
       
       // Navigate immediately to results page
       console.log('Navigating to results page...');
-      navigate(`/call-results/${currentCallRecordId}`, { replace: true });
+      navigate(`/call-results/${currentCallRecordId}`);
 
       // Start analysis in background
       try {
@@ -308,24 +300,21 @@ const CallSimulation = () => {
         const finalDuration = callDurationRef.current;
         console.log('Starting background analysis - Duration from ref:', finalDuration, 'Transcript:', transcriptRef.current);
         
-        // Send transcript for analysis (even if empty) - run in background
-        (async () => {
-          try {
-            const { data, error } = await supabase.functions.invoke('end-call-analysis', {
-              body: {
-                callRecordId: currentCallRecordId,
-                transcript: transcriptRef.current || 'No transcript available',
-                duration: finalDuration
-              }
-            });
-            console.log('Background analysis completed:', { data, error });
-            if (error) {
-              console.error('Error analyzing call:', error);
-            }
-          } catch (error) {
-            console.error('Error in background analysis:', error);
+        // Send transcript for analysis (even if empty) - don't await
+        supabase.functions.invoke('end-call-analysis', {
+          body: {
+            callRecordId: currentCallRecordId,
+            transcript: transcriptRef.current || 'No transcript available',
+            duration: finalDuration
           }
-        })();
+        }).then(({ data, error }) => {
+          console.log('Background analysis completed:', { data, error });
+          if (error) {
+            console.error('Error analyzing call:', error);
+          }
+        }).catch(error => {
+          console.error('Error in background analysis:', error);
+        });
 
       } catch (error) {
         console.error('Error starting background analysis:', error);

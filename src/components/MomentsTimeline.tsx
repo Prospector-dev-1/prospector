@@ -139,10 +139,14 @@ const MomentsTimeline: React.FC<MomentsTimelineProps> = ({ moments, selectedMome
                         </Button>
                         <Button 
                           size="sm"
-                          variant={isSelected ? "destructive" : "default"}
                           onClick={(e) => handleSelectMoment(m.id, e)}
+                          className={cn(
+                            isSelected 
+                              ? "bg-green-600 hover:bg-green-700 text-white" 
+                              : "bg-primary hover:bg-primary/90"
+                          )}
                         >
-                          {isSelected ? "Undo Selection" : "Select This Moment"}
+                          {isSelected ? "Moment Selected" : "Select This Moment"}
                         </Button>
                       </div>
                     </div>

@@ -5,12 +5,3 @@ verify_jwt = false
 
 [functions.upload-call-analysis]
 verify_jwt = true
-
-[functions.get-vapi-key]
-verify_jwt = false
-
-[functions.test-function]
-verify_jwt = false
-
-[functions.vapi-webhook]
-verify_jwt = false

@@ -292,59 +292,6 @@ export type Database = {
         }
         Relationships: []
       }
-      call_replays: {
-        Row: {
-          ai_improvements: Json | null
-          call_id: string
-          created_at: string
-          do_over_audio_url: string | null
-          do_over_transcript: Json | null
-          id: string
-          original_audio_url: string | null
-          per_utterance_timestamps: Json | null
-          replay_settings: Json | null
-          synthesized_audio_url: string | null
-          updated_at: string
-          user_id: string
-        }
-        Insert: {
-          ai_improvements?: Json | null
-          call_id: string
-          created_at?: string
-          do_over_audio_url?: string | null
-          do_over_transcript?: Json | null
-          id?: string
-          original_audio_url?: string | null
-          per_utterance_timestamps?: Json | null
-          replay_settings?: Json | null
-          synthesized_audio_url?: string | null
-          updated_at?: string
-          user_id: string
-        }
-        Update: {
-          ai_improvements?: Json | null
-          call_id?: string
-          created_at?: string
-          do_over_audio_url?: string | null
-          do_over_transcript?: Json | null
-          id?: string
-          original_audio_url?: string | null
-          per_utterance_timestamps?: Json | null
-          replay_settings?: Json | null
-          synthesized_audio_url?: string | null
-          updated_at?: string
-          user_id?: string
-        }
-        Relationships: [
-          {
-            foreignKeyName: "call_replays_call_id_fkey"
-            columns: ["call_id"]
-            isOneToOne: false
-            referencedRelation: "calls"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
       call_uploads: {
         Row: {
           ai_analysis: Json | null
@@ -431,7 +378,6 @@ export type Database = {
           successful_sale: boolean | null
           tone_score: number | null
           transcript: string | null
-          transcript_with_timestamps: Json | null
           user_id: string
         }
         Insert: {
@@ -456,7 +402,6 @@ export type Database = {
           successful_sale?: boolean | null
           tone_score?: number | null
           transcript?: string | null
-          transcript_with_timestamps?: Json | null
           user_id: string
         }
         Update: {
@@ -481,7 +426,6 @@ export type Database = {
           successful_sale?: boolean | null
           tone_score?: number | null
           transcript?: string | null
-          transcript_with_timestamps?: Json | null
           user_id?: string
         }
         Relationships: []
@@ -633,36 +577,6 @@ export type Database = {
         }
         Relationships: []
       }
-      pii_access_log: {
-        Row: {
-          action: string | null
-          created_at: string | null
-          id: string
-          ip_address: string | null
-          pii_fields_accessed: string | null
-          target_id: string | null
-          user_id: string | null
-        }
-        Insert: {
-          action?: string | null
-          created_at?: string | null
-          id?: string
-          ip_address?: string | null
-          pii_fields_accessed?: string | null
-          target_id?: string | null
-          user_id?: string | null
-        }
-        Update: {
-          action?: string | null
-          created_at?: string | null
-          id?: string
-          ip_address?: string | null
-          pii_fields_accessed?: string | null
-          target_id?: string | null
-          user_id?: string | null
-        }
-        Relationships: []
-      }
       profiles: {
         Row: {
           avatar_url: string | null
@@ -679,7 +593,6 @@ export type Database = {
           monthly_custom_scripts_limit: number | null
           monthly_custom_scripts_used: number | null
           phone_number: string | null
-          show_on_leaderboard: boolean | null
           subscription_end: string | null
           subscription_type: string | null
           updated_at: string
@@ -700,7 +613,6 @@ export type Database = {
           monthly_custom_scripts_limit?: number | null
           monthly_custom_scripts_used?: number | null
           phone_number?: string | null
-          show_on_leaderboard?: boolean | null
           subscription_end?: string | null
           subscription_type?: string | null
           updated_at?: string
@@ -721,7 +633,6 @@ export type Database = {
           monthly_custom_scripts_limit?: number | null
           monthly_custom_scripts_used?: number | null
           phone_number?: string | null
-          show_on_leaderboard?: boolean | null
           subscription_end?: string | null
           subscription_type?: string | null
           updated_at?: string
@@ -910,10 +821,6 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
-      can_view_pii: {
-        Args: { target_user_id: string }
-        Returns: boolean
-      }
       check_email_exists: {
         Args: { email_to_check: string }
         Returns: boolean
@@ -923,10 +830,6 @@ export type Database = {
         Returns: undefined
       }
       cleanup_old_audit_logs: {
-        Args: Record<PropertyKey, never>
-        Returns: undefined
-      }
-      cleanup_old_sensitive_data: {
         Args: Record<PropertyKey, never>
         Returns: undefined
       }
@@ -940,18 +843,6 @@ export type Database = {
           _user_id: string
         }
         Returns: boolean
-      }
-      log_security_event: {
-        Args: {
-          action_name: string
-          event_details: Json
-          target_user_id?: string
-        }
-        Returns: undefined
-      }
-      mask_sensitive_data: {
-        Args: { input_email?: string; input_phone?: string; is_admin?: boolean }
-        Returns: Json
       }
       reset_monthly_limits: {
         Args: Record<PropertyKey, never>

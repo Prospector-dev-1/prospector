@@ -55,13 +55,13 @@ const AIReplay = () => {
   const [prospectPersonality, setProspectPersonality] = useState<ProspectPersonality>('professional');
   const [gamificationMode, setGamificationMode] = useState<GamificationMode>('none');
 
-  // AI conversation hook for upload call replay
+  // AI conversation hook
   const {
     conversationState,
     startConversation,
     endConversation,
     clearHints
-  } = useRealtimeAIChat({ isUploadCallReplay: true });
+  } = useRealtimeAIChat();
   useEffect(() => {
     if (!uploadId || !user) return;
     fetchOriginalCall();
@@ -72,7 +72,7 @@ const AIReplay = () => {
     return () => {
       endConversation();
     };
-  }, []); // Remove dependency to prevent premature cleanup
+  }, [endConversation]);
   const fetchOriginalCall = async () => {
     try {
       const {
@@ -123,18 +123,9 @@ const AIReplay = () => {
     }
   };
   const handleStartConversation = async () => {
-    if (!selectedMoment) {
-      console.log('AIReplay: No moment selected, cannot start conversation');
-      return;
-    }
+    if (!selectedMoment) return;
     const moment = moments.find(m => m.id === selectedMoment);
-    if (!moment) {
-      console.log('AIReplay: Moment not found:', selectedMoment);
-      return;
-    }
-
-    console.log('AIReplay: Starting conversation with moment:', moment);
-    console.log('AIReplay: Replay config:', { replayMode, prospectPersonality, gamificationMode });
+    if (!moment) return;
 
     // Generate session ID and navigate to live call page
     const sessionId = `session_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
@@ -144,11 +135,7 @@ const AIReplay = () => {
       gamification: gamificationMode,
       moment: JSON.stringify(moment)
     });
-    
-    const navigateUrl = `/live-call/${sessionId}?${queryParams.toString()}`;
-    console.log('AIReplay: Navigating to:', navigateUrl);
-    
-    navigate(navigateUrl);
+    navigate(`/live-call/${sessionId}?${queryParams.toString()}`);
   };
   const handleEndConversation = () => {
     endConversation();
@@ -239,7 +226,7 @@ const AIReplay = () => {
                   {loadingMoments ? <div className="text-center py-8">
                       <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto"></div>
                       <p className="mt-4 text-muted-foreground">Analyzing call moments...</p>
-                    </div> : moments.length > 0 ? <MomentsTimeline moments={moments} selectedMomentId={selectedMoment} onSelectMoment={(id) => setSelectedMoment(selectedMoment === id ? null : id)} /> : <div className="text-center py-8">
+                    </div> : moments.length > 0 ? <MomentsTimeline moments={moments} selectedMomentId={selectedMoment} onSelectMoment={setSelectedMoment} /> : <div className="text-center py-8">
                       <p className="text-muted-foreground mb-4">
                         No transcript available for moment analysis
                       </p>

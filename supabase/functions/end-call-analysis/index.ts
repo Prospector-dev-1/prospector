@@ -12,22 +12,8 @@ serve(async (req) => {
     return new Response(null, { headers: corsHeaders });
   }
 
-  let callRecordId: string | undefined;
-  let userId: string | undefined;
-  
   try {
-    const requestBody = await req.json();
-    callRecordId = requestBody.callRecordId;
-    const transcript = requestBody.transcript;
-    const duration = requestBody.duration;
-    
-    console.log('=== END-CALL-ANALYSIS START ===');
-    console.log('Call Record ID:', callRecordId);
-    console.log('Transcript length:', transcript?.length || 0);
-    console.log('Duration:', duration);
-    
-    // If transcript is missing, try to fetch from call record
-    let finalTranscript = transcript;
+    const { callRecordId, transcript, duration } = await req.json();
     
     // Authenticate user
     const authHeader = req.headers.get('Authorization')!;
@@ -40,6 +26,7 @@ serve(async (req) => {
     );
 
     // Decode JWT locally
+    let userId: string | undefined;
     try {
       const base64Url = token.split('.')[1];
       const payload = JSON.parse(atob(base64Url));
@@ -63,73 +50,15 @@ serve(async (req) => {
       throw new Error('Call record not found');
     }
 
-    // If no transcript provided, try to use the one from the call record
-    if (!finalTranscript && callRecord.transcript) {
-      console.log('Using transcript from call record');
-      finalTranscript = callRecord.transcript;
-    }
-    
-    if (!finalTranscript || finalTranscript.trim().length === 0) {
-      console.log('No valid transcript available, updating call status to failed');
-      
-      // Update call record with failed status and helpful message
-      await supabaseService
-        .from('calls')
-        .update({
-          call_status: 'failed',
-          ai_feedback: 'Unable to analyze call: No transcript was captured during the call. This may happen if the call was too short or there were technical issues. Please try making another call.'
-        })
-        .eq('id', callRecordId);
-      
-      return new Response(JSON.stringify({ 
-        success: false, 
-        error: 'No transcript available for analysis',
-        message: 'Call analysis failed due to missing transcript'
-      }), {
-        status: 400,
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-      });
-    }
-
     console.log('=== ANALYSIS DEBUG ===');
-    console.log('Transcript received:', finalTranscript);
-    console.log('Transcript length:', finalTranscript.length);
+    console.log('Transcript received:', transcript);
+    console.log('Transcript length:', transcript.length);
     console.log('Duration:', duration);
-
-    // Remove large system/prompt blocks and normalize whitespace
-    function stripSystemContent(raw: string): string {
-      if (!raw) return '';
-      let t = raw.replace(/\r/g, '');
-      // Aggressively drop known prompt sections (often injected by simulators)
-      const sectionPattern = /(?:ROLE AND CONTEXT|BUSINESS CONTEXT|PERSONALITY|OBJECTIONS STRATEGY|HUMAN-LIKE SPEECH GUIDELINES)[\s\S]*?(?=(?:\n{2,}|$))/gi;
-      t = t.replace(sectionPattern, '');
-      // Remove obvious guideline lines
-      const lines = t.split(/\n+/).map(l => l.trim());
-      const keep: string[] = [];
-      for (const l of lines) {
-        if (!l) continue;
-        if (/^(Assistant:|User:)/.test(l)) { keep.push(l); continue; }
-        // Skip lines that look like meta/guidelines
-        if (/\b(communication style|backchannel|disfluenc|guidelines|constraint|primary goal|current toolset|mood right now|conversation quirks)\b/i.test(l)) continue;
-        if (/^[-•]/.test(l)) continue;
-        if ((l.match(/-/g)?.length || 0) >= 3) continue;
-        // Very long lines are likely prompt blocks
-        if (l.length > 320) continue;
-        keep.push(l);
-      }
-      // Deduplicate adjacent repeats
-      const dedup: string[] = [];
-      for (const l of keep) {
-        if (dedup.length === 0 || dedup[dedup.length - 1] !== l) dedup.push(l);
-      }
-      return dedup.join('\n').trim();
-    }
 
     // Clean up transcript to remove duplicates and repetitive text
     function cleanTranscript(rawTranscript: string): string {
       if (!rawTranscript) return '';
-      const stripped = stripSystemContent(rawTranscript);
-      const lines = stripped.split(/\n+/).map(line => line.trim()).filter(Boolean);
+      const lines = rawTranscript.split('\n').map(line => line.trim()).filter(Boolean);
       const cleanedLines: string[] = [];
       for (const line of lines) {
         const words = line.split(/\s+/);
@@ -143,10 +72,10 @@ serve(async (req) => {
           cleanedLines.push(cleanedLine);
         }
       }
-      return cleanedLines.join('\n');
+      return cleanedLines.join(' ');
     }
 
-    // Advanced normalization: collapse repeated phrases
+    // Advanced normalization: rebuild turns and collapse repeated phrases
     function collapseRepeatedPhrases(text: string): string {
       const words = text.split(/\s+/).filter(Boolean);
       const out: string[] = [];
@@ -175,42 +104,6 @@ serve(async (req) => {
         }
       }
       return out.join(' ').replace(/\s+([,.!?;:])/g, '$1');
-    }
-
-    // Fallback: infer speaker turns from plain text by alternating speakers
-    function inferTurnsFromPlainText(raw: string): string {
-      const lines = raw.split(/\n+/).map(l => l.trim()).filter(Boolean);
-      const filtered = lines.filter(l => {
-        if (/^(Assistant:|User:)/.test(l)) return true;
-        if (l.length > 280) return false;
-        if (/\b(ROLE AND CONTEXT|BUSINESS CONTEXT|PERSONALITY|OBJECTIONS STRATEGY|HUMAN-LIKE SPEECH GUIDELINES)\b/i.test(l)) return false;
-        if (/\b(communication style|backchannel|disfluenc|guidelines|constraint|primary goal|current toolset)\b/i.test(l)) return false;
-        return true;
-      });
-      if (filtered.length === 0) return '';
-      // Heuristic: if the first line looks like a probing question, assume Assistant starts
-      const first = filtered[0].toLowerCase();
-      let next: 'Assistant' | 'User' = /(what's|what’s|how can i help|what can i do|tell me|what brings you)/.test(first) ? 'Assistant' : 'User';
-      const out: string[] = [];
-      for (const l of filtered) {
-        if (/^(Assistant:|User:)/.test(l)) { out.push(l); continue; }
-        out.push(`${next}: ${l}`);
-        next = next === 'Assistant' ? 'User' : 'Assistant';
-      }
-      // Merge consecutive same-speaker lines
-      const merged: string[] = [];
-      for (const line of out) {
-        const m = line.match(/^(Assistant|User):\s*(.*)$/);
-        if (!m) continue;
-        const speaker = m[1];
-        const content = m[2];
-        if (merged.length && merged[merged.length - 1].startsWith(`${speaker}:`)) {
-          merged[merged.length - 1] = `${speaker}: ${collapseRepeatedPhrases(merged[merged.length - 1].slice(speaker.length + 2) + ' ' + content).trim()}`;
-        } else {
-          merged.push(`${speaker}: ${collapseRepeatedPhrases(content).trim()}`);
-        }
-      }
-      return merged.join('\n');
     }
 
     function rebuildTurns(raw: string): string {
@@ -242,11 +135,6 @@ serve(async (req) => {
         }
       }
 
-      if (turns.length === 0) {
-        // No labeled turns present; infer by alternation
-        return inferTurnsFromPlainText(normalized);
-      }
-
       const out: string[] = [];
       let prevLine = '';
       for (const t of turns) {
@@ -257,17 +145,10 @@ serve(async (req) => {
           prevLine = line;
         }
       }
-
-      const joined = out.join('\n');
-      const hasUser = /\n?User:\s+/.test(joined);
-      if (!hasUser) {
-        // Ensure we have user participation for analysis to proceed
-        return inferTurnsFromPlainText(normalized);
-      }
-      return joined;
+      return out.join('\n');
     }
 
-    const initialClean = cleanTranscript(finalTranscript);
+    const initialClean = cleanTranscript(transcript);
     const cleanedTranscript = rebuildTurns(initialClean);
     console.log('Cleaned transcript:', cleanedTranscript);
 
@@ -546,27 +427,15 @@ ${overallScore < 3 ? 'This was a weak sales call. Focus on: 1) Professional intr
   } catch (error) {
     console.error('Error in end-call-analysis function:', error);
     
-    // Update call record with failed status if we have the callRecordId
-    if (callRecordId && userId) {
+    // Update call status to failed so it doesn't stay in analyzing state
+    if (callRecordId) {
       try {
-        const supabaseService = createClient(
-          Deno.env.get('SUPABASE_URL') ?? '',
-          Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? '',
-          { auth: { persistSession: false } }
-        );
-        
         await supabaseService
           .from('calls')
-          .update({
-            call_status: 'failed',
-            ai_feedback: `Analysis failed: ${error.message}. Please try the analysis again or contact support if the issue persists.`
-          })
-          .eq('id', callRecordId)
-          .eq('user_id', userId);
-          
-        console.log('Updated call record with failed status');
+          .update({ call_status: 'failed' })
+          .eq('id', callRecordId);
       } catch (updateError) {
-        console.error('Failed to update call record with error status:', updateError);
+        console.error('Failed to update call status to failed:', updateError);
       }
     }
     

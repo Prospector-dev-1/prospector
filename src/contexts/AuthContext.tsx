@@ -48,26 +48,12 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         .from('profiles')
         .select('*')
         .eq('user_id', userId)
-        .maybeSingle();
+        .single();
 
       if (error) {
         console.error('Error fetching profile:', error);
         return;
       }
-
-      // Log profile access for security auditing - use RPC for proper permissions
-      supabase.rpc('log_security_event', {
-        action_name: 'profile_view',
-        event_details: {
-          pii_accessed: ['email', 'first_name', 'last_name', 'phone_number'],
-          context: 'auth_context_fetch'
-        },
-        target_user_id: userId
-      }).then(result => {
-        if (result.error) {
-          console.warn('Failed to log profile access:', result.error);
-        }
-      });
 
       setProfile(data);
     } catch (error) {
@@ -119,7 +105,20 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   }, []);
 
   const signUp = async (email: string, password: string, firstName?: string, lastName?: string) => {
-    // Remove email enumeration check for security - let Supabase handle duplicate emails
+    // Check if email already exists using our database function
+    const { data: emailExists, error: checkError } = await supabase
+      .rpc('check_email_exists', { email_to_check: email });
+    
+    if (checkError) {
+      console.error('Error checking email:', checkError);
+    } else if (emailExists) {
+      toast({
+        title: "Email Already Exists",
+        description: "This email is already in the database. Please log in instead.",
+        variant: "destructive",
+      });
+      return { error: { message: "Email already exists" } };
+    }
     
     const redirectUrl = `${window.location.origin}/`;
     

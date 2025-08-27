@@ -48,7 +48,8 @@ const ConversationPanel: React.FC<ConversationPanelProps> = ({
         <CardContent>
           <div className="text-center py-8">
             <MessageSquare className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
-            <p className="text-muted-foreground">Select a moment from Practice Moments to begin AI Replay mode</p>
+            <p className="text-muted-foreground">Select a moment from Call Moments 
+ to begin AI Replay mode</p>
           </div>
         </CardContent>
       </Card>;
@@ -80,17 +81,24 @@ const ConversationPanel: React.FC<ConversationPanelProps> = ({
             </div>}
         </div>
 
-        {/* Instructions */}
-        {!isActive && !isConnecting && <div className="p-3 bg-primary/5 rounded-lg border border-primary/10">
-            <div className="flex items-start gap-2">
-              <Zap className="h-4 w-4 text-primary mt-0.5 flex-shrink-0" />
-              <div className="text-sm">
-                <p className="font-medium text-primary mb-1">Real-time AI Practice</p>
-                <p className="text-primary/80 text-xs leading-relaxed">
-                  Have a live conversation with our AI prospect. Get real-time coaching hints 
-                  and handle multiple objections to improve your skills.
-                </p>
-              </div>
+        {/* Conversation Status */}
+        {(isActive || isConnecting) && <div className="space-y-3">
+            <div className="flex items-center justify-between">
+              <span className="text-sm font-medium">Conversation Progress</span>
+              <Badge variant={isActive ? "default" : "secondary"}>
+                {isConnecting ? 'Connecting...' : isActive ? 'Active' : 'Ended'}
+              </Badge>
+            </div>
+            
+            <Progress value={getExchangeProgress()} className="w-full" />
+            
+            <div className="flex items-center justify-between text-sm">
+              <span className="text-muted-foreground">
+                Exchange {exchangeCount}/3
+              </span>
+              {currentScore !== null && <span className={`font-medium ${getScoreColor(currentScore)}`}>
+                  Score: {currentScore}/100
+                </span>}
             </div>
           </div>}
 
@@ -119,29 +127,35 @@ const ConversationPanel: React.FC<ConversationPanelProps> = ({
             </div>}
         </div>
 
-        {/* Conversation Status */}
-        {(isActive || isConnecting) && <div className="space-y-3">
-            <div className="flex items-center justify-between">
-              <span className="text-sm font-medium">Conversation Progress</span>
-              <Badge variant={isActive ? "default" : "secondary"}>
-                {isConnecting ? 'Connecting...' : isActive ? 'Active' : 'Ended'}
-              </Badge>
-            </div>
-            
-            <Progress value={getExchangeProgress()} className="w-full" />
-            
-            <div className="flex items-center justify-between text-sm">
-              <span className="text-muted-foreground">
-                Exchange {exchangeCount}/3
-              </span>
-              {currentScore !== null && <span className={`font-medium ${getScoreColor(currentScore)}`}>
-                  Score: {currentScore}/100
-                </span>}
+        {/* Instructions */}
+        {!isActive && !isConnecting && <div className="p-3 bg-primary/5 rounded-lg border border-primary/10">
+            <div className="flex items-start gap-2">
+              <Zap className="h-4 w-4 text-primary mt-0.5 flex-shrink-0" />
+              <div className="text-sm">
+                <p className="font-medium text-primary mb-1">Real-time AI Practice</p>
+                <p className="text-primary/80 text-xs leading-relaxed">
+                  Have a live conversation with our AI prospect. Get real-time coaching hints 
+                  and handle multiple objections to improve your skills.
+                </p>
+              </div>
             </div>
           </div>}
 
         {/* Final Score Display */}
-        {currentScore !== null && !isActive && !isConnecting}
+        {currentScore !== null && !isActive && !isConnecting && <div className="p-4 bg-accent/10 rounded-lg border border-accent/20">
+            <div className="flex items-center justify-between mb-2">
+              <span className="text-sm font-medium">Final Score</span>
+              <span className={`text-2xl font-bold ${getScoreColor(currentScore)}`}>
+                {currentScore}/100
+              </span>
+            </div>
+            <div className="flex items-center gap-2">
+              <TrendingUp className="h-4 w-4 text-success" />
+              <span className="text-sm text-muted-foreground">
+                {exchangeCount} exchanges completed
+              </span>
+            </div>
+          </div>}
       </CardContent>
     </Card>;
 };

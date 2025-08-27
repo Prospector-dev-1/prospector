@@ -72,25 +72,18 @@ export const useSmartNavigation = () => {
   const goBack = useCallback((fallbackRoute: string = '/') => {
     const stack = getNavigationStack();
     
-    // Filter out any ended call pages from the stack
-    const filteredStack = stack.filter(entry => {
-      const path = entry.pathname;
-      // Remove live call, call simulation live from navigation history
-      return !path.includes('/call-simulation-live') && !path.includes('/live-call');
-    });
-    
     // Check if browser history can go back
     const canGoBackInHistory = window.history.state?.idx > 0;
     
-    if (canGoBackInHistory && filteredStack.length > 1) {
+    if (canGoBackInHistory && stack.length > 1) {
       // Remove current entry and go back
-      filteredStack.pop();
-      saveNavigationStack(filteredStack);
+      stack.pop();
+      saveNavigationStack(stack);
       navigate(-1);
-    } else if (filteredStack.length > 1) {
-      // Use our session stack, skipping call pages
-      filteredStack.pop(); // Remove current
-      const previousEntry = filteredStack.pop(); // Get previous (non-call page)
+    } else if (stack.length > 1) {
+      // Use our session stack
+      stack.pop(); // Remove current
+      const previousEntry = stack.pop(); // Get previous
       if (previousEntry) {
         const targetPath = `${previousEntry.pathname}${previousEntry.search}${previousEntry.hash}`;
         navigate(targetPath, { replace: true });
@@ -98,7 +91,7 @@ export const useSmartNavigation = () => {
         navigate(fallbackRoute, { replace: true });
       }
     } else {
-      // No valid history available, go to fallback
+      // No history available, go to fallback
       navigate(fallbackRoute, { replace: true });
     }
   }, [navigate, getNavigationStack, saveNavigationStack]);
@@ -112,15 +105,8 @@ export const useSmartNavigation = () => {
   // Get previous page name for display
   const getPreviousPageName = useCallback(() => {
     const stack = getNavigationStack();
-    
-    // Filter out ended call pages
-    const filteredStack = stack.filter(entry => {
-      const path = entry.pathname;
-      return !path.includes('/call-simulation-live') && !path.includes('/live-call');
-    });
-    
-    if (filteredStack.length > 1) {
-      const previousEntry = filteredStack[filteredStack.length - 2];
+    if (stack.length > 1) {
+      const previousEntry = stack[stack.length - 2];
       return getPageNameFromPath(previousEntry.pathname);
     }
     return 'Dashboard';
@@ -211,12 +197,9 @@ const getPageNameFromPath = (pathname: string): string => {
     '/profile': 'Profile',
     '/call-upload': 'Call Upload',
     '/call-simulation': 'Practice Call',
-    '/call-simulation-live': 'Live Call',
     '/call-coaching': 'Call Coaching',
     '/call-results': 'Call Results',
     '/call-review': 'Call Review',
-    '/call-analysis': 'Call Analysis',
-    '/live-call': 'Live Call',
     '/ai-replay': 'AI Replay',
     '/ai-replay-setup': 'AI Replay Setup',
     '/custom-script': 'Script Generator',

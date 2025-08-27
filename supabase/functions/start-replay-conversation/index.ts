@@ -43,14 +43,8 @@ serve(async (req) => {
       endCallFunctionEnabled: false,
       recordingEnabled: true,
       hipaaEnabled: false,
-      transcriber: {
-        provider: "deepgram",
-        model: "nova-3-general",
-        language: "en"
-      },
       clientMessages: ["conversation-update", "function-call", "hang", "model-output", "speech-update", "status-update", "transcript", "tool-calls", "user-interrupted", "voice-input"]
     };
-    console.log('Assistant config:', JSON.stringify(assistantConfig, null, 2));
 
     const response = await fetch('https://api.vapi.ai/assistant', {
       method: 'POST',

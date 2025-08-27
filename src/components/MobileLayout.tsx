@@ -17,7 +17,7 @@ const MobileLayout: React.FC<MobileLayoutProps> = ({
   const location = useLocation();
   
   // Hide navigation on call-related routes
-  const isCallPage = location.pathname.includes('/live-call') || location.pathname.includes('/call-simulation-live');
+  const isCallPage = location.pathname.includes('/live-call');
   const shouldShowNav = showBottomNav && !isCallPage;
   
   return (

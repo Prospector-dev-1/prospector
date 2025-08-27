@@ -28,21 +28,14 @@ serve(async (req) => {
       { auth: { persistSession: false } }
     );
 
-    // Get users who opt-in to leaderboard with only non-sensitive data needed
+    // Get all users with only non-sensitive data needed for leaderboard
     const { data: allUsers, error: usersError } = await supabaseService
       .from('profiles')
-      .select('user_id, first_name, last_name, avatar_url, show_on_leaderboard')
-      .eq('show_on_leaderboard', true);
+      .select('user_id, first_name, last_name, avatar_url');
 
     if (usersError) {
       console.error('Error fetching users:', usersError);
-      return new Response(JSON.stringify({ 
-        error: 'Failed to fetch leaderboard users',
-        details: usersError.message 
-      }), {
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-        status: 500
-      });
+      throw usersError;
     }
 
     console.log(`Processing ${allUsers?.length || 0} users for leaderboard`);
