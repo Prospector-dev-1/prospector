@@ -39,9 +39,63 @@ const CallSimulation = () => {
   // Vapi instance
   const vapiRef = useRef<any>(null);
   const timerRef = useRef<NodeJS.Timeout | null>(null);
-  const transcriptRef = useRef<string>('');
+
   const callRecordIdRef = useRef<string | null>(null);
   const callDurationRef = useRef<number>(0);
+
+  // ========= Clean transcript pipeline state/helpers =========
+  type Role = "user" | "bot" | "assistant" | "system" | string;
+
+  interface MessageLike {
+    role: Role;
+    content?: unknown;
+    timestamp?: number;
+    type?: "partial" | "final" | string;
+    id?: string;
+  }
+
+  const messagesRef = useRef<MessageLike[]>([]);
+
+  function normalizeRole(role: Role): "user" | "bot" | "system" | "other" {
+    const r = (role || '').toString().toLowerCase();
+    if (r === 'user') return 'user';
+    if (r === 'bot' || r === 'assistant') return 'bot'; // assistant → bot
+    if (r === 'system') return 'system';
+    return 'other';
+  }
+
+  function isFinalLike(m: MessageLike): boolean {
+    return m.type ? m.type.toLowerCase() === 'final' : true;
+  }
+
+  function safeToText(v: unknown): string {
+    if (v == null) return '';
+    if (typeof v === 'string') return v.trim();
+    try { return JSON.stringify(v); } catch { return String(v); }
+  }
+
+  function buildTranscriptText(): string {
+    const ordered = [...messagesRef.current].sort((a, b) => (a.timestamp ?? 0) - (b.timestamp ?? 0));
+    const lines: string[] = [];
+    let last = '';
+    for (const m of ordered) {
+      const role = normalizeRole(m.role).toUpperCase();
+      if (role !== 'USER' && role !== 'BOT') continue;
+
+      let text = safeToText(m.content);
+      if (text.startsWith('```') && text.endsWith('```')) {
+        text = text.slice(3, -3).trim();
+      }
+
+      const line = `${role}: ${text}`;
+      if (line !== last) {
+        lines.push(line);
+        last = line;
+      }
+    }
+    return lines.join('\n');
+  }
+  // ===========================================================
 
   useEffect(() => {
     const initVapi = async () => {
@@ -63,19 +117,14 @@ const CallSimulation = () => {
           console.log('Call started');
           setIsCallActive(true);
           setIsConnecting(false);
-          console.log('About to start timer...');
           startTimer();
-          console.log('Timer started');
+          messagesRef.current = []; // reset clean store at start
         });
 
         vapiRef.current.on('call-end', () => {
           console.log('=== CALL END EVENT TRIGGERED ===');
-          console.log('Call ended - duration from ref at event time:', callDurationRef.current);
-          console.log('Call ended - duration from state at event time:', callDuration);
-          console.log('Call record ID from state:', callRecordId);
-          console.log('Call record ID from ref:', callRecordIdRef.current);
-          console.log('Transcript length:', transcriptRef.current.length);
-          console.log('About to call handleCallEnd...');
+          console.log('Duration (ref):', callDurationRef.current);
+          console.log('Messages collected (final user/bot):', messagesRef.current.length);
           handleCallEnd();
         });
 
@@ -87,46 +136,43 @@ const CallSimulation = () => {
           console.log('Speech ended');
         });
 
+        // ========== Single structured collector ==========
         vapiRef.current.on('message', (message: any) => {
           console.log('Vapi message received:', message);
-          
-          // Capture various types of transcript data
-          if (message.transcript) {
-            transcriptRef.current += message.transcript + ' ';
-            console.log('Transcript added from message.transcript:', message.transcript);
-          }
-          
-          // Also capture conversation transcript if available
-          if (message.type === 'conversation-update' && message.conversation) {
-            const conversationText = message.conversation.map((item: any) => {
-              if (item.role === 'user' && item.transcript) {
-                return `User: ${item.transcript}`;
-              } else if (item.role === 'assistant' && item.transcript) {
-                return `Assistant: ${item.transcript}`;
+
+          const pushFinalMessages = (incoming: MessageLike[]) => {
+            for (const msg of incoming) {
+              const r = normalizeRole(msg.role);
+              if ((r === 'user' || r === 'bot') && isFinalLike(msg)) {
+                if (typeof msg.timestamp !== 'number') {
+                  msg.timestamp = Date.now(); // ensure stable ordering
+                }
+                messagesRef.current.push(msg);
               }
-              return '';
-            }).filter(Boolean).join('\n');
-            
-            if (conversationText) {
-              transcriptRef.current = conversationText; // Replace with full conversation
-              console.log('Updated full conversation transcript:', conversationText);
             }
+          };
+
+          // DO NOT accumulate raw free-text (causes dupes)
+          // Prefer structured updates
+          if (message?.type === 'conversation-update' && Array.isArray(message?.conversation)) {
+            pushFinalMessages(message.conversation as MessageLike[]);
+            console.log('conversation-update appended. messagesRef size:', messagesRef.current.length);
+            return;
           }
-          
-          // Capture user speech
-          if (message.type === 'speech-update' && message.role === 'user') {
-            transcriptRef.current += `User: ${message.transcript || message.text || ''} `;
-            console.log('User speech captured:', message.transcript || message.text);
+
+          if (Array.isArray(message?.messages)) {
+            pushFinalMessages(message.messages as MessageLike[]);
+            console.log('messages[] appended. messagesRef size:', messagesRef.current.length);
+            return;
           }
-          
-          // Capture assistant speech
-          if (message.type === 'speech-update' && message.role === 'assistant') {
-            transcriptRef.current += `Assistant: ${message.transcript || message.text || ''} `;
-            console.log('Assistant speech captured:', message.transcript || message.text);
+
+          // Optional: keep if speech-update emits finals you need
+          if (message?.type === 'speech-update' && message?.message) {
+            pushFinalMessages([message.message as MessageLike]);
+            console.log('speech-update(final) appended. messagesRef size:', messagesRef.current.length);
           }
-          
-          console.log('Current transcript length:', transcriptRef.current.length);
         });
+        // =================================================
 
         vapiRef.current.on('error', (error: any) => {
           console.error('Vapi error:', error);
@@ -163,16 +209,13 @@ const CallSimulation = () => {
   }, []);
 
   const startTimer = () => {
-    console.log('startTimer function called');
     timerRef.current = setInterval(() => {
       setCallDuration(prev => {
         const newDuration = prev + 1;
         callDurationRef.current = newDuration; // Keep ref in sync
-        console.log(`Timer tick: duration is now ${newDuration}, ref is now ${callDurationRef.current}`);
         return newDuration;
       });
     }, 1000);
-    console.log('setInterval created, timerRef.current:', timerRef.current);
   };
 
   const stopTimer = () => {
@@ -284,27 +327,22 @@ const CallSimulation = () => {
     setIsCallActive(false);
     setCallStarted(false);
 
-    // Use the ref instead of state to avoid closure issues
     const currentCallRecordId = callRecordIdRef.current;
     
     if (currentCallRecordId) {
-      console.log('Call record ID exists, navigating to results...');
-      
-      // Navigate immediately to results page
       console.log('Navigating to results page...');
       navigate(`/call-results/${currentCallRecordId}`);
 
-      // Start analysis in background
       try {
-        // Get current duration at the time of call end from ref
         const finalDuration = callDurationRef.current;
-        console.log('Starting background analysis - Duration from ref:', finalDuration, 'Transcript:', transcriptRef.current);
-        
+        const finalTranscript = buildTranscriptText();
+        console.log('Starting background analysis - Duration (ref):', finalDuration, 'Lines:', messagesRef.current.length);
+
         // Send transcript for analysis (even if empty) - don't await
         supabase.functions.invoke('end-call-analysis', {
           body: {
             callRecordId: currentCallRecordId,
-            transcript: transcriptRef.current || 'No transcript available',
+            transcript: finalTranscript || 'No transcript available',
             duration: finalDuration
           }
         }).then(({ data, error }) => {
@@ -324,12 +362,11 @@ const CallSimulation = () => {
     }
 
     // Reset state and refs
-    console.log('Resetting state...');
     setCallDuration(0);
     callDurationRef.current = 0;
     setCallRecordId(null);
     callRecordIdRef.current = null;
-    transcriptRef.current = '';
+    messagesRef.current = [];
     console.log('=== HANDLE CALL END FUNCTION COMPLETED ===');
   };
 
