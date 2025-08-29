@@ -22,3 +22,7 @@ dist-ssr
 *.njsproj
 *.sln
 *.sw?
+
+# Lock files (using npm-shrinkwrap.json instead)
+package-lock.json
+bun.lockb
