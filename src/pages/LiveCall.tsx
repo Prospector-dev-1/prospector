@@ -1,7 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useRealtimeAIChat } from '@/hooks/useRealtimeAIChat';
-import CoachingHints from '@/components/CoachingHints';
 import ReplaySummary from '@/components/ReplaySummary';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
@@ -35,8 +34,6 @@ const LiveCall = () => {
     conversationState,
     startConversation,
     endConversation,
-    addCoachingHint,
-    clearHints,
     finalAnalysis
   } = useRealtimeAIChat();
 
@@ -319,12 +316,6 @@ const LiveCall = () => {
             </div>
           </div>
 
-          {/* Floating Coaching Hints */}
-          <div className="fixed top-20 right-4 left-4 z-40 pointer-events-none">
-            <div className="max-w-sm ml-auto pointer-events-auto">
-              <CoachingHints hints={conversationState.hints} onClearHints={clearHints} />
-            </div>
-          </div>
         </div>
       </MobileLayout>
     </>

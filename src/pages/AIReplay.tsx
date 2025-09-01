@@ -13,7 +13,6 @@ import MobileLayout from '@/components/MobileLayout';
 import SmartBackButton from '@/components/SmartBackButton';
 import MomentsTimeline, { type Moment } from '@/components/MomentsTimeline';
 import ReplayModeControls from '@/components/ReplayModeControls';
-import CoachingHints from '@/components/CoachingHints';
 import ConversationPanel from '@/components/ConversationPanel';
 import { useRealtimeAIChat, type ReplayMode, type ProspectPersonality, type GamificationMode } from '@/hooks/useRealtimeAIChat';
 import { useIsMobile } from '@/hooks/use-mobile';
@@ -59,8 +58,7 @@ const AIReplay = () => {
   const {
     conversationState,
     startConversation,
-    endConversation,
-    clearHints
+    endConversation
   } = useRealtimeAIChat();
   useEffect(() => {
     if (!uploadId || !user) return;
@@ -241,9 +239,6 @@ const AIReplay = () => {
             <div>
               <ConversationPanel conversationState={conversationState} selectedMoment={selectedMoment ? moments.find(m => m.id === selectedMoment) : null} onStartConversation={handleStartConversation} onEndConversation={handleEndConversation} disabled={!selectedMoment} />
             </div>
-
-            {/* Coaching Hints Overlay */}
-            <CoachingHints hints={conversationState.hints} onClearHints={clearHints} />
           </div>
         </div>
       </MobileLayout>

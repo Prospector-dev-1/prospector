@@ -235,10 +235,7 @@ export const useRealtimeAIChat = () => {
 
       await vapiInstance.current?.start(data.assistantId);
 
-      // Start coaching hints
-      setTimeout(() => {
-        addCoachingHint(`You're now talking to a ${prospectPersonality} prospect. Adapt your approach accordingly.`, 'info');
-      }, 2000);
+      // Coaching hints disabled
 
     } catch (error) {
       console.error('Error starting enhanced conversation:', error);
@@ -363,8 +360,6 @@ export const useRealtimeAIChat = () => {
     conversationState,
     startConversation,
     endConversation,
-    addCoachingHint,
-    clearHints,
     finalAnalysis
   };
 };
