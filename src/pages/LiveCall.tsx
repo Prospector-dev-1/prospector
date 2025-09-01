@@ -6,7 +6,7 @@ import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Progress } from '@/components/ui/progress';
-import { Slider } from '@/components/ui/slider';
+
 import { useToast } from '@/components/ui/use-toast';
 import SEO from '@/components/SEO';
 import MobileLayout from '@/components/MobileLayout';
@@ -40,7 +40,7 @@ const LiveCall = () => {
   const [callStartTime] = useState(Date.now());
   const [currentTime, setCurrentTime] = useState(Date.now());
   const [isMuted, setIsMuted] = useState(false);
-  const [volume, setVolume] = useState([80]);
+  
   const [confidence, setConfidence] = useState(75);
   const [responseSpeed, setResponseSpeed] = useState(85);
 
@@ -261,22 +261,6 @@ const LiveCall = () => {
             </div>
           </div>
 
-          {/* Volume Control */}
-          <div className="px-6 pb-4">
-            <Card className="p-4">
-              <div className="flex items-center gap-4">
-                <Volume2 className="h-4 w-4" />
-                <Slider
-                  value={volume}
-                  onValueChange={setVolume}
-                  max={100}
-                  step={5}
-                  className="flex-1"
-                />
-                <span className="text-sm font-medium w-12">{volume[0]}%</span>
-              </div>
-            </Card>
-          </div>
 
           {/* Call Controls */}
           <div className="fixed bottom-0 left-0 right-0 p-6 bg-background/80 backdrop-blur-sm border-t mobile-safe-bottom">
