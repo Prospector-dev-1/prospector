@@ -284,7 +284,8 @@ const CallUpload = () => {
                               <input
                                 type="file"
                                 className="hidden"
-                                accept="audio/caf,audio/m4a,audio/aac,audio/amr,audio/mp3,audio/wav"
+                                accept="audio/caf,audio/m4a,audio/aac,audio/amr,audio/mp3,audio/wav,audio/*"
+                                capture
                                 onChange={handleVoiceMemoInput}
                               />
                             </label>
