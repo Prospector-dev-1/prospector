@@ -12,6 +12,7 @@ import { supabase } from '@/integrations/supabase/client';
 import SEO from '@/components/SEO';
 import MobileLayout from '@/components/MobileLayout';
 import RecentCallUploads from '@/components/RecentCallUploads';
+import VoiceMemoHelp from '@/components/VoiceMemoHelp';
 
 const CallUpload = () => {
   const { user, profile } = useAuth();
@@ -206,6 +207,9 @@ const CallUpload = () => {
 
           {/* Recent Call Uploads */}
           <RecentCallUploads />
+
+          {/* Voice Memo Help */}
+          <VoiceMemoHelp />
 
           {/* Upload Area */}
           <Card className="mb-6">
