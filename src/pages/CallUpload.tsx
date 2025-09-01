@@ -2,11 +2,12 @@ import React, { useState } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import { useNavigate } from 'react-router-dom';
 import { useSmartNavigation } from '@/hooks/useSmartNavigation';
+import { useIsMobile } from '@/hooks/use-mobile';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Progress } from '@/components/ui/progress';
 import { Badge } from '@/components/ui/badge';
-import { Upload, FileAudio, FileVideo, CreditCard, ArrowLeft, RotateCcw } from 'lucide-react';
+import { Upload, FileAudio, FileVideo, CreditCard, ArrowLeft, Mic } from 'lucide-react';
 import { toast } from 'sonner';
 import { supabase } from '@/integrations/supabase/client';
 import SEO from '@/components/SEO';
@@ -17,6 +18,7 @@ const CallUpload = () => {
   const { user, profile } = useAuth();
   const navigate = useNavigate();
   const { goBack } = useSmartNavigation();
+  const isMobile = useIsMobile();
   const [uploading, setUploading] = useState(false);
   const [progress, setProgress] = useState(0);
   const [dragActive, setDragActive] = useState(false);
@@ -33,9 +35,18 @@ const CallUpload = () => {
       return;
     }
 
-    const allowedTypes = ['audio/mpeg', 'audio/wav', 'audio/m4a', 'video/mp4', 'video/mov'];
-    if (!allowedTypes.some(type => file.type.includes(type.split('/')[1]))) {
-      toast.error('Please upload an audio file (mp3, wav, m4a) or video file (mp4, mov)');
+    const allowedTypes = [
+      'audio/mpeg', 'audio/wav', 'audio/m4a', 'audio/mp4', 'audio/aac', 
+      'audio/caf', 'audio/amr', 'audio/3gp', 'audio/3gpp', 'audio/x-caf',
+      'video/mp4', 'video/mov', 'video/quicktime'
+    ];
+    const isAllowedType = allowedTypes.some(type => 
+      file.type === type || file.type.includes(type.split('/')[1]) || 
+      (file.name && file.name.toLowerCase().includes(type.split('/')[1]))
+    );
+    
+    if (!isAllowedType) {
+      toast.error('Please upload an audio file (mp3, wav, m4a, aac, caf) or video file (mp4, mov)');
       return;
     }
 
@@ -164,6 +175,13 @@ const CallUpload = () => {
     }
   };
 
+  const handleVoiceMemoInput = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = Array.from(e.target.files || []);
+    if (files.length > 0) {
+      handleFileUpload(files[0]);
+    }
+  };
+
   return (
     <>
       <SEO 
@@ -249,28 +267,64 @@ const CallUpload = () => {
                     
                     <div>
                       <h3 className="text-base font-semibold mb-1">
-                        Drag & drop your call file here
+                        {isMobile ? 'Choose your recording method' : 'Drag & drop your call file here'}
                       </h3>
                       <p className="text-xs text-muted-foreground mb-3">
-                        MP3, WAV, M4A, MP4, MOV (max 100MB)
+                        {isMobile ? 'Upload from Voice Memos or select any audio/video file' : 'MP3, WAV, M4A, CAF, MP4, MOV (max 100MB)'}
                       </p>
                     </div>
 
-                    <div className="flex flex-col sm:flex-row gap-3">
-                      <Button asChild size="sm">
-                        <label className="cursor-pointer">
-                          <Upload className="h-4 w-4 mr-2" />
-                          Choose File
-                          <input
-                            type="file"
-                            className="hidden"
-                            accept="audio/*,video/*"
-                            onChange={handleFileInput}
-                          />
-                        </label>
-                      </Button>
+                    <div className={`flex gap-3 ${isMobile ? 'flex-col' : 'flex-col sm:flex-row'}`}>
+                      {isMobile ? (
+                        <>
+                          <Button asChild size="sm" className="w-full">
+                            <label className="cursor-pointer">
+                              <Mic className="h-4 w-4 mr-2" />
+                              Upload Voice Memo
+                              <input
+                                type="file"
+                                className="hidden"
+                                accept="audio/caf,audio/m4a,audio/aac,audio/amr,audio/mp3,audio/wav,audio/*"
+                                capture
+                                onChange={handleVoiceMemoInput}
+                              />
+                            </label>
+                          </Button>
+                          
+                          <Button asChild variant="outline" size="sm" className="w-full">
+                            <label className="cursor-pointer">
+                              <Upload className="h-4 w-4 mr-2" />
+                              Choose File
+                              <input
+                                type="file"
+                                className="hidden"
+                                accept="audio/*,video/*"
+                                onChange={handleFileInput}
+                              />
+                            </label>
+                          </Button>
+                        </>
+                      ) : (
+                        <Button asChild size="sm">
+                          <label className="cursor-pointer">
+                            <Upload className="h-4 w-4 mr-2" />
+                            Choose File
+                            <input
+                              type="file"
+                              className="hidden"
+                              accept="audio/*,video/*"
+                              onChange={handleFileInput}
+                            />
+                          </label>
+                        </Button>
+                      )}
                       
-                      <Button variant="outline" size="sm" onClick={() => navigate('/buy-credits')}>
+                      <Button 
+                        variant="outline" 
+                        size="sm" 
+                        onClick={() => navigate('/buy-credits')}
+                        className={isMobile ? 'w-full' : ''}
+                      >
                         <CreditCard className="h-4 w-4 mr-2" />
                         Buy Credits
                       </Button>
