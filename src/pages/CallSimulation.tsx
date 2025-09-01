@@ -6,12 +6,13 @@ import { Badge } from '@/components/ui/badge';
 import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
-import { Phone, PhoneOff, Timer, Mic, MicOff, User } from 'lucide-react';
+import { Phone, PhoneOff, Timer, Mic, MicOff, User, Volume2 } from 'lucide-react';
 import Vapi from '@vapi-ai/web';
 import SEO from '@/components/SEO';
 import CallCustomization from '@/components/CallCustomization';
 import MobileLayout from '@/components/MobileLayout';
 import SmartBackButton from '@/components/SmartBackButton';
+import { useAudioRouting } from '@/hooks/useAudioRouting';
 const CallSimulation = () => {
   const navigate = useNavigate();
   const {
@@ -40,6 +41,8 @@ const CallSimulation = () => {
   const [callDuration, setCallDuration] = useState(0);
   const [isMuted, setIsMuted] = useState(false);
   const [callRecordId, setCallRecordId] = useState<string | null>(null);
+
+  const { outputMode, isChanging: isAudioChanging, toggleAudioRoute } = useAudioRouting();
 
   // Vapi instance
   const vapiRef = useRef<any>(null);
@@ -493,10 +496,17 @@ const CallSimulation = () => {
                       <PhoneOff className="h-8 w-8" />
                     </Button>
 
-                    {/* Difficulty Level Indicator */}
-                    <div className="rounded-full w-16 h-16 border-2 border-border flex items-center justify-center">
-                      
-                    </div>
+                    {/* Speaker Toggle */}
+                    <Button 
+                      variant={outputMode === 'speaker' ? "default" : "secondary"} 
+                      size="lg" 
+                      onClick={toggleAudioRoute} 
+                      disabled={isAudioChanging}
+                      className="rounded-full w-16 h-16" 
+                      aria-label={outputMode === 'speaker' ? 'Switch to earpiece' : 'Switch to speaker'}
+                    >
+                      {outputMode === 'speaker' ? <Volume2 className="h-6 w-6" /> : <Phone className="h-6 w-6" />}
+                    </Button>
                   </div>
                 </div>
               </div>}

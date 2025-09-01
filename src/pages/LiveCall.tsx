@@ -10,6 +10,7 @@ import { Slider } from '@/components/ui/slider';
 import { useToast } from '@/components/ui/use-toast';
 import SEO from '@/components/SEO';
 import MobileLayout from '@/components/MobileLayout';
+import { useAudioRouting } from '@/hooks/useAudioRouting';
 import { 
   Phone, 
   PhoneOff, 
@@ -44,6 +45,8 @@ const LiveCall = () => {
   const [volume, setVolume] = useState([80]);
   const [confidence, setConfidence] = useState(75);
   const [responseSpeed, setResponseSpeed] = useState(85);
+
+  const { outputMode, isChanging: isAudioChanging, toggleAudioRoute } = useAudioRouting();
 
   // Get session config from URL params or localStorage
   const [sessionConfig] = useState(() => {
@@ -293,14 +296,16 @@ const LiveCall = () => {
                 <PhoneOff className="h-8 w-8" />
               </Button>
 
-              {/* Emergency Actions */}
+              {/* Speaker Toggle */}
               <Button
-                variant="outline"
+                variant={outputMode === 'speaker' ? "default" : "secondary"}
                 size="lg"
-                onClick={clearHints}
+                onClick={toggleAudioRoute}
+                disabled={isAudioChanging}
                 className="rounded-full w-16 h-16"
+                aria-label={outputMode === 'speaker' ? 'Switch to earpiece' : 'Switch to speaker'}
               >
-                <Target className="h-6 w-6" />
+                {outputMode === 'speaker' ? <Volume2 className="h-6 w-6" /> : <Phone className="h-6 w-6" />}
               </Button>
             </div>
           </div>
