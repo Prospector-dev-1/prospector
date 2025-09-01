@@ -3,10 +3,11 @@ import { useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
-import { Phone, PhoneOff, Timer, Mic, MicOff, User, Volume2 } from 'lucide-react';
+import { Phone, PhoneOff, Timer, Mic, MicOff, User, Volume2, ChevronDown } from 'lucide-react';
 import Vapi from '@vapi-ai/web';
 import SEO from '@/components/SEO';
 import CallCustomization from '@/components/CallCustomization';
@@ -398,34 +399,73 @@ const CallSimulation = () => {
           </div>
 
           <div className="px-3 sm:px-4 lg:px-8 py-4 sm:py-6">
-            {!callStarted ?
-          // Call Setup
-          <div className="space-y-6">
-                {/* Call Customization */}
-                <CallCustomization businessType={businessType} setBusinessType={setBusinessType} prospectRole={prospectRole} setProspectRole={setProspectRole} callObjective={callObjective} setCallObjective={setCallObjective} customObjective={customObjective} setCustomObjective={setCustomObjective} customInstructions={customInstructions} setCustomInstructions={setCustomInstructions} difficultyLevel={difficultyLevel} setDifficultyLevel={setDifficultyLevel} />
+            {!callStarted ? (
+              // Call Setup View
+              <div className="space-y-6">
+            {/* Hero Section */}
+            <CallHeroSection
+              userName={user?.user_metadata?.display_name || user?.email?.split('@')[0] || 'User'}
+              credits={profile?.credits || 0}
+              subscriptionType={profile?.subscription_type || 'free'}
+              recentPerformance={{
+                lastScore: 78,
+                streak: 3,
+                avgScore: 82
+              }}
+            />
 
-                {/* Scenario Preview */}
-                {(businessType || prospectRole || callObjective) && <Card className="border-primary/20 bg-primary/5">
-                    <CardHeader>
-                      <CardTitle className="text-primary">Practice Session Preview</CardTitle>
-                    </CardHeader>
-                    <CardContent>
-                      <div className="space-y-2 text-sm">
-                        {businessType && <div>
-                            <span className="font-medium">Business:</span> {businessType}
-                          </div>}
-                        {prospectRole && <div>
-                            <span className="font-medium">Role:</span> {prospectRole}
-                          </div>}
-                        {callObjective && <div>
-                            <span className="font-medium">Objective:</span> {callObjective}
-                          </div>}
-                        <div>
-                          <span className="font-medium">Difficulty:</span> Level {difficultyLevel[0]} ({getDifficultyLabel(difficultyLevel[0])})
-                        </div>
-                      </div>
-                    </CardContent>
-                  </Card>}
+            {/* Quick Setup Cards */}
+            <div>
+              <h3 className="text-lg font-semibold mb-4">Quick Setup</h3>
+              <QuickSetupCards
+                onSelectPreset={handlePresetSelect}
+                selectedPreset={selectedPreset}
+              />
+            </div>
+
+            {/* Visual Difficulty Selector */}
+            <div>
+              <h3 className="text-lg font-semibold mb-4">Choose Your Challenge</h3>
+              <VisualDifficultySelector
+                selectedLevel={difficultyLevel[0]}
+                onLevelChange={handleDifficultyChange}
+              />
+            </div>
+
+            {/* Enhanced Scenario Preview */}
+            <EnhancedScenarioPreview
+              businessType={businessType}
+              prospectRole={prospectRole}
+              callObjective={callObjective}
+              customObjective={customObjective}
+              difficultyLevel={difficultyLevel[0]}
+            />
+
+            {/* Advanced Options (Collapsible) */}
+            <Collapsible>
+              <CollapsibleTrigger className="flex items-center justify-between w-full p-4 bg-card rounded-lg border hover:bg-accent/50 transition-colors">
+                <span className="font-medium">Advanced Options</span>
+                <ChevronDown className="h-4 w-4" />
+              </CollapsibleTrigger>
+              <CollapsibleContent className="mt-2">
+                <div className="bg-card rounded-lg border p-4">
+                  <CallCustomization 
+                    businessType={businessType} 
+                    setBusinessType={setBusinessType} 
+                    prospectRole={prospectRole} 
+                    setProspectRole={setProspectRole} 
+                    callObjective={callObjective} 
+                    setCallObjective={setCallObjective} 
+                    customObjective={customObjective} 
+                    setCustomObjective={setCustomObjective} 
+                    customInstructions={customInstructions} 
+                    setCustomInstructions={setCustomInstructions} 
+                    difficultyLevel={difficultyLevel} 
+                    setDifficultyLevel={setDifficultyLevel} 
+                  />
+                </div>
+              </CollapsibleContent>
+            </Collapsible>
 
                 {/* Start Call Button */}
                 <div className="space-y-4">
@@ -443,8 +483,9 @@ const CallSimulation = () => {
                       You need credits to start a call. Purchase more credits to continue.
                     </p>}
                 </div>
-              </div> :
-          // Active Call Interface - Modern Design
+              </div>
+            ) : (
+              // Active Call Interface - Modern Design
           <div className="flex flex-col items-center justify-center min-h-[calc(100vh-200px)] space-y-8">
                 
                 {/* AI Prospect Avatar */}
@@ -530,7 +571,8 @@ const CallSimulation = () => {
                     </Button>
                   </div>
                 </div>
-              </div>}
+              </div>
+            )}
           </div>
         </div>
       </MobileLayout>
