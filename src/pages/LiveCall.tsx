@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useRealtimeAIChat } from '@/hooks/useRealtimeAIChat';
 import CoachingHints from '@/components/CoachingHints';
+import ReplaySummary from '@/components/ReplaySummary';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -179,6 +180,14 @@ const LiveCall = () => {
               </div>
             </div>
           </div>
+
+          {/* Replay Summary */}
+          <ReplaySummary 
+            originalMoment={sessionConfig.originalMoment}
+            replayMode={sessionConfig.replayMode}
+            prospectPersonality={sessionConfig.prospectPersonality}
+            gamificationMode={sessionConfig.gamificationMode}
+          />
 
           {/* Main Call Interface */}
           <div className="flex flex-col items-center justify-center min-h-[calc(100vh-120px)] p-4 space-y-8">
