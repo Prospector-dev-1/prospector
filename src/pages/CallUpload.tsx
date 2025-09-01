@@ -35,22 +35,34 @@ const CallUpload = () => {
     }
 
     const allowedMimeTypes = [
-      'audio/mpeg',      // mp3
-      'audio/wav',       // wav  
-      'audio/mp4',       // m4a (most common)
-      'audio/x-m4a',     // m4a (alternative)
-      'audio/aac',       // m4a (another alternative)
-      'video/mp4',       // mp4
-      'video/quicktime'  // mov
+      'audio/mpeg',       // mp3
+      'audio/wav',        // wav  
+      'audio/mp4',        // m4a (most common)
+      'audio/x-m4a',      // m4a (alternative)
+      'audio/aac',        // m4a (another alternative)
+      'audio/mp4a',       // m4a (mobile variant)
+      'video/mp4',        // mp4
+      'video/quicktime',  // mov
+      '',                 // empty MIME type (mobile fallback)
+      'application/octet-stream' // generic fallback
     ];
     
     const allowedExtensions = ['.mp3', '.wav', '.m4a', '.mp4', '.mov'];
     const fileExtension = file.name.toLowerCase().substring(file.name.lastIndexOf('.'));
     
+    // Debug logging for mobile issues
+    console.log('File validation:', {
+      fileName: file.name,
+      fileType: file.type,
+      fileExtension: fileExtension,
+      fileSize: file.size
+    });
+    
     const isMimeTypeValid = allowedMimeTypes.includes(file.type);
     const isExtensionValid = allowedExtensions.includes(fileExtension);
     
-    if (!isMimeTypeValid && !isExtensionValid) {
+    // On mobile, prioritize extension validation since MIME types are unreliable
+    if (!isExtensionValid) {
       toast.error('Please upload an audio file (mp3, wav, m4a) or video file (mp4, mov)');
       return;
     }
