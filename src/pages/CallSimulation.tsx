@@ -449,77 +449,78 @@ const CallSimulation = () => {
                 </div>
               </div>
             ) : (
-              // Active Call Interface
-              <div className="flex flex-col items-center justify-center space-y-8">
-                <Card className="w-full max-w-md">
-                  <CardContent className="p-8 text-center">
-                    <div className="space-y-6">
-                      {/* Prospect Avatar */}
-                      <div className="mx-auto w-24 h-24 bg-primary rounded-full flex items-center justify-center">
-                        <User className="h-12 w-12 text-primary-foreground" />
-                      </div>
-
-                      {/* Prospect Name */}
-                      <div>
-                        <h3 className="text-xl font-semibold">
-                          {prospectRole || 'Business Owner'}
-                        </h3>
-                        <p className="text-muted-foreground">
-                          {`${businessType ? `${businessType} • ` : ''}Level ${difficultyLevel[0]} Prospect`}
-                        </p>
-                        {callObjective && (
-                          <p className="text-xs text-muted-foreground mt-1">
-                            Goal: {callObjective}
-                          </p>
-                        )}
-                      </div>
-
-                      {/* Call Timer */}
-                      <div className="flex items-center justify-center space-x-2">
-                        <Timer className="h-4 w-4 text-muted-foreground" />
-                        <span className="text-2xl font-mono">{formatTime(callDuration)}</span>
-                      </div>
-
-                      {/* Call Status */}
-                      <div>
+              // Active Call Interface - Modern Design
+              <div className="flex flex-col items-center justify-center min-h-[calc(100vh-200px)] space-y-8">
+                
+                {/* Call Header Status */}
+                <div className="glass-card border p-4 rounded-lg">
+                  <div className="flex items-center justify-between gap-6">
+                    <div className="flex items-center gap-3">
+                      <Badge variant={isCallActive ? 'default' : 'secondary'}>
                         {isConnecting && (
-                          <p className="text-muted-foreground">Connecting...</p>
+                          <>
+                            <div className="w-2 h-2 bg-current rounded-full animate-pulse mr-1"></div>
+                            Connecting...
+                          </>
                         )}
                         {isCallActive && (
-                          <div className="flex items-center justify-center space-x-2">
-                            <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse"></div>
-                            <span className="text-green-500 font-medium">Connected</span>
-                          </div>
+                          <>
+                            <div className="w-2 h-2 bg-current rounded-full animate-pulse mr-1"></div>
+                            Connected
+                          </>
                         )}
-                      </div>
-
-                      {/* Call Controls */}
-                      <div className="flex justify-center space-x-4">
-                        <Button
-                          variant="outline"
-                          size="icon"
-                          onClick={toggleMute}
-                          aria-label={isMuted ? 'Unmute microphone' : 'Mute microphone'}
-                          className="rounded-full w-12 h-12"
-                        >
-                          {isMuted ? <MicOff className="h-4 w-4" /> : <Mic className="h-4 w-4" />}
-                        </Button>
-                        
-                        <Button
-                          variant="destructive"
-                          size="icon"
-                          onClick={endCall}
-                          className="rounded-full w-12 h-12"
-                        >
-                          <PhoneOff className="h-4 w-4" />
-                        </Button>
-                      </div>
+                        {!isConnecting && !isCallActive && 'Disconnected'}
+                      </Badge>
+                      <Badge variant="outline">
+                        Level {difficultyLevel[0]} • {getDifficultyLabel(difficultyLevel[0])}
+                      </Badge>
                     </div>
-                  </CardContent>
-                </Card>
+                    
+                    <div className="flex items-center gap-2 text-lg font-mono">
+                      <Timer className="h-4 w-4" />
+                      {formatTime(callDuration)}
+                    </div>
+                  </div>
+                </div>
 
-                {/* Call Tips */}
-                <Card className="w-full max-w-2xl">
+                {/* AI Prospect Avatar */}
+                <div className="relative">
+                  <div className="w-32 h-32 sm:w-40 sm:h-40 rounded-full bg-gradient-primary flex items-center justify-center">
+                    <User className="h-16 w-16 sm:h-20 sm:w-20 text-primary-foreground" />
+                  </div>
+                  
+                  {/* Breathing animation ring */}
+                  {isCallActive && (
+                    <div className="absolute inset-0 rounded-full bg-primary/20 animate-ping" />
+                  )}
+                  
+                  {/* Speaking indicator */}
+                  {isCallActive && (
+                    <div className="absolute -bottom-2 left-1/2 transform -translate-x-1/2">
+                      <Badge variant="default" className="text-xs">
+                        AI Speaking...
+                      </Badge>
+                    </div>
+                  )}
+                </div>
+
+                {/* Prospect Info */}
+                <div className="text-center space-y-2">
+                  <h2 className="text-xl sm:text-2xl font-bold">
+                    {prospectRole || 'Business Owner'}
+                  </h2>
+                  <p className="text-muted-foreground">
+                    {businessType && `${businessType} • `}Level {difficultyLevel[0]} Prospect
+                  </p>
+                  {callObjective && (
+                    <p className="text-sm text-muted-foreground">
+                      Goal: {callObjective}
+                    </p>
+                  )}
+                </div>
+
+                {/* Quick Tips */}
+                <Card className="w-full max-w-2xl glass-card">
                   <CardHeader>
                     <CardTitle className="text-center">💡 Quick Tips</CardTitle>
                   </CardHeader>
@@ -544,6 +545,40 @@ const CallSimulation = () => {
                     </div>
                   </CardContent>
                 </Card>
+
+                {/* Call Controls - Fixed Bottom */}
+                <div className="fixed bottom-0 left-0 right-0 p-6 bg-background/80 backdrop-blur-sm border-t mobile-safe-bottom">
+                  <div className="flex justify-center items-center gap-6">
+                    {/* Mute Toggle */}
+                    <Button
+                      variant={isMuted ? "destructive" : "secondary"}
+                      size="lg"
+                      onClick={toggleMute}
+                      className="rounded-full w-16 h-16"
+                      aria-label={isMuted ? 'Unmute microphone' : 'Mute microphone'}
+                    >
+                      {isMuted ? <MicOff className="h-6 w-6" /> : <Mic className="h-6 w-6" />}
+                    </Button>
+
+                    {/* End Call */}
+                    <Button
+                      variant="destructive"
+                      size="lg"
+                      onClick={endCall}
+                      className="rounded-full w-20 h-20 bg-destructive hover:bg-destructive/90"
+                      disabled={isConnecting}
+                    >
+                      <PhoneOff className="h-8 w-8" />
+                    </Button>
+
+                    {/* Difficulty Level Indicator */}
+                    <div className="rounded-full w-16 h-16 border-2 border-border flex items-center justify-center">
+                      <Badge variant="outline" className="text-xs font-bold">
+                        L{difficultyLevel[0]}
+                      </Badge>
+                    </div>
+                  </div>
+                </div>
               </div>
             )}
           </div>
