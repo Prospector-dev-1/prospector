@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -6,10 +6,22 @@ import { Badge } from '@/components/ui/badge';
 import { HeroCard } from '@/components/ui/hero-card';
 import { FeatureCard } from '@/components/ui/feature-card';
 import { StatsCard } from '@/components/ui/stats-card';
+import { FloatingActionButton } from '@/components/ui/floating-action-button';
 import MobileLayout from '@/components/MobileLayout';
+import PullToRefresh from '@/components/PullToRefresh';
+import QuickActionsSheet from '@/components/QuickActionsSheet';
+import { 
+  HeroCardSkeleton, 
+  StatsCardSkeleton, 
+  FeatureCardSkeleton, 
+  LeaderboardSkeleton,
+  RecentCallsSkeleton 
+} from '@/components/SkeletonLoaders';
 import { useAuth } from '@/contexts/AuthContext';
+import { useHapticFeedback } from '@/hooks/useHapticFeedback';
+import { useSwipeGesture } from '@/hooks/useSwipeGesture';
 import { supabase } from '@/integrations/supabase/client';
-import { Phone, TrendingUp, User, Target, FileText, Sparkles, Upload, Trophy, Activity, Clock } from 'lucide-react';
+import { Phone, TrendingUp, User, Target, FileText, Sparkles, Upload, Trophy, Activity, Clock, Plus, Zap } from 'lucide-react';
 interface CallRecord {
   id: string;
   difficulty_level: number;
@@ -30,15 +42,46 @@ const Dashboard = () => {
     signOut
   } = useAuth();
   const navigate = useNavigate();
+  const { buttonFeedback, successFeedback } = useHapticFeedback();
+  const dashboardRef = useRef<HTMLDivElement>(null);
+  
   const [recentCalls, setRecentCalls] = useState<CallRecord[]>([]);
   const [totalCallsCount, setTotalCallsCount] = useState<number>(0);
   const [thisWeekCallsCount, setThisWeekCallsCount] = useState<number>(0);
   const [loading, setLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
   const [userRank, setUserRank] = useState<number | null>(null);
   const [topUsers, setTopUsers] = useState<any[]>([]);
+  const [lastCallId, setLastCallId] = useState<string | null>(null);
   useEffect(() => {
     fetchRecentCalls();
   }, [user]);
+
+  // Swipe gestures for quick actions
+  const { bindSwipeEvents } = useSwipeGesture({
+    onSwipeLeft: () => navigate('/challenges'),
+    onSwipeRight: () => navigate('/progress'),
+  });
+
+  useEffect(() => {
+    const element = dashboardRef.current;
+    if (element) {
+      const cleanup = bindSwipeEvents(element);
+      return cleanup;
+    }
+  }, [bindSwipeEvents]);
+
+  const handleRefresh = async () => {
+    setRefreshing(true);
+    successFeedback();
+    await fetchRecentCalls();
+    setRefreshing(false);
+  };
+
+  const handleFABClick = () => {
+    buttonFeedback();
+    navigate('/call-simulation');
+  };
   const fetchRecentCalls = async () => {
     if (!user) return;
     try {
@@ -54,6 +97,11 @@ const Dashboard = () => {
         return;
       }
       setRecentCalls(data || []);
+      
+      // Set the last call ID for quick actions
+      if (data && data.length > 0) {
+        setLastCallId(data[0].id);
+      }
 
       // Fetch total count of all calls
       const {
@@ -128,119 +176,269 @@ const Dashboard = () => {
     return <Badge variant="secondary" className="cursor-pointer hover:bg-secondary/80" onClick={() => navigate('/plans')}>{planName}</Badge>;
   };
   const averageScore = recentCalls.length > 0 ? (recentCalls.reduce((sum, call) => sum + (call.overall_score || 0), 0) / recentCalls.length).toFixed(1) : 'N/A';
-  return <MobileLayout>
-      <div className="p-4 space-y-6 my-[35px]">
-        {/* Hero Card */}
-        <HeroCard title="Prospector" subtitle="Ready to master your cold calling skills? Start a new practice session or review your progress." userName={profile?.first_name || 'Prospector'} credits={profile?.credits || 0} subscriptionType={profile?.subscription_type} onCreditsClick={() => navigate('/profile?tab=subscription')} />
+  
+  const handleCallClick = (callId: string) => {
+    buttonFeedback();
+    navigate(`/call-results/${callId}`);
+  };
 
-        {/* Quick Stats */}
-        <div className="grid grid-cols-3 gap-3">
-          <StatsCard label="Total Calls" value={totalCallsCount} icon={Phone} variant="default" />
-          <StatsCard label="Avg Score" value={averageScore} icon={Target} variant="success" />
-          <StatsCard label="This Week" value={thisWeekCallsCount} icon={Clock} variant="info" />
-        </div>
+  return (
+    <MobileLayout>
+      <PullToRefresh onRefresh={handleRefresh}>
+        <div ref={dashboardRef} className="p-4 space-y-6 my-[35px] mobile-scroll-bounce">
+          {/* Hero Card */}
+          {loading ? (
+            <HeroCardSkeleton />
+          ) : (
+            <HeroCard 
+              title="Prospector" 
+              subtitle="Ready to master your cold calling skills? Start a new practice session or review your progress." 
+              userName={profile?.first_name || 'Prospector'} 
+              credits={profile?.credits || 0} 
+              subscriptionType={profile?.subscription_type} 
+              onCreditsClick={() => {
+                buttonFeedback();
+                navigate('/profile?tab=subscription');
+              }} 
+            />
+          )}
 
-        {/* Main Features */}
-        <div className="space-y-4">
-          <h3 className="text-lg font-bold text-foreground mb-3">Quick Actions</h3>
-          
-          <div className="grid grid-cols-1 gap-4">
-            <FeatureCard icon={Phone} title="Start Practice Call" description="Begin a new AI-powered cold calling session with personalized scenarios" buttonText="Start New Call" variant="default" onAction={() => navigate('/call-simulation')} />
+          {/* Quick Stats */}
+          {loading ? (
+            <div className="grid grid-cols-3 gap-3">
+              <StatsCardSkeleton />
+              <StatsCardSkeleton />
+              <StatsCardSkeleton />
+            </div>
+          ) : (
+            <div className="grid grid-cols-3 gap-3">
+              <StatsCard label="Total Calls" value={totalCallsCount} icon={Phone} variant="default" />
+              <StatsCard label="Avg Score" value={averageScore} icon={Target} variant="success" />
+              <StatsCard label="This Week" value={thisWeekCallsCount} icon={Clock} variant="info" />
+            </div>
+          )}
 
-            <FeatureCard icon={Upload} title="Upload Call Recording" description="Get detailed AI analysis and coaching for your real calls" buttonText="Upload & Analyze" variant="upload" onAction={() => navigate('/call-upload')} />
+          {/* Main Features */}
+          <div className="space-y-4">
+            <div className="flex items-center justify-between">
+              <h3 className="text-lg font-bold text-foreground">Quick Actions</h3>
+              <QuickActionsSheet lastCallId={lastCallId}>
+                <Button variant="outline" size="sm" className="gap-2">
+                  <Zap className="h-4 w-4" />
+                  More
+                </Button>
+              </QuickActionsSheet>
+            </div>
+            
+            {loading ? (
+              <div className="grid grid-cols-1 gap-4">
+                <FeatureCardSkeleton />
+                <FeatureCardSkeleton />
+                <FeatureCardSkeleton />
+                <FeatureCardSkeleton />
+              </div>
+            ) : (
+              <div className="grid grid-cols-1 gap-4">
+                <FeatureCard 
+                  icon={Phone} 
+                  title="Start Practice Call" 
+                  description="Begin a new AI-powered cold calling session with personalized scenarios" 
+                  buttonText="Start New Call" 
+                  variant="default" 
+                  onAction={() => {
+                    buttonFeedback();
+                    navigate('/call-simulation');
+                  }} 
+                />
 
-            <FeatureCard icon={FileText} title="Script Analysis" description="Get AI feedback on your sales scripts and improve your approach" buttonText="Analyze Script" variant="progress" onAction={() => navigate('/script-analysis')} />
+                <FeatureCard 
+                  icon={Upload} 
+                  title="Upload Call Recording" 
+                  description="Get detailed AI analysis and coaching for your real calls" 
+                  buttonText="Upload & Analyze" 
+                  variant="upload" 
+                  onAction={() => {
+                    buttonFeedback();
+                    navigate('/call-upload');
+                  }} 
+                />
 
-            <FeatureCard icon={Sparkles} title="Custom Script Generator" description="Generate personalized sales scripts tailored to your industry" buttonText="Generate Script" variant="challenges" onAction={() => navigate('/custom-script')} />
+                <FeatureCard 
+                  icon={FileText} 
+                  title="Script Analysis" 
+                  description="Get AI feedback on your sales scripts and improve your approach" 
+                  buttonText="Analyze Script" 
+                  variant="progress" 
+                  onAction={() => {
+                    buttonFeedback();
+                    navigate('/script-analysis');
+                  }} 
+                />
+
+                <FeatureCard 
+                  icon={Sparkles} 
+                  title="Custom Script Generator" 
+                  description="Generate personalized sales scripts tailored to your industry" 
+                  buttonText="Generate Script" 
+                  variant="challenges" 
+                  onAction={() => {
+                    buttonFeedback();
+                    navigate('/custom-script');
+                  }} 
+                />
+              </div>
+            )}
           </div>
-        </div>
 
-        {/* Leaderboard Preview */}
-        <div className="space-y-4">
-          <div className="flex items-center justify-between">
-            <h3 className="text-lg font-bold text-foreground">Weekly Leaderboard</h3>
-            <Button variant="outline" size="sm" onClick={() => navigate('/leaderboard')}>
-              View All
-            </Button>
-          </div>
-          
-          <Card className="glass-card">
-            <CardContent className="p-4">
-              {loading ? <div className="text-center py-4">
-                  <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-primary mx-auto"></div>
-                </div> : topUsers.length === 0 ? <div className="text-center py-4">
-                  <Trophy className="h-8 w-8 mx-auto mb-2 text-muted-foreground" />
-                  <p className="text-sm text-muted-foreground">No rankings yet</p>
-                </div> : <div className="space-y-2">
-                  {topUsers.map((entry, index) => <div key={entry.user_id} className={`flex items-center justify-between p-2 rounded-lg ${entry.user_id === user?.id ? 'bg-primary/10' : 'bg-muted/20'}`}>
-                      <div className="flex items-center space-x-2">
-                        <span className="text-sm font-bold">#{entry.rank}</span>
-                        <span className="text-sm">
-                          {entry.profile.first_name} {entry.profile.last_initial}.
-                        </span>
-                        {entry.user_id === user?.id && <Badge variant="outline" className="text-xs">You</Badge>}
-                      </div>
-                      <span className="text-sm font-bold text-primary">{entry.total_score}</span>
-                    </div>)}
-                  {userRank && userRank > 3 && <div className="border-t pt-2 mt-2">
-                      <div className="flex items-center justify-between p-2 rounded-lg bg-primary/10">
-                        <span className="text-sm">Your rank: #{userRank}</span>
-                        <Button variant="outline" size="sm" onClick={() => navigate('/leaderboard')}>
-                          View Details
-                        </Button>
-                      </div>
-                    </div>}
-                </div>}
-            </CardContent>
-          </Card>
-        </div>
-
-        {/* Recent Activity */}
-        <div className="space-y-4">
-          <h3 className="text-lg font-bold text-foreground">Recent Practice Sessions</h3>
-          
-          <Card className="glass-card">
-            <CardContent className="p-4">
-              {loading ? <div className="text-center py-8">
-                  <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto"></div>
-                  <p className="mt-4 text-sm text-muted-foreground">Loading sessions...</p>
-                </div> : recentCalls.length === 0 ? <div className="text-center py-8">
-                  <div className="w-16 h-16 mx-auto mb-4 rounded-full bg-muted/20 flex items-center justify-center">
-                    <Phone className="h-8 w-8 text-muted-foreground" />
-                  </div>
-                  <p className="text-sm text-muted-foreground mb-2">No practice sessions yet</p>
-                  <p className="text-xs text-muted-foreground">
-                    Start your first call to see your progress here
-                  </p>
-                </div> : <div className="space-y-3">
-                  {recentCalls.map(call => <div key={call.id} className="flex items-center justify-between p-3 bg-muted/20 rounded-lg hover:bg-muted/30 transition-colors cursor-pointer" onClick={() => navigate(`/call-results/${call.id}`)}>
-                      <div className="flex items-center space-x-3">
-                        <div className="w-10 h-10 rounded-full gradient-primary p-0.5">
-                          <div className="w-full h-full bg-card rounded-full flex items-center justify-center">
-                            <Activity className="h-5 w-5 text-foreground" />
-                          </div>
-                        </div>
-                        <div>
+          {/* Leaderboard Preview */}
+          <div className="space-y-4">
+            <div className="flex items-center justify-between">
+              <h3 className="text-lg font-bold text-foreground">Weekly Leaderboard</h3>
+              <Button 
+                variant="outline" 
+                size="sm" 
+                onClick={() => {
+                  buttonFeedback();
+                  navigate('/leaderboard');
+                }}
+              >
+                View All
+              </Button>
+            </div>
+            
+            {loading ? (
+              <LeaderboardSkeleton />
+            ) : (
+              <Card className="glass-card">
+                <CardContent className="p-4">
+                  {topUsers.length === 0 ? (
+                    <div className="text-center py-4">
+                      <Trophy className="h-8 w-8 mx-auto mb-2 text-muted-foreground" />
+                      <p className="text-sm text-muted-foreground">No rankings yet</p>
+                    </div>
+                  ) : (
+                    <div className="space-y-2">
+                      {topUsers.map((entry, index) => (
+                        <div 
+                          key={entry.user_id} 
+                          className={`flex items-center justify-between p-2 rounded-lg transition-colors ${
+                            entry.user_id === user?.id ? 'bg-primary/10' : 'bg-muted/20'
+                          }`}
+                        >
                           <div className="flex items-center space-x-2">
-                            <Badge variant={call.difficulty_level <= 3 ? "secondary" : call.difficulty_level <= 7 ? "default" : "destructive"} className="text-xs">
-                              Level {call.difficulty_level}
-                            </Badge>
-                            <span className="text-sm font-medium">Score: {call.overall_score}/10</span>
+                            <span className="text-sm font-bold">#{entry.rank}</span>
+                            <span className="text-sm">
+                              {entry.profile.first_name} {entry.profile.last_initial}.
+                            </span>
+                            {entry.user_id === user?.id && (
+                              <Badge variant="outline" className="text-xs">You</Badge>
+                            )}
                           </div>
-                          <p className="text-xs text-muted-foreground">
-                            {Math.floor((call.duration_seconds || 0) / 60)}m {(call.duration_seconds || 0) % 60}s • {new Date(call.created_at).toLocaleDateString()}
-                          </p>
+                          <span className="text-sm font-bold text-primary">{entry.total_score}</span>
                         </div>
+                      ))}
+                      {userRank && userRank > 3 && (
+                        <div className="border-t pt-2 mt-2">
+                          <div className="flex items-center justify-between p-2 rounded-lg bg-primary/10">
+                            <span className="text-sm">Your rank: #{userRank}</span>
+                            <Button 
+                              variant="outline" 
+                              size="sm" 
+                              onClick={() => {
+                                buttonFeedback();
+                                navigate('/leaderboard');
+                              }}
+                            >
+                              View Details
+                            </Button>
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  )}
+                </CardContent>
+              </Card>
+            )}
+          </div>
+
+          {/* Recent Activity */}
+          <div className="space-y-4">
+            <h3 className="text-lg font-bold text-foreground">Recent Practice Sessions</h3>
+            
+            {loading ? (
+              <RecentCallsSkeleton />
+            ) : (
+              <Card className="glass-card">
+                <CardContent className="p-4">
+                  {recentCalls.length === 0 ? (
+                    <div className="text-center py-8">
+                      <div className="w-16 h-16 mx-auto mb-4 rounded-full bg-muted/20 flex items-center justify-center">
+                        <Phone className="h-8 w-8 text-muted-foreground" />
                       </div>
-                      <Button variant="ghost" size="sm" className="h-8">
-                        View
-                      </Button>
-                    </div>)}
-                </div>}
-            </CardContent>
-          </Card>
+                      <p className="text-sm text-muted-foreground mb-2">No practice sessions yet</p>
+                      <p className="text-xs text-muted-foreground">
+                        Start your first call to see your progress here
+                      </p>
+                    </div>
+                  ) : (
+                    <div className="space-y-3">
+                      {recentCalls.map(call => (
+                        <div 
+                          key={call.id} 
+                          className="flex items-center justify-between p-3 bg-muted/20 rounded-lg hover:bg-muted/30 transition-all cursor-pointer hover:scale-[1.02] mobile-tap-highlight" 
+                          onClick={() => handleCallClick(call.id)}
+                        >
+                          <div className="flex items-center space-x-3">
+                            <div className="w-10 h-10 rounded-full gradient-primary p-0.5">
+                              <div className="w-full h-full bg-card rounded-full flex items-center justify-center">
+                                <Activity className="h-5 w-5 text-foreground" />
+                              </div>
+                            </div>
+                            <div>
+                              <div className="flex items-center space-x-2">
+                                <Badge 
+                                  variant={
+                                    call.difficulty_level <= 3 ? "secondary" : 
+                                    call.difficulty_level <= 7 ? "default" : 
+                                    "destructive"
+                                  } 
+                                  className="text-xs"
+                                >
+                                  Level {call.difficulty_level}
+                                </Badge>
+                                <span className="text-sm font-medium">Score: {call.overall_score}/10</span>
+                              </div>
+                              <p className="text-xs text-muted-foreground">
+                                {Math.floor((call.duration_seconds || 0) / 60)}m {(call.duration_seconds || 0) % 60}s • {new Date(call.created_at).toLocaleDateString()}
+                              </p>
+                            </div>
+                          </div>
+                          <Button variant="ghost" size="sm" className="h-8">
+                            View
+                          </Button>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </CardContent>
+              </Card>
+            )}
+          </div>
+
+          {/* Bottom padding to account for FAB */}
+          <div className="h-20" />
         </div>
-      </div>
-    </MobileLayout>;
+      </PullToRefresh>
+
+      {/* Floating Action Button */}
+      <FloatingActionButton
+        onClick={handleFABClick}
+        className={totalCallsCount === 0 ? "fab-pulse" : ""}
+        position="bottom-right"
+      >
+        <Plus className="h-6 w-6" />
+      </FloatingActionButton>
+    </MobileLayout>
+  );
 };
 export default Dashboard;

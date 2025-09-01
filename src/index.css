@@ -215,4 +215,82 @@ All colors MUST be HSL.
   .notification-badge-animated {
     @apply notification-badge animate-pulse;
   }
+
+  /* Enhanced mobile interactions */
+  .mobile-tap-highlight {
+    -webkit-tap-highlight-color: rgba(0, 0, 0, 0);
+  }
+
+  .mobile-scroll-bounce {
+    -webkit-overflow-scrolling: touch;
+    overscroll-behavior-y: contain;
+  }
+
+  /* Swipe gesture feedback */
+  .swipe-action {
+    transition: transform 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+  }
+
+  .swipe-action.swipe-left {
+    transform: translateX(-100px);
+  }
+
+  .swipe-action.swipe-right {
+    transform: translateX(100px);
+  }
+
+  /* FAB pulse animation for attention */
+  .fab-pulse {
+    animation: fab-pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+  }
+
+  @keyframes fab-pulse {
+    0%, 100% {
+      box-shadow: 0 0 0 0 hsl(var(--primary) / 0.7);
+    }
+    70% {
+      box-shadow: 0 0 0 10px hsl(var(--primary) / 0);
+    }
+  }
+
+  /* Enhanced tab bar animations */
+  .tab-indicator {
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  }
+
+  /* Progressive loading shimmer */
+  .shimmer {
+    background: linear-gradient(
+      90deg,
+      transparent 0%,
+      rgba(255, 255, 255, 0.1) 50%,
+      transparent 100%
+    );
+    animation: shimmer 2s infinite;
+  }
+
+  @keyframes shimmer {
+    0% {
+      transform: translateX(-100%);
+    }
+    100% {
+      transform: translateX(100%);
+    }
+  }
+
+  /* Infinite scroll loading */
+  .scroll-loading {
+    background: linear-gradient(
+      to bottom,
+      transparent 0%,
+      hsl(var(--muted) / 0.3) 50%,
+      transparent 100%
+    );
+    animation: scroll-loading 1.5s ease-in-out infinite;
+  }
+
+  @keyframes scroll-loading {
+    0%, 100% { opacity: 0.5; }
+    50% { opacity: 1; }
+  }
 }
