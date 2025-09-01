@@ -359,11 +359,43 @@ const CallSimulation = () => {
               <div className="flex justify-between items-center py-3">
                 <div className="flex items-center space-x-2">
                   <SmartBackButton variant="ghost" size="icon" />
-                  <h1 className="text-lg sm:text-xl font-bold text-primary">Practice Call</h1>
+                  {!callStarted ? (
+                    <h1 className="text-lg sm:text-xl font-bold text-primary">Practice Call</h1>
+                  ) : (
+                    <div className="flex items-center gap-3">
+                      <Badge variant={isCallActive ? 'default' : 'secondary'}>
+                        {isConnecting && (
+                          <>
+                            <div className="w-2 h-2 bg-current rounded-full animate-pulse mr-1"></div>
+                            Connecting...
+                          </>
+                        )}
+                        {isCallActive && (
+                          <>
+                            <div className="w-2 h-2 bg-green-500 rounded-full mr-1"></div>
+                            Connected
+                          </>
+                        )}
+                        {!isConnecting && !isCallActive && 'Call Ended'}
+                      </Badge>
+                      <Badge variant="outline" className={`${getDifficultyColor(difficultyLevel[0])} text-white border-transparent`}>
+                        Level {difficultyLevel[0]} - {getDifficultyLabel(difficultyLevel[0])}
+                      </Badge>
+                    </div>
+                  )}
                 </div>
                 <div className="text-right">
-                  <p className="text-xs text-muted-foreground">Credits</p>
-                  <p className="text-sm font-bold text-primary">{profile.credits}</p>
+                  {!callStarted ? (
+                    <>
+                      <p className="text-xs text-muted-foreground">Credits</p>
+                      <p className="text-sm font-bold text-primary">{profile.credits}</p>
+                    </>
+                  ) : (
+                    <div className="flex items-center gap-2">
+                      <Timer className="h-4 w-4 text-muted-foreground" />
+                      <span className="text-sm font-mono font-medium">{formatTime(callDuration)}</span>
+                    </div>
+                  )}
                 </div>
               </div>
             </div>
@@ -452,37 +484,6 @@ const CallSimulation = () => {
               // Active Call Interface - Modern Design
               <div className="flex flex-col items-center justify-center min-h-[calc(100vh-200px)] space-y-8">
                 
-                {/* Call Header Status */}
-                <div className="glass-card border p-4 rounded-lg">
-                  <div className="flex items-center justify-between gap-6">
-                    <div className="flex items-center gap-3">
-                      <Badge variant={isCallActive ? 'default' : 'secondary'}>
-                        {isConnecting && (
-                          <>
-                            <div className="w-2 h-2 bg-current rounded-full animate-pulse mr-1"></div>
-                            Connecting...
-                          </>
-                        )}
-                        {isCallActive && (
-                          <>
-                            <div className="w-2 h-2 bg-current rounded-full animate-pulse mr-1"></div>
-                            Connected
-                          </>
-                        )}
-                        {!isConnecting && !isCallActive && 'Disconnected'}
-                      </Badge>
-                      <Badge variant="outline">
-                        Level {difficultyLevel[0]} • {getDifficultyLabel(difficultyLevel[0])}
-                      </Badge>
-                    </div>
-                    
-                    <div className="flex items-center gap-2 text-lg font-mono">
-                      <Timer className="h-4 w-4" />
-                      {formatTime(callDuration)}
-                    </div>
-                  </div>
-                </div>
-
                 {/* AI Prospect Avatar */}
                 <div className="relative">
                   <div className="w-32 h-32 sm:w-40 sm:h-40 rounded-full bg-gradient-primary flex items-center justify-center">
