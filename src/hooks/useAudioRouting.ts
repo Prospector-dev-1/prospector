@@ -30,14 +30,6 @@ export const useAudioRouting = () => {
       }
       
       setOutputMode(mode);
-      
-      // Provide user feedback
-      toast.success(
-        mode === 'speaker' 
-          ? 'Audio routed to speaker' 
-          : 'Audio routed to earpiece',
-        { duration: 1500 }
-      );
     } catch (error) {
       console.error('Failed to set audio route:', error);
       toast.error('Failed to change audio output');
