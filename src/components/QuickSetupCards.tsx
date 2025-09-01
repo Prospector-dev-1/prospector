@@ -37,6 +37,19 @@ const presetScenarios: PresetScenario[] = [
     color: 'from-blue-500/20 to-blue-600/20'
   },
   {
+    id: 'objection-handling',
+    title: 'Objection Handling',
+    description: 'Practice overcoming common objections',
+    icon: Users,
+    difficulty: 7,
+    duration: '5-8 min',
+    businessType: 'Professional Services',
+    prospectRole: 'CEO',
+    callObjective: 'Overcome Objections',
+    tags: ['Advanced', 'Challenging'],
+    color: 'from-red-500/20 to-red-600/20'
+  },
+  {
     id: 'follow-up',
     title: 'Follow-up Call',
     description: 'Re-engage a previous lead or contact',
@@ -61,19 +74,6 @@ const presetScenarios: PresetScenario[] = [
     callObjective: 'Schedule Demo',
     tags: ['Intermediate', 'B2B'],
     color: 'from-purple-500/20 to-purple-600/20'
-  },
-  {
-    id: 'objection-handling',
-    title: 'Objection Handling',
-    description: 'Practice overcoming common objections',
-    icon: Users,
-    difficulty: 7,
-    duration: '5-8 min',
-    businessType: 'Professional Services',
-    prospectRole: 'CEO',
-    callObjective: 'Overcome Objections',
-    tags: ['Advanced', 'Challenging'],
-    color: 'from-red-500/20 to-red-600/20'
   }
 ];
 
