@@ -351,7 +351,7 @@ const CallSimulation = () => {
   return (
     <>
       <SEO title="Practice Call | AI Cold Call Simulator" description="Simulate realistic cold calls with AI; choose difficulty and get coaching." canonicalPath="/call-simulation" />
-      <MobileLayout>
+      <MobileLayout showBottomNav={!callStarted}>
         <div className="min-h-screen bg-background">
           {/* Header */}
           <div className="border-b border-border bg-card">
