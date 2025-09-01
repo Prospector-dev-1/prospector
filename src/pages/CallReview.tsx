@@ -157,7 +157,7 @@ const CallReview = () => {
                 </Button>
                 <Button onClick={() => navigate(`/ai-replay/${uploadId}`)}>
                   <RefreshCw className="h-4 w-4 mr-2" />
-                  Retry with AI Prospect
+                  Replay Moments with AI
                 </Button>
               </div>
             </div>
