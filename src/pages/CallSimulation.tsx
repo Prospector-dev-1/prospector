@@ -412,7 +412,7 @@ const CallSimulation = () => {
 
             {/* Quick Setup Cards */}
             <div>
-              <h3 className="text-lg font-semibold mb-4">Quick Setup</h3>
+              
               <QuickSetupCards onSelectPreset={handlePresetSelect} selectedPreset={selectedPreset} />
             </div>
 
