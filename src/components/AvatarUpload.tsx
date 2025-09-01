@@ -1,9 +1,9 @@
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
-import { Camera, Upload, Loader2, X } from 'lucide-react';
+import { Camera, Upload, Loader2, X, Edit } from 'lucide-react';
 
 interface AvatarUploadProps {
   currentAvatarUrl?: string | null;
@@ -22,7 +22,9 @@ const AvatarUpload: React.FC<AvatarUploadProps> = ({
 }) => {
   const { toast } = useToast();
   const [uploading, setUploading] = useState(false);
+  const [isEditMode, setIsEditMode] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const containerRef = useRef<HTMLDivElement>(null);
 
   const sizeClasses = {
     sm: 'h-12 w-12',
@@ -34,6 +36,26 @@ const AvatarUpload: React.FC<AvatarUploadProps> = ({
     sm: 'h-4 w-4',
     md: 'h-5 w-5', 
     lg: 'h-6 w-6'
+  };
+
+  // Close edit mode when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (containerRef.current && !containerRef.current.contains(event.target as Node)) {
+        setIsEditMode(false);
+      }
+    };
+
+    if (isEditMode) {
+      document.addEventListener('mousedown', handleClickOutside);
+      return () => document.removeEventListener('mousedown', handleClickOutside);
+    }
+  }, [isEditMode]);
+
+  const handleAvatarClick = () => {
+    if (!isEditMode) {
+      setIsEditMode(true);
+    }
   };
 
   const handleFileSelect = () => {
@@ -59,6 +81,7 @@ const AvatarUpload: React.FC<AvatarUploadProps> = ({
       if (updateError) throw updateError;
       
       onAvatarUpdate('');
+      setIsEditMode(false); // Exit edit mode after successful removal
       
       toast({
         title: 'Success',
@@ -138,6 +161,7 @@ const AvatarUpload: React.FC<AvatarUploadProps> = ({
       if (updateError) throw updateError;
 
       onAvatarUpdate(publicUrl);
+      setIsEditMode(false); // Exit edit mode after successful upload
       
       toast({
         title: 'Success',
@@ -160,17 +184,37 @@ const AvatarUpload: React.FC<AvatarUploadProps> = ({
     }
   };
 
+  const handleCameraClick = () => {
+    if (isEditMode) {
+      handleFileSelect();
+    } else {
+      setIsEditMode(true);
+    }
+  };
+
   return (
-    <div className="relative inline-block">
-      <Avatar className={`${sizeClasses[size]} border-2 border-primary/20`}>
-        <AvatarImage src={currentAvatarUrl || undefined} alt="Profile picture" />
-        <AvatarFallback className="bg-primary text-primary-foreground font-bold">
-          {userInitials}
-        </AvatarFallback>
-      </Avatar>
+    <div ref={containerRef} className="relative inline-block">
+      <div 
+        onClick={handleAvatarClick}
+        className={`cursor-pointer transition-opacity ${!isEditMode ? 'hover:opacity-80' : ''}`}
+      >
+        <Avatar className={`${sizeClasses[size]} border-2 border-primary/20`}>
+          <AvatarImage src={currentAvatarUrl || undefined} alt="Profile picture" />
+          <AvatarFallback className="bg-primary text-primary-foreground font-bold">
+            {userInitials}
+          </AvatarFallback>
+        </Avatar>
+        
+        {/* Edit indicator when not in edit mode */}
+        {!isEditMode && (
+          <div className="absolute inset-0 flex items-center justify-center bg-black/20 opacity-0 hover:opacity-100 transition-opacity rounded-full">
+            <Edit className="h-4 w-4 text-white" />
+          </div>
+        )}
+      </div>
       
-      
-      {currentAvatarUrl && (
+      {/* Remove button - only shown in edit mode when avatar exists */}
+      {isEditMode && currentAvatarUrl && (
         <Button
           onClick={handleRemoveAvatar}
           disabled={uploading}
@@ -182,12 +226,14 @@ const AvatarUpload: React.FC<AvatarUploadProps> = ({
         </Button>
       )}
 
+      {/* Camera/Change Photo button */}
       <Button
-        onClick={handleFileSelect}
+        onClick={handleCameraClick}
         disabled={uploading}
         size="sm"
         className="absolute -bottom-2 -right-2 rounded-full h-8 w-8 p-0 border-2 border-background"
         variant="default"
+        title={isEditMode ? "Change Photo" : "Edit Photo"}
       >
         {uploading ? (
           <Loader2 className={`${iconSizes[size]} animate-spin`} />
