@@ -34,8 +34,23 @@ const CallUpload = () => {
       return;
     }
 
-    const allowedTypes = ['audio/mpeg', 'audio/wav', 'audio/m4a', 'video/mp4', 'video/mov'];
-    if (!allowedTypes.some(type => file.type.includes(type.split('/')[1]))) {
+    const allowedMimeTypes = [
+      'audio/mpeg',      // mp3
+      'audio/wav',       // wav  
+      'audio/mp4',       // m4a (most common)
+      'audio/x-m4a',     // m4a (alternative)
+      'audio/aac',       // m4a (another alternative)
+      'video/mp4',       // mp4
+      'video/quicktime'  // mov
+    ];
+    
+    const allowedExtensions = ['.mp3', '.wav', '.m4a', '.mp4', '.mov'];
+    const fileExtension = file.name.toLowerCase().substring(file.name.lastIndexOf('.'));
+    
+    const isMimeTypeValid = allowedMimeTypes.includes(file.type);
+    const isExtensionValid = allowedExtensions.includes(fileExtension);
+    
+    if (!isMimeTypeValid && !isExtensionValid) {
       toast.error('Please upload an audio file (mp3, wav, m4a) or video file (mp4, mov)');
       return;
     }
