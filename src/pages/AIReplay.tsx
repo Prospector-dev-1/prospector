@@ -218,9 +218,7 @@ const AIReplay = () => {
               <Card>
                 <CardHeader>
                   <CardTitle>Select a Moment to Replay</CardTitle>
-                  <CardDescription>
-                    Select a moment below to start an AI conversation practice
-                  </CardDescription>
+                  <CardDescription>Select a moment below to initialize Replay Mode</CardDescription>
                 </CardHeader>
                 <CardContent>
                   {loadingMoments ? <div className="text-center py-8">
