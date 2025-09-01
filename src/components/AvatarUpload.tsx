@@ -3,7 +3,7 @@ import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
-import { Camera, Upload, Loader2 } from 'lucide-react';
+import { Camera, Upload, Loader2, X } from 'lucide-react';
 
 interface AvatarUploadProps {
   currentAvatarUrl?: string | null;
@@ -38,6 +38,43 @@ const AvatarUpload: React.FC<AvatarUploadProps> = ({
 
   const handleFileSelect = () => {
     fileInputRef.current?.click();
+  };
+
+  const handleRemoveAvatar = async () => {
+    if (!currentAvatarUrl) return;
+    
+    setUploading(true);
+    
+    try {
+      // Delete from storage
+      const oldPath = currentAvatarUrl.split('/').slice(-2).join('/');
+      await supabase.storage.from('avatars').remove([oldPath]);
+      
+      // Update profile to remove avatar URL
+      const { error: updateError } = await supabase
+        .from('profiles')
+        .update({ avatar_url: null })
+        .eq('user_id', userId);
+        
+      if (updateError) throw updateError;
+      
+      onAvatarUpdate('');
+      
+      toast({
+        title: 'Success',
+        description: 'Profile picture removed successfully'
+      });
+      
+    } catch (error: any) {
+      console.error('Error removing avatar:', error);
+      toast({
+        title: 'Remove failed',
+        description: error.message || 'Failed to remove profile picture',
+        variant: 'destructive'
+      });
+    } finally {
+      setUploading(false);
+    }
   };
 
   const handleFileUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
@@ -132,6 +169,19 @@ const AvatarUpload: React.FC<AvatarUploadProps> = ({
         </AvatarFallback>
       </Avatar>
       
+      
+      {currentAvatarUrl && (
+        <Button
+          onClick={handleRemoveAvatar}
+          disabled={uploading}
+          size="sm"
+          className="absolute -top-2 -right-2 rounded-full h-6 w-6 p-0 border-2 border-background"
+          variant="destructive"
+        >
+          <X className="h-3 w-3" />
+        </Button>
+      )}
+
       <Button
         onClick={handleFileSelect}
         disabled={uploading}
