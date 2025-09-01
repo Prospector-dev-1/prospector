@@ -13,6 +13,10 @@ import CallCustomization from '@/components/CallCustomization';
 import MobileLayout from '@/components/MobileLayout';
 import SmartBackButton from '@/components/SmartBackButton';
 import { useAudioRouting } from '@/hooks/useAudioRouting';
+import CallHeroSection from '@/components/CallHeroSection';
+import { QuickSetupCards, type PresetScenario } from '@/components/QuickSetupCards';
+import VisualDifficultySelector from '@/components/VisualDifficultySelector';
+import EnhancedScenarioPreview from '@/components/EnhancedScenarioPreview';
 const CallSimulation = () => {
   const navigate = useNavigate();
   const {
@@ -36,6 +40,10 @@ const CallSimulation = () => {
   const [callObjective, setCallObjective] = useState('');
   const [customObjective, setCustomObjective] = useState('');
   const [customInstructions, setCustomInstructions] = useState('');
+  
+  // UI states
+  const [selectedPreset, setSelectedPreset] = useState<string | undefined>(undefined);
+  const [showAdvanced, setShowAdvanced] = useState(false);
 
   // Call state tracking
   const [callDuration, setCallDuration] = useState(0);
@@ -332,6 +340,19 @@ const CallSimulation = () => {
       }
       setIsMuted(!isMuted);
     }
+  };
+
+  const handlePresetSelect = (preset: PresetScenario) => {
+    setSelectedPreset(preset.id);
+    setBusinessType(preset.businessType);
+    setProspectRole(preset.prospectRole);
+    setCallObjective(preset.callObjective);
+    setDifficultyLevel([preset.difficulty]);
+    setShowAdvanced(false);
+  };
+
+  const handleDifficultyChange = (level: number) => {
+    setDifficultyLevel([level]);
   };
   if (!user || !profile) {
     return <div>Loading...</div>;
