@@ -418,7 +418,7 @@ const CallSimulation = () => {
 
             {/* Visual Difficulty Selector */}
             <div>
-              <h3 className="text-lg font-semibold mb-4">Choose Your Challenge</h3>
+              
               <VisualDifficultySelector selectedLevel={difficultyLevel[0]} onLevelChange={handleDifficultyChange} />
             </div>
 
