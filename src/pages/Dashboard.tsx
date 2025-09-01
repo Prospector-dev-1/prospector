@@ -85,9 +85,10 @@ const Dashboard = () => {
       }
 
       // Fetch leaderboard data
-      const { data: leaderboardData } = await supabase.functions.invoke('get-leaderboard');
+      const {
+        data: leaderboardData
+      } = await supabase.functions.invoke('get-leaderboard');
       console.log('Dashboard leaderboard data:', leaderboardData);
-      
       if (leaderboardData) {
         // Extract the leaderboard array from the response
         let arrayData = [];
@@ -96,7 +97,6 @@ const Dashboard = () => {
         } else if (Array.isArray(leaderboardData)) {
           arrayData = leaderboardData;
         }
-        
         setTopUsers(arrayData.slice(0, 3));
         const currentUserEntry = arrayData.find((entry: any) => entry.user_id === user?.id);
         setUserRank(currentUserEntry?.rank || null);
@@ -128,40 +128,16 @@ const Dashboard = () => {
     return <Badge variant="secondary" className="cursor-pointer hover:bg-secondary/80" onClick={() => navigate('/plans')}>{planName}</Badge>;
   };
   const averageScore = recentCalls.length > 0 ? (recentCalls.reduce((sum, call) => sum + (call.overall_score || 0), 0) / recentCalls.length).toFixed(1) : 'N/A';
-  
-  return (
-    <MobileLayout>
-      <div className="p-4 space-y-6">
+  return <MobileLayout>
+      <div className="p-4 space-y-6 my-[35px]">
         {/* Hero Card */}
-        <HeroCard
-          title="Prospector"
-          subtitle="Ready to master your cold calling skills? Start a new practice session or review your progress."
-          userName={profile?.first_name || 'Prospector'}
-          credits={profile?.credits || 0}
-          subscriptionType={profile?.subscription_type}
-          onCreditsClick={() => navigate('/profile?tab=subscription')}
-        />
+        <HeroCard title="Prospector" subtitle="Ready to master your cold calling skills? Start a new practice session or review your progress." userName={profile?.first_name || 'Prospector'} credits={profile?.credits || 0} subscriptionType={profile?.subscription_type} onCreditsClick={() => navigate('/profile?tab=subscription')} />
 
         {/* Quick Stats */}
         <div className="grid grid-cols-3 gap-3">
-          <StatsCard
-            label="Total Calls"
-            value={totalCallsCount}
-            icon={Phone}
-            variant="default"
-          />
-          <StatsCard
-            label="Avg Score"
-            value={averageScore}
-            icon={Target}
-            variant="success"
-          />
-          <StatsCard
-            label="This Week"
-            value={thisWeekCallsCount}
-            icon={Clock}
-            variant="info"
-          />
+          <StatsCard label="Total Calls" value={totalCallsCount} icon={Phone} variant="default" />
+          <StatsCard label="Avg Score" value={averageScore} icon={Target} variant="success" />
+          <StatsCard label="This Week" value={thisWeekCallsCount} icon={Clock} variant="info" />
         </div>
 
         {/* Main Features */}
@@ -169,41 +145,13 @@ const Dashboard = () => {
           <h3 className="text-lg font-bold text-foreground mb-3">Quick Actions</h3>
           
           <div className="grid grid-cols-1 gap-4">
-            <FeatureCard
-              icon={Phone}
-              title="Start Practice Call"
-              description="Begin a new AI-powered cold calling session with personalized scenarios"
-              buttonText="Start New Call"
-              variant="default"
-              onAction={() => navigate('/call-simulation')}
-            />
+            <FeatureCard icon={Phone} title="Start Practice Call" description="Begin a new AI-powered cold calling session with personalized scenarios" buttonText="Start New Call" variant="default" onAction={() => navigate('/call-simulation')} />
 
-            <FeatureCard
-              icon={Upload}
-              title="Upload Call Recording"
-              description="Get detailed AI analysis and coaching for your real calls"
-              buttonText="Upload & Analyze"
-              variant="upload"
-              onAction={() => navigate('/call-upload')}
-            />
+            <FeatureCard icon={Upload} title="Upload Call Recording" description="Get detailed AI analysis and coaching for your real calls" buttonText="Upload & Analyze" variant="upload" onAction={() => navigate('/call-upload')} />
 
-            <FeatureCard
-              icon={FileText}
-              title="Script Analysis"
-              description="Get AI feedback on your sales scripts and improve your approach"
-              buttonText="Analyze Script"
-              variant="progress"
-              onAction={() => navigate('/script-analysis')}
-            />
+            <FeatureCard icon={FileText} title="Script Analysis" description="Get AI feedback on your sales scripts and improve your approach" buttonText="Analyze Script" variant="progress" onAction={() => navigate('/script-analysis')} />
 
-            <FeatureCard
-              icon={Sparkles}
-              title="Custom Script Generator"
-              description="Generate personalized sales scripts tailored to your industry"
-              buttonText="Generate Script"
-              variant="challenges"
-              onAction={() => navigate('/custom-script')}
-            />
+            <FeatureCard icon={Sparkles} title="Custom Script Generator" description="Generate personalized sales scripts tailored to your industry" buttonText="Generate Script" variant="challenges" onAction={() => navigate('/custom-script')} />
           </div>
         </div>
 
@@ -211,59 +159,38 @@ const Dashboard = () => {
         <div className="space-y-4">
           <div className="flex items-center justify-between">
             <h3 className="text-lg font-bold text-foreground">Weekly Leaderboard</h3>
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => navigate('/leaderboard')}
-            >
+            <Button variant="outline" size="sm" onClick={() => navigate('/leaderboard')}>
               View All
             </Button>
           </div>
           
           <Card className="glass-card">
             <CardContent className="p-4">
-              {loading ? (
-                <div className="text-center py-4">
+              {loading ? <div className="text-center py-4">
                   <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-primary mx-auto"></div>
-                </div>
-              ) : topUsers.length === 0 ? (
-                <div className="text-center py-4">
+                </div> : topUsers.length === 0 ? <div className="text-center py-4">
                   <Trophy className="h-8 w-8 mx-auto mb-2 text-muted-foreground" />
                   <p className="text-sm text-muted-foreground">No rankings yet</p>
-                </div>
-              ) : (
-                <div className="space-y-2">
-                  {topUsers.map((entry, index) => (
-                    <div
-                      key={entry.user_id}
-                      className={`flex items-center justify-between p-2 rounded-lg ${
-                        entry.user_id === user?.id ? 'bg-primary/10' : 'bg-muted/20'
-                      }`}
-                    >
+                </div> : <div className="space-y-2">
+                  {topUsers.map((entry, index) => <div key={entry.user_id} className={`flex items-center justify-between p-2 rounded-lg ${entry.user_id === user?.id ? 'bg-primary/10' : 'bg-muted/20'}`}>
                       <div className="flex items-center space-x-2">
                         <span className="text-sm font-bold">#{entry.rank}</span>
                         <span className="text-sm">
                           {entry.profile.first_name} {entry.profile.last_initial}.
                         </span>
-                        {entry.user_id === user?.id && (
-                          <Badge variant="outline" className="text-xs">You</Badge>
-                        )}
+                        {entry.user_id === user?.id && <Badge variant="outline" className="text-xs">You</Badge>}
                       </div>
                       <span className="text-sm font-bold text-primary">{entry.total_score}</span>
-                    </div>
-                  ))}
-                  {userRank && userRank > 3 && (
-                    <div className="border-t pt-2 mt-2">
+                    </div>)}
+                  {userRank && userRank > 3 && <div className="border-t pt-2 mt-2">
                       <div className="flex items-center justify-between p-2 rounded-lg bg-primary/10">
                         <span className="text-sm">Your rank: #{userRank}</span>
                         <Button variant="outline" size="sm" onClick={() => navigate('/leaderboard')}>
                           View Details
                         </Button>
                       </div>
-                    </div>
-                  )}
-                </div>
-              )}
+                    </div>}
+                </div>}
             </CardContent>
           </Card>
         </div>
@@ -274,13 +201,10 @@ const Dashboard = () => {
           
           <Card className="glass-card">
             <CardContent className="p-4">
-              {loading ? (
-                <div className="text-center py-8">
+              {loading ? <div className="text-center py-8">
                   <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto"></div>
                   <p className="mt-4 text-sm text-muted-foreground">Loading sessions...</p>
-                </div>
-              ) : recentCalls.length === 0 ? (
-                <div className="text-center py-8">
+                </div> : recentCalls.length === 0 ? <div className="text-center py-8">
                   <div className="w-16 h-16 mx-auto mb-4 rounded-full bg-muted/20 flex items-center justify-center">
                     <Phone className="h-8 w-8 text-muted-foreground" />
                   </div>
@@ -288,15 +212,8 @@ const Dashboard = () => {
                   <p className="text-xs text-muted-foreground">
                     Start your first call to see your progress here
                   </p>
-                </div>
-              ) : (
-                <div className="space-y-3">
-                  {recentCalls.map(call => (
-                    <div 
-                      key={call.id} 
-                      className="flex items-center justify-between p-3 bg-muted/20 rounded-lg hover:bg-muted/30 transition-colors cursor-pointer"
-                      onClick={() => navigate(`/call-results/${call.id}`)}
-                    >
+                </div> : <div className="space-y-3">
+                  {recentCalls.map(call => <div key={call.id} className="flex items-center justify-between p-3 bg-muted/20 rounded-lg hover:bg-muted/30 transition-colors cursor-pointer" onClick={() => navigate(`/call-results/${call.id}`)}>
                       <div className="flex items-center space-x-3">
                         <div className="w-10 h-10 rounded-full gradient-primary p-0.5">
                           <div className="w-full h-full bg-card rounded-full flex items-center justify-center">
@@ -305,10 +222,7 @@ const Dashboard = () => {
                         </div>
                         <div>
                           <div className="flex items-center space-x-2">
-                            <Badge 
-                              variant={call.difficulty_level <= 3 ? "secondary" : call.difficulty_level <= 7 ? "default" : "destructive"} 
-                              className="text-xs"
-                            >
+                            <Badge variant={call.difficulty_level <= 3 ? "secondary" : call.difficulty_level <= 7 ? "default" : "destructive"} className="text-xs">
                               Level {call.difficulty_level}
                             </Badge>
                             <span className="text-sm font-medium">Score: {call.overall_score}/10</span>
@@ -321,15 +235,12 @@ const Dashboard = () => {
                       <Button variant="ghost" size="sm" className="h-8">
                         View
                       </Button>
-                    </div>
-                  ))}
-                </div>
-              )}
+                    </div>)}
+                </div>}
             </CardContent>
           </Card>
         </div>
       </div>
-    </MobileLayout>
-  );
+    </MobileLayout>;
 };
 export default Dashboard;
