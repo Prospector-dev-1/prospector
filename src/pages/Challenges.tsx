@@ -67,18 +67,26 @@ const Challenges = () => {
         return [];
       }
       
-      let leaderboardData = [];
-      if (data && data.leaderboard && Array.isArray(data.leaderboard)) {
-        leaderboardData = data.leaderboard;
-      } else if (Array.isArray(data)) {
-        leaderboardData = data;
-      }
-      
-      const currentUserEntry = leaderboardData.find((entry: any) => entry.user_id === user?.id);
-      let topUsers = leaderboardData.slice(0, 15);
-      
-      if (currentUserEntry && !topUsers.find((u: any) => u.user_id === user?.id)) {
-        topUsers.push(currentUserEntry);
+      // Prefer new shape { top, currentUser }, fallback to older shapes
+      let topUsers: any[] = [];
+      if (data && Array.isArray(data.top)) {
+        topUsers = data.top;
+        // Ensure current user is visible even if not in top
+        if (data.currentUser && !topUsers.find((u: any) => u.user_id === data.currentUser.user_id)) {
+          topUsers = [...topUsers, data.currentUser];
+        }
+      } else {
+        let leaderboardData: any[] = [];
+        if (data && Array.isArray(data.leaderboard)) {
+          leaderboardData = data.leaderboard;
+        } else if (Array.isArray(data)) {
+          leaderboardData = data;
+        }
+        const currentUserEntry = leaderboardData.find((entry: any) => entry.user_id === user?.id);
+        topUsers = leaderboardData.slice(0, 15);
+        if (currentUserEntry && !topUsers.find((u: any) => u.user_id === user?.id)) {
+          topUsers.push(currentUserEntry);
+        }
       }
       
       return topUsers;

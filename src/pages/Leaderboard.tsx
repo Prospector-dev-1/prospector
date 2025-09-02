@@ -45,9 +45,11 @@ const Leaderboard = () => {
 
       console.log('Leaderboard data received:', data);
       
-      // Extract the leaderboard array from the response
-      let leaderboardData = [];
-      if (data && data.leaderboard && Array.isArray(data.leaderboard)) {
+      // Prefer new shape { top, currentUser }, fallback to older shapes
+      let leaderboardData: any[] = [];
+      if (data && Array.isArray(data.top)) {
+        leaderboardData = data.top;
+      } else if (data && Array.isArray(data.leaderboard)) {
         leaderboardData = data.leaderboard;
       } else if (Array.isArray(data)) {
         leaderboardData = data;
@@ -55,9 +57,14 @@ const Leaderboard = () => {
       
       setLeaderboard(leaderboardData);
       
-      // Find current user's rank
-      const currentUserEntry = leaderboardData.find((entry: LeaderboardEntry) => entry.user_id === user?.id);
-      setUserRank(currentUserEntry?.rank || null);
+      // Determine current user's rank (prefer server-provided currentUser)
+      const serverUserRank = data?.currentUser?.rank as number | undefined;
+      if (serverUserRank) {
+        setUserRank(serverUserRank);
+      } else {
+        const currentUserEntry = leaderboardData.find((entry: LeaderboardEntry) => entry.user_id === user?.id);
+        setUserRank(currentUserEntry?.rank || null);
+      }
     } catch (error) {
       console.error('Error fetching leaderboard:', error);
     } finally {
