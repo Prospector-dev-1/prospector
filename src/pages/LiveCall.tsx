@@ -6,45 +6,37 @@ import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Progress } from '@/components/ui/progress';
-
+import { Slider } from '@/components/ui/slider';
 import { useToast } from '@/components/ui/use-toast';
 import SEO from '@/components/SEO';
 import MobileLayout from '@/components/MobileLayout';
 import { useAudioRouting } from '@/hooks/useAudioRouting';
-import { 
-  Phone, 
-  PhoneOff, 
-  Mic, 
-  MicOff, 
-  Volume2, 
-  User, 
-  Clock,
-  Signal,
-  TrendingUp,
-  Zap,
-  Target
-} from 'lucide-react';
-
+import { Phone, PhoneOff, Mic, MicOff, Volume2, User, Clock, Signal, TrendingUp, Zap, Target } from 'lucide-react';
 const LiveCall = () => {
-  const { sessionId } = useParams();
+  const {
+    sessionId
+  } = useParams();
   const navigate = useNavigate();
-  const { toast } = useToast();
-  
+  const {
+    toast
+  } = useToast();
   const {
     conversationState,
     startConversation,
     endConversation,
     finalAnalysis
   } = useRealtimeAIChat();
-
   const [callStartTime] = useState(Date.now());
   const [currentTime, setCurrentTime] = useState(Date.now());
   const [isMuted, setIsMuted] = useState(false);
-  
+  const [volume, setVolume] = useState([80]);
   const [confidence, setConfidence] = useState(75);
   const [responseSpeed, setResponseSpeed] = useState(85);
-
-  const { outputMode, isChanging: isAudioChanging, toggleAudioRoute } = useAudioRouting();
+  const {
+    outputMode,
+    isChanging: isAudioChanging,
+    toggleAudioRoute
+  } = useAudioRouting();
 
   // Get session config from URL params or localStorage
   const [sessionConfig] = useState(() => {
@@ -81,32 +73,23 @@ const LiveCall = () => {
       }
     };
   }, [conversationState.isActive, conversationState.isConnecting, endConversation]);
-
   const formatCallDuration = (startTime: number, currentTime: number) => {
     const duration = Math.floor((currentTime - startTime) / 1000);
     const minutes = Math.floor(duration / 60);
     const seconds = duration % 60;
     return `${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
   };
-
   const handleStartConversation = async () => {
     try {
-      await startConversation(
-        sessionId || 'default-session',
-        sessionConfig.originalMoment,
-        sessionConfig.replayMode as any,
-        sessionConfig.prospectPersonality as any,
-        sessionConfig.gamificationMode as any
-      );
+      await startConversation(sessionId || 'default-session', sessionConfig.originalMoment, sessionConfig.replayMode as any, sessionConfig.prospectPersonality as any, sessionConfig.gamificationMode as any);
     } catch (error) {
       toast({
         title: "Connection Error",
         description: "Failed to start the conversation. Please try again.",
-        variant: "destructive",
+        variant: "destructive"
       });
     }
   };
-
   const handleEndCall = async () => {
     try {
       await endConversation();
@@ -124,38 +107,42 @@ const LiveCall = () => {
       toast({
         title: "Error",
         description: "Failed to end the conversation properly.",
-        variant: "destructive",
+        variant: "destructive"
       });
     }
   };
-
   const toggleMute = () => {
     setIsMuted(!isMuted);
     toast({
       title: isMuted ? "Microphone On" : "Microphone Off",
-      description: isMuted ? "You can now speak" : "Your microphone is muted",
+      description: isMuted ? "You can now speak" : "Your microphone is muted"
     });
   };
-
   const getConnectionStatus = () => {
     if (conversationState.isConnecting) {
-      return { label: 'Connecting...', color: 'bg-warning', icon: Signal };
+      return {
+        label: 'Connecting...',
+        color: 'bg-warning',
+        icon: Signal
+      };
     } else if (conversationState.isActive) {
-      return { label: 'Connected', color: 'bg-success', icon: Signal };
+      return {
+        label: 'Connected',
+        color: 'bg-success',
+        icon: Signal
+      };
     } else {
-      return { label: 'Disconnected', color: 'bg-destructive', icon: Signal };
+      return {
+        label: 'Disconnected',
+        color: 'bg-destructive',
+        icon: Signal
+      };
     }
   };
-
   const connectionStatus = getConnectionStatus();
   const ConnectionIcon = connectionStatus.icon;
-
-  return (
-    <>
-      <SEO 
-        title="Live Practice Call"
-        description="Practice your sales skills with AI-powered real-time coaching"
-      />
+  return <>
+      <SEO title="Live Practice Call" description="Practice your sales skills with AI-powered real-time coaching" />
       <MobileLayout>
         <div className="min-h-screen bg-background">
           {/* Call Header */}
@@ -179,12 +166,7 @@ const LiveCall = () => {
           </div>
 
           {/* Replay Summary */}
-          <ReplaySummary 
-            originalMoment={sessionConfig.originalMoment}
-            replayMode={sessionConfig.replayMode}
-            prospectPersonality={sessionConfig.prospectPersonality}
-            gamificationMode={sessionConfig.gamificationMode}
-          />
+          <ReplaySummary originalMoment={sessionConfig.originalMoment} replayMode={sessionConfig.replayMode} prospectPersonality={sessionConfig.prospectPersonality} gamificationMode={sessionConfig.gamificationMode} />
 
           {/* Main Call Interface */}
           <div className="flex flex-col items-center justify-center min-h-[calc(100vh-120px)] p-4 space-y-8">
@@ -196,18 +178,14 @@ const LiveCall = () => {
               </div>
               
               {/* Breathing animation ring */}
-              {conversationState.isActive && (
-                <div className="absolute inset-0 rounded-full bg-primary/20 animate-ping" />
-              )}
+              {conversationState.isActive && <div className="absolute inset-0 rounded-full bg-primary/20 animate-ping" />}
               
               {/* Speaking indicator */}
-              {conversationState.isActive && (
-                <div className="absolute -bottom-2 left-1/2 transform -translate-x-1/2">
+              {conversationState.isActive && <div className="absolute -bottom-2 left-1/2 transform -translate-x-1/2">
                   <Badge variant="default" className="text-xs">
                     AI Speaking...
                   </Badge>
-                </div>
-              )}
+                </div>}
             </div>
 
             {/* Prospect Info */}
@@ -222,79 +200,41 @@ const LiveCall = () => {
 
             {/* Real-time Performance Metrics */}
             <div className="grid grid-cols-2 gap-4 w-full max-w-sm">
-              <Card className="p-4 text-center">
-                <div className="flex items-center justify-center gap-2 mb-2">
-                  <TrendingUp className="h-4 w-4 text-primary" />
-                  <span className="text-sm font-medium">Confidence</span>
-                </div>
-                <div className="text-2xl font-bold text-primary">{confidence}%</div>
-              </Card>
               
-              <Card className="p-4 text-center">
-                <div className="flex items-center justify-center gap-2 mb-2">
-                  <Zap className="h-4 w-4 text-primary" />
-                  <span className="text-sm font-medium">Response</span>
-                </div>
-                <div className="text-2xl font-bold text-primary">{responseSpeed}%</div>
-              </Card>
+              
+              
             </div>
 
             {/* Progress Indicators */}
-            <div className="w-full max-w-md space-y-4">
-              <div className="space-y-2">
-                <div className="flex justify-between text-sm">
-                  <span>Conversation Progress</span>
-                  <span>{conversationState.exchangeCount || 0}/10 exchanges</span>
-                </div>
-                <Progress value={(conversationState.exchangeCount || 0) * 10} className="h-2" />
-              </div>
-              
-              {conversationState.currentScore && (
-                <div className="space-y-2">
-                  <div className="flex justify-between text-sm">
-                    <span>Current Score</span>
-                    <span className="font-medium">{conversationState.currentScore}/100</span>
-                  </div>
-                  <Progress value={conversationState.currentScore} className="h-2" />
-                </div>
-              )}
-            </div>
+            
           </div>
 
+          {/* Volume Control */}
+          <div className="px-6 pb-4">
+            <Card className="p-4">
+              <div className="flex items-center gap-4">
+                <Volume2 className="h-4 w-4" />
+                <Slider value={volume} onValueChange={setVolume} max={100} step={5} className="flex-1" />
+                <span className="text-sm font-medium w-12">{volume[0]}%</span>
+              </div>
+            </Card>
+          </div>
 
           {/* Call Controls */}
           <div className="fixed bottom-0 left-0 right-0 p-6 bg-background/80 backdrop-blur-sm border-t mobile-safe-bottom">
             <div className="flex justify-center items-center gap-6">
               {/* Mute Toggle */}
-              <Button
-                variant={isMuted ? "destructive" : "secondary"}
-                size="lg"
-                onClick={toggleMute}
-                className="rounded-full w-16 h-16"
-              >
+              <Button variant={isMuted ? "destructive" : "secondary"} size="lg" onClick={toggleMute} className="rounded-full w-16 h-16">
                 {isMuted ? <MicOff className="h-6 w-6" /> : <Mic className="h-6 w-6" />}
               </Button>
 
               {/* End Call */}
-              <Button
-                variant="destructive"
-                size="lg"
-                onClick={handleEndCall}
-                className="rounded-full w-20 h-20 bg-red-500 hover:bg-red-600"
-                disabled={conversationState.isConnecting}
-              >
+              <Button variant="destructive" size="lg" onClick={handleEndCall} className="rounded-full w-20 h-20 bg-red-500 hover:bg-red-600" disabled={conversationState.isConnecting}>
                 <PhoneOff className="h-8 w-8" />
               </Button>
 
               {/* Speaker Toggle */}
-              <Button
-                variant={outputMode === 'speaker' ? "default" : "secondary"}
-                size="lg"
-                onClick={toggleAudioRoute}
-                disabled={isAudioChanging}
-                className="rounded-full w-16 h-16"
-                aria-label={outputMode === 'speaker' ? 'Switch to earpiece' : 'Switch to speaker'}
-              >
+              <Button variant={outputMode === 'speaker' ? "default" : "secondary"} size="lg" onClick={toggleAudioRoute} disabled={isAudioChanging} className="rounded-full w-16 h-16" aria-label={outputMode === 'speaker' ? 'Switch to earpiece' : 'Switch to speaker'}>
                 {outputMode === 'speaker' ? <Volume2 className="h-6 w-6" /> : <Phone className="h-6 w-6" />}
               </Button>
             </div>
@@ -302,8 +242,6 @@ const LiveCall = () => {
 
         </div>
       </MobileLayout>
-    </>
-  );
+    </>;
 };
-
 export default LiveCall;
