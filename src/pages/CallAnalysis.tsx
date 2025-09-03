@@ -128,16 +128,20 @@ const CallAnalysis = () => {
               console.log('✅ Using database fallback data');
               const metrics = conversationData.performance_metrics as any;
               
-              const dbAnalysis: AnalysisData = {
-                score: metrics?.overall_score || 50,
-                feedback: metrics?.feedback || "Analysis retrieved from database backup.",
-                strengths: metrics?.strengths || ["Completed conversation"],
-                improvements: metrics?.improvements || ["Continue practicing"],
-                recommendations: metrics?.recommendations || ["Keep practicing regular conversations"],
-                exchanges: (conversationData.conversation_flow as any[]) || [],
-                duration: metrics?.duration || 0,
-                sessionConfig: metrics?.session_config || {}
-              };
+               const dbAnalysis: AnalysisData = {
+                 score: metrics?.final_score || 50,
+                 feedback: "Analysis retrieved from database backup. This shows your conversation performance based on the AI coaching system.",
+                 strengths: metrics?.skill_assessment ? Object.entries(metrics.skill_assessment)
+                   .filter(([_, score]) => (score as number) >= 70)
+                   .map(([skill, score]) => `Good ${skill.replace('_', ' ')}: ${score}%`) : ["Completed conversation"],
+                 improvements: metrics?.skill_assessment ? Object.entries(metrics.skill_assessment)
+                   .filter(([_, score]) => (score as number) < 60)
+                   .map(([skill, score]) => `Improve ${skill.replace('_', ' ')}: ${score}%`) : ["Continue practicing"],
+                 recommendations: ["Practice regularly to improve conversation skills", "Focus on weaker skill areas", "Try different conversation scenarios"],
+                 exchanges: [], // conversation_flow is an object, not an array of exchanges
+                 duration: Math.round((new Date(metrics?.end_time).getTime() - new Date(metrics?.start_time).getTime()) / 1000) || 0,
+                 sessionConfig: metrics?.session_config || { replayMode: 'Standard Practice' }
+               };
               
               setAnalysisData(dbAnalysis);
               
