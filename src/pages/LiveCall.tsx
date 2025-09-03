@@ -26,6 +26,10 @@ const LiveCall = () => {
   const [callStartTime] = useState(Date.now());
   const [currentTime, setCurrentTime] = useState(Date.now());
   const [isMuted, setIsMuted] = useState(false);
+  
+  // Component mount tracking to prevent premature cleanup
+  const isComponentMounted = React.useRef(true);
+  
   const {
     outputMode,
     isChanging: isAudioChanging,
@@ -97,21 +101,27 @@ const LiveCall = () => {
       return;
     }
 
-    if (conversationState.status === 'idle' && !conversationState.error) {
-      console.log('Auto-starting conversation for session:', sessionId);
-      handleStartConversation();
-    }
-  }, [sessionId, conversationState.status, conversationState.error]);
-
-  // Cleanup on unmount
-  useEffect(() => {
-    return () => {
-      if (conversationState.isActive || conversationState.isConnecting) {
-        console.log('LiveCall unmounting, ending conversation...');
-        endConversation();
+    // Add delay to prevent React Strict Mode double mounting issues
+    const timeoutId = setTimeout(() => {
+      if (isComponentMounted.current && conversationState.status === 'idle' && !conversationState.error) {
+        console.log('Auto-starting conversation for session:', sessionId);
+        handleStartConversation();
       }
+    }, 100);
+
+    return () => clearTimeout(timeoutId);
+  }, [sessionId]);
+  
+  // Component mount tracking
+  React.useEffect(() => {
+    isComponentMounted.current = true;
+    
+    return () => {
+      isComponentMounted.current = false;
+      console.log('LiveCall component unmounting...');
+      // The cleanup will be handled by the useRealtimeAIChat hook
     };
-  }, [conversationState.isActive, conversationState.isConnecting, endConversation]);
+  }, []);
   const formatCallDuration = (startTime: number, currentTime: number) => {
     const duration = Math.floor((currentTime - startTime) / 1000);
     const minutes = Math.floor(duration / 60);
@@ -166,18 +176,24 @@ const LiveCall = () => {
   };
   const handleEndCall = async () => {
     try {
+      console.log('User initiated call end');
       await endConversation();
-      // Navigate to analysis page with session data
-      navigate(`/call-analysis/${sessionId}`, {
-        state: {
-          sessionConfig,
-          duration: Math.floor((currentTime - callStartTime) / 1000),
-          score: conversationState.currentScore,
-          exchanges: conversationState.exchangeCount,
-          analysis: finalAnalysis || null
-        }
-      });
+      
+      // Small delay to ensure conversation analysis completes
+      setTimeout(() => {
+        navigate(`/call-analysis/${sessionId}`, {
+          state: {
+            sessionConfig,
+            duration: Math.floor((currentTime - callStartTime) / 1000),
+            score: conversationState.currentScore,
+            exchanges: conversationState.exchangeCount,
+            analysis: finalAnalysis || null
+          }
+        });
+      }, 1500);
+      
     } catch (error) {
+      console.error('Error ending call:', error);
       toast({
         title: "Error",
         description: "Failed to end the conversation properly.",

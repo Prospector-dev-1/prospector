@@ -1,4 +1,4 @@
-import { useState, useRef, useCallback } from 'react';
+import { useState, useRef, useCallback, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 
 
@@ -168,11 +168,27 @@ export const useRealtimeAIChat = () => {
         console.log('Vapi message:', message);
         
         if (message.type === 'transcript' && message.transcript) {
-          sessionTranscript.current += message.transcript + '\n';
-          setConversationState(prev => ({
-            ...prev,
-            transcript: sessionTranscript.current
-          }));
+          const transcriptText = typeof message.transcript === 'object' 
+            ? message.transcript.text || JSON.stringify(message.transcript)
+            : message.transcript;
+            
+          sessionTranscript.current += transcriptText + '\n';
+          setConversationState(prev => {
+            const newState = {
+              ...prev,
+              transcript: sessionTranscript.current,
+              exchangeCount: prev.exchangeCount + (transcriptText.trim().length > 0 ? 1 : 0)
+            };
+            Object.defineProperty(newState, 'isActive', {
+              get() { return this.status === 'active'; },
+              enumerable: true
+            });
+            Object.defineProperty(newState, 'isConnecting', {
+              get() { return this.status === 'connecting'; },
+              enumerable: true
+            });
+            return newState as ConversationState;
+          });
         }
       });
 
@@ -183,6 +199,18 @@ export const useRealtimeAIChat = () => {
       throw error;
     }
   }, []);
+
+  // Cleanup on unmount - avoid dependency array to prevent unnecessary re-runs
+  useEffect(() => {
+    return () => {
+      // Only cleanup if there's an active VAPI instance
+      if (vapiInstance.current) {
+        console.log('useRealtimeAIChat cleanup: ending conversation...');
+        vapiInstance.current.stop().catch(console.error);
+        vapiInstance.current = null;
+      }
+    };
+  }, []); // Empty dependency array to run only on mount/unmount
 
   const analyzeUserResponse = useCallback((exchangeCount: number) => {
     const hints = [
@@ -389,12 +417,22 @@ export const useRealtimeAIChat = () => {
 
   const handleConversationEnd = useCallback(async () => {
     try {
-      if (!sessionConfigRef.current?.sessionId || !sessionTranscript.current) {
-        console.log('No session to analyze');
+      // Check if we have sufficient session data and transcript
+      if (!sessionConfigRef.current?.sessionId) {
+        console.log('No session ID to analyze');
         return;
       }
 
-      console.log('Analyzing enhanced conversation...');
+      if (!sessionTranscript.current || sessionTranscript.current.trim().length < 10) {
+        console.log('No meaningful transcript to analyze:', sessionTranscript.current?.length || 0, 'characters');
+        return;
+      }
+
+      console.log('Analyzing enhanced conversation...', {
+        sessionId: sessionConfigRef.current.sessionId,
+        transcriptLength: sessionTranscript.current.length,
+        exchangeCount: conversationState.exchangeCount
+      });
 
       // Use enhanced conversation analysis
       const { data, error } = await supabase.functions.invoke('analyze-enhanced-conversation', {
