@@ -14,7 +14,7 @@ interface CoachingHint {
 }
 
 export interface ConversationState {
-  status: 'idle' | 'connecting' | 'active' | 'ending' | 'ended';
+  status: 'idle' | 'connecting' | 'active' | 'ending' | 'ended' | 'error';
   isConnected: boolean;
   transcript: string;
   exchangeCount: number;
@@ -24,9 +24,11 @@ export interface ConversationState {
   sessionId?: string;
   prospectProfile?: any;
   personalityState?: string;
-  // Backward compatibility
-  isActive: boolean;
-  isConnecting: boolean;
+  error?: string;
+  retryAvailable?: boolean;
+  // Computed properties for backward compatibility
+  get isActive(): boolean;
+  get isConnecting(): boolean;
 }
 
 export interface FinalAnalysis {
@@ -41,16 +43,28 @@ export interface FinalAnalysis {
 }
 
 export const useRealtimeAIChat = () => {
-  const [conversationState, setConversationState] = useState<ConversationState>({
-    status: 'idle',
-    isConnected: false,
-    transcript: '',
-    exchangeCount: 0,
-    currentScore: 0,
-    hints: [],
-    // Backward compatibility
-    isActive: false,
-    isConnecting: false,
+  const [conversationState, setConversationState] = useState<ConversationState>(() => {
+    const baseState = {
+      status: 'idle' as const,
+      isConnected: false,
+      transcript: '',
+      exchangeCount: 0,
+      currentScore: 0,
+      hints: [],
+    };
+    
+    // Add computed properties
+    Object.defineProperty(baseState, 'isActive', {
+      get() { return this.status === 'active'; },
+      enumerable: true
+    });
+    
+    Object.defineProperty(baseState, 'isConnecting', {
+      get() { return this.status === 'connecting'; },
+      enumerable: true
+    });
+    
+    return baseState as ConversationState;
   });
 
   const [finalAnalysis, setFinalAnalysis] = useState<FinalAnalysis | null>(null);
@@ -97,24 +111,45 @@ export const useRealtimeAIChat = () => {
 
       vapi.on('call-start', () => {
         console.log('Call started');
-        setConversationState(prev => ({
-          ...prev,
-          status: 'active',
-          isConnected: true,
-          isActive: true,
-          isConnecting: false
-        }));
+        setConversationState(prev => {
+          const newState = {
+            ...prev,
+            status: 'active' as const,
+            isConnected: true,
+            error: undefined,
+            retryAvailable: false
+          };
+          // Redefine computed properties
+          Object.defineProperty(newState, 'isActive', {
+            get() { return this.status === 'active'; },
+            enumerable: true
+          });
+          Object.defineProperty(newState, 'isConnecting', {
+            get() { return this.status === 'connecting'; },
+            enumerable: true
+          });
+          return newState as ConversationState;
+        });
       });
 
       vapi.on('call-end', () => {
         console.log('Call ended');
-        setConversationState(prev => ({
-          ...prev,
-          status: 'ended',
-          isConnected: false,
-          isActive: false,
-          isConnecting: false
-        }));
+        setConversationState(prev => {
+          const newState = {
+            ...prev,
+            status: 'ended' as const,
+            isConnected: false
+          };
+          Object.defineProperty(newState, 'isActive', {
+            get() { return this.status === 'active'; },
+            enumerable: true
+          });
+          Object.defineProperty(newState, 'isConnecting', {
+            get() { return this.status === 'connecting'; },
+            enumerable: true
+          });
+          return newState as ConversationState;
+        });
         
         setTimeout(() => {
           handleConversationEnd();
@@ -183,19 +218,38 @@ export const useRealtimeAIChat = () => {
     gamificationMode: GamificationMode = 'none',
     customProspectId?: string
   ) => {
+    console.log('=== Starting Enhanced Conversation ===', {
+      sessionId,
+      replayMode,
+      prospectPersonality,
+      gamificationMode,
+      customProspectId
+    });
+
     try {
-      setConversationState(prev => ({
-        ...prev,
-        status: 'connecting',
-        selectedMoment,
-        sessionId,
-        exchangeCount: 0,
-        currentScore: 0,
-        hints: [],
-        transcript: '',
-        isActive: false,
-        isConnecting: true
-      }));
+      setConversationState(prev => {
+        const newState = {
+          ...prev,
+          status: 'connecting' as const,
+          selectedMoment,
+          sessionId,
+          exchangeCount: 0,
+          currentScore: 0,
+          hints: [],
+          transcript: '',
+          error: undefined,
+          retryAvailable: false
+        };
+        Object.defineProperty(newState, 'isActive', {
+          get() { return this.status === 'active'; },
+          enumerable: true
+        });
+        Object.defineProperty(newState, 'isConnecting', {
+          get() { return this.status === 'connecting'; },
+          enumerable: true
+        });
+        return newState as ConversationState;
+      });
 
       sessionTranscript.current = '';
       setFinalAnalysis(null);
@@ -212,7 +266,8 @@ export const useRealtimeAIChat = () => {
         sessionId
       };
 
-      // Use enhanced AI conversation start
+      // Use enhanced AI conversation start with comprehensive error handling
+      console.log('Invoking start-enhanced-ai-conversation...');
       const { data, error } = await supabase.functions.invoke('start-enhanced-ai-conversation', {
         body: {
           sessionId,
@@ -224,7 +279,17 @@ export const useRealtimeAIChat = () => {
         }
       });
 
-      if (error) throw error;
+      if (error) {
+        console.error('Supabase function error:', error);
+        throw new Error(error.message || 'Failed to start conversation');
+      }
+
+      if (!data || !data.assistantId) {
+        console.error('Invalid response from start-enhanced-ai-conversation:', data);
+        throw new Error('Invalid response from conversation service');
+      }
+
+      console.log('Enhanced AI conversation started successfully:', data);
 
       // Store prospect profile in state
       setConversationState(prev => ({
@@ -238,14 +303,39 @@ export const useRealtimeAIChat = () => {
       // Coaching hints disabled
 
     } catch (error) {
-      console.error('Error starting enhanced conversation:', error);
-      setConversationState(prev => ({
-        ...prev,
-        status: 'idle',
-        isActive: false,
-        isConnecting: false
-      }));
-      throw error;
+      console.error('=== Error starting enhanced conversation ===', error);
+      
+      let errorMessage = 'Failed to start conversation';
+      let retryAvailable = false;
+      
+      if (error.message?.includes('busy') || error.message?.includes('429')) {
+        errorMessage = 'AI service is currently busy. Please try again in a moment.';
+        retryAvailable = true;
+      } else if (error.message?.includes('authentication')) {
+        errorMessage = 'Authentication required. Please sign in again.';
+      } else if (error.message?.includes('configuration')) {
+        errorMessage = 'Service configuration error. Please contact support.';
+      }
+      
+      setConversationState(prev => {
+        const newState = {
+          ...prev,
+          status: 'error' as const,
+          error: errorMessage,
+          retryAvailable
+        };
+        Object.defineProperty(newState, 'isActive', {
+          get() { return this.status === 'active'; },
+          enumerable: true
+        });
+        Object.defineProperty(newState, 'isConnecting', {
+          get() { return this.status === 'connecting'; },
+          enumerable: true
+        });
+        return newState as ConversationState;
+      });
+      
+      throw new Error(errorMessage);
     }
   }, [initializeVapi, addCoachingHint]);
 
