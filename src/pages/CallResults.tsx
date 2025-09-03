@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -11,6 +11,7 @@ import SEO from '@/components/SEO';
 import { useToast } from '@/hooks/use-toast';
 import MobileLayout from '@/components/MobileLayout';
 import SmartBackButton from '@/components/SmartBackButton';
+
 interface CallRecord {
   id: string;
   difficulty_level: number;
@@ -27,64 +28,88 @@ interface CallRecord {
   transcript: string;
   ai_feedback: string;
   created_at: string;
+  call_status: string;
 }
-type CoachingItem = {
-  assistant_said: string;
-  your_response: string;
-  issue: string;
-  better_response: string;
-  why_better: string;
-  category: string;
-};
-type CoachingResponse = {
-  success?: boolean;
-  coaching: CoachingItem[];
-  summary?: string;
-  tips?: string[];
-  credits_remaining?: number;
-};
+
 const CallResults = () => {
-  const {
-    callId
-  } = useParams<{
-    callId: string;
-  }>();
+  const { callId } = useParams<{ callId: string }>();
   const navigate = useNavigate();
-  const {
-    user
-  } = useAuth();
-  const {
-    toast
-  } = useToast();
+  const { user } = useAuth();
+  const { toast } = useToast();
   const [callRecord, setCallRecord] = useState<CallRecord | null>(null);
   const [loading, setLoading] = useState(true);
   const [analysisError, setAnalysisError] = useState<string | null>(null);
-  useEffect(() => {
-    if (callId && user) {
-      fetchCallRecord();
-    }
-  }, [callId, user]);
-  const fetchCallRecord = async () => {
-    if (!callId || !user) return;
-    try {
-      const {
-        data,
-        error
-      } = await supabase.from('calls').select('*').eq('id', callId).eq('user_id', user.id).single();
-      if (error) {
-        console.error('Error fetching call record:', error);
-        navigate('/');
+
+  const pollForAnalysisCompletion = useCallback(async () => {
+    let attempts = 0;
+    const maxAttempts = 60; // Poll for up to 60 seconds
+
+    const poll = async () => {
+      if (attempts >= maxAttempts) {
+        setAnalysisError('Analysis is taking too long. Please try refreshing the page.');
+        setLoading(false);
         return;
       }
+
+      attempts++;
+
+      try {
+        const { data, error } = await supabase
+          .from('calls')
+          .select('*')
+          .eq('id', callId)
+          .eq('user_id', user.id)
+          .single();
+
+        if (error) {
+          throw error;
+        }
+
+        if (data) {
+          if (data.overall_score !== null) {
+            setCallRecord(data);
+            setLoading(false);
+          } else if (data.call_status === 'failed') {
+            setAnalysisError('Call analysis failed. This may be due to external service issues.');
+            setLoading(false);
+          } else {
+            setTimeout(poll, 1000);
+          }
+        }
+      } catch (error) {
+        console.error('Error polling for analysis completion:', error);
+        setAnalysisError('An error occurred while fetching analysis results.');
+        setLoading(false);
+      }
+    };
+
+    poll();
+  }, [callId, user]);
+
+  const fetchCallRecord = useCallback(async () => {
+    if (!callId || !user) return;
+    setLoading(true);
+    setAnalysisError(null);
+
+    try {
+      const { data, error } = await supabase
+        .from('calls')
+        .select('*')
+        .eq('id', callId)
+        .eq('user_id', user.id)
+        .single();
+
+      if (error) {
+        throw error;
+      }
+
       setCallRecord(data);
 
-      // Check if analysis is complete, failed, or still in progress
       if (data && data.overall_score === null) {
         if (data.call_status === 'failed') {
           setAnalysisError('Call analysis failed. This may be due to external service issues.');
           setLoading(false);
         } else {
-          console.log('Analysis not complete, starting polling...');
           pollForAnalysisCompletion();
         }
       } else {
@@ -92,71 +117,48 @@ const CallResults = () => {
       }
     } catch (error) {
       console.error('Error fetching call record:', error);
+      toast({ title: 'Error', description: 'Could not fetch call record.', variant: 'destructive' });
       navigate('/');
     }
-  };
-  const pollForAnalysisCompletion = async () => {
-    let attempts = 0;
-    const maxAttempts = 60; // Poll for up to 60 seconds
+  }, [callId, user, navigate, toast, pollForAnalysisCompletion]);
 
-    const pollInterval = setInterval(async () => {
-      attempts++;
-      if (attempts >= maxAttempts) {
-        console.log('Max polling attempts reached');
-        clearInterval(pollInterval);
-        setAnalysisError('Analysis is taking too long. Please try refreshing the page.');
-        setLoading(false);
-        return;
-      }
-      try {
-        const {
-          data,
-          error
-        } = await supabase.from('calls').select('*').eq('id', callId).eq('user_id', user.id).single();
-        if (!error && data) {
-          if (data.overall_score !== null) {
-            console.log('Analysis completed, updating call record');
-            setCallRecord(data);
-            setLoading(false);
-            clearInterval(pollInterval);
-          } else if (data.call_status === 'failed') {
-            setAnalysisError('Call analysis failed. This may be due to external service issues.');
-            setLoading(false);
-            clearInterval(pollInterval);
-          }
-        }
-      } catch (error) {
-        console.error('Error polling for analysis completion:', error);
-      }
-    }, 1000); // Poll every second
-  };
+  useEffect(() => {
+    fetchCallRecord();
+  }, [fetchCallRecord]);
+
   const retryAnalysis = async () => {
     if (!callId || !user) return;
+    
     setLoading(true);
     setAnalysisError(null);
+
     try {
-      // Reset call status to trigger reanalysis
-      const {
-        error
-      } = await supabase.from('calls').update({
-        call_status: 'started'
-      }).eq('id', callId).eq('user_id', user.id);
+      const { error } = await supabase
+        .from('calls')
+        .update({ call_status: 'started', overall_score: null, ai_feedback: null })
+        .eq('id', callId)
+        .eq('user_id', user.id);
+
       if (error) {
         throw error;
       }
 
-      // Start polling again
-      pollForAnalysisCompletion();
       toast({
         title: "Analysis restarted",
         description: "We're processing your call again. This may take a moment."
       });
+
+      pollForAnalysisCompletion();
+
     } catch (error) {
       console.error('Error retrying analysis:', error);
       setAnalysisError('Failed to restart analysis. Please try again.');
       setLoading(false);
     }
   };
+  
+  // ... rest of the component remains the same
+
   const handleCoaching = () => {
     navigate(`/call-coaching/${callId}`);
   };
@@ -252,7 +254,7 @@ const CallResults = () => {
         <div className="text-center">
           <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto"></div>
           <p className="mt-4 text-muted-foreground">
-            {analysisError ? 'Retrying analysis...' : 'Analyzing your call performance...'}
+            {'Analyzing your call performance...'}
           </p>
           <p className="text-sm text-muted-foreground mt-2">This may take up to a minute</p>
         </div>
