@@ -53,43 +53,85 @@ const CallAnalysis = () => {
       try {
         setLoading(true);
         
-        // If we have analysis data from navigation state, use it (real results from edge function)
+        // If we have real analysis data from navigation state
         if ((location.state as any)?.analysis) {
           const state = location.state as any;
           const a = state.analysis;
-          const realAnalysis: AnalysisData = {
+          
+          console.log('📊 Loading analysis from navigation state:', {
             score: a.score,
-            feedback: a.feedback,
+            feedbackLength: a.feedback?.length,
+            strengthsCount: a.strengths?.length,
+            fallbackUsed: state.fallbackUsed,
+            timedOut: state.timedOut
+          });
+          
+          const realAnalysis: AnalysisData = {
+            score: a.score || 0,
+            feedback: a.feedback || 'Analysis completed',
             strengths: Array.isArray(a.strengths) ? a.strengths : [],
             improvements: Array.isArray(a.improvements) ? a.improvements : [],
             recommendations: Array.isArray(a.recommendations) ? a.recommendations : [],
-            exchanges: [],
+            exchanges: a.exchanges || [],
             duration: state.duration || 0,
             sessionConfig: state.sessionConfig || {}
           };
+          
           setAnalysisData(realAnalysis);
+          
+          // Show feedback on data quality
+          if (state.fallbackUsed) {
+            toast({
+              title: 'Analysis Complete',
+              description: 'Used fallback analysis due to processing issues',
+              variant: 'default'
+            });
+          } else if (state.timedOut) {
+            toast({
+              title: 'Analysis Timeout',
+              description: 'Analysis took longer than expected - showing basic results',
+              variant: 'default'
+            });
+          }
+          
         } else if (location.state) {
-          // Minimal fallback when only basic state is available
+          // Basic fallback when only minimal state is available
           const state = location.state as any;
+          console.log('📊 Loading basic state fallback:', state);
+          
           setAnalysisData({
             score: state.score ?? 0,
-            feedback: 'Analysis details were not captured. Please finish the call to generate a full analysis.',
-            strengths: [],
-            improvements: [],
-            recommendations: [],
+            feedback: 'Analysis data was incomplete. The conversation may have been too short or ended unexpectedly.',
+            strengths: ['Attempted the practice session'],
+            improvements: ['Complete the conversation for detailed feedback'],
+            recommendations: ['Try a longer practice session', 'Speak clearly to the AI prospect'],
             exchanges: [],
             duration: state.duration || 0,
             sessionConfig: state.sessionConfig || {}
           });
-        } else {
-          // No state: show a message (could fetch from DB in the future)
+          
           toast({
-            title: 'Loading Analysis',
-            description: 'No analysis found for this session.',
+            title: 'Limited Analysis',
+            description: 'Analysis data was incomplete - try a longer conversation next time',
+            variant: 'default'
           });
+          
+        } else {
+          // No navigation state at all
+          console.log('❌ No analysis data found in navigation state');
+          
+          toast({
+            title: 'No Analysis Data',
+            description: 'Could not load analysis for this session. It may have expired.',
+            variant: 'destructive'
+          });
+          
+          // Could implement database fallback here in the future
+          setAnalysisData(null);
         }
+        
       } catch (error) {
-        console.error('Error fetching analysis:', error);
+        console.error('Error processing analysis data:', error);
         toast({
           title: "Error",
           description: "Failed to load call analysis.",
@@ -101,7 +143,7 @@ const CallAnalysis = () => {
     };
 
     fetchAnalysisData();
-  }, [sessionId, location.state]);
+  }, [sessionId, location.state, toast]);
 
   const formatDuration = (seconds: number) => {
     const minutes = Math.floor(seconds / 60);
@@ -156,7 +198,10 @@ const CallAnalysis = () => {
         <div className="flex items-center justify-center min-h-screen">
           <div className="text-center space-y-4">
             <RefreshCw className="h-8 w-8 animate-spin mx-auto text-primary" />
-            <p className="text-muted-foreground">Analyzing your call...</p>
+            <div className="space-y-2">
+              <p className="font-medium">Analyzing your call...</p>
+              <p className="text-sm text-muted-foreground">This may take a few moments</p>
+            </div>
           </div>
         </div>
       </MobileLayout>
@@ -167,12 +212,27 @@ const CallAnalysis = () => {
     return (
       <MobileLayout>
         <div className="flex items-center justify-center min-h-screen">
-          <div className="text-center space-y-4">
+          <div className="text-center space-y-4 max-w-md mx-auto p-4">
             <AlertCircle className="h-8 w-8 mx-auto text-destructive" />
-            <p className="text-muted-foreground">Failed to load analysis data</p>
-            <Button onClick={() => navigate('/ai-replay')}>
-              Back to Practice
-            </Button>
+            <div className="space-y-2">
+              <h2 className="text-lg font-semibold">Analysis Not Available</h2>
+              <p className="text-sm text-muted-foreground">
+                We couldn't load analysis data for this session. This might happen if:
+              </p>
+              <ul className="text-xs text-muted-foreground text-left space-y-1">
+                <li>• The conversation was too short</li>
+                <li>• The session expired</li>
+                <li>• There was a processing error</li>
+              </ul>
+            </div>
+            <div className="flex flex-col gap-2">
+              <Button onClick={() => navigate('/ai-replay')}>
+                Start New Practice
+              </Button>
+              <Button variant="outline" onClick={() => navigate('/dashboard')}>
+                Back to Dashboard
+              </Button>
+            </div>
           </div>
         </div>
       </MobileLayout>

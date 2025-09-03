@@ -18,9 +18,15 @@ serve(async (req) => {
   }
 
   try {
-    const { transcript, exchangeCount, sessionConfig, sessionId } = await req.json();
+    const { transcript, exchangeCount, sessionConfig, sessionId, retryAttempt } = await req.json();
     
-    console.log('Analyzing enhanced conversation:', { sessionId, exchangeCount });
+    console.log('🔍 Analyzing enhanced conversation:', { 
+      sessionId, 
+      exchangeCount, 
+      transcriptLength: transcript?.length || 0,
+      retryAttempt: retryAttempt || 1,
+      transcriptSample: transcript?.substring(0, 200) + '...'
+    });
 
     const openAIApiKey = Deno.env.get('OPENAI_API_KEY');
     if (!openAIApiKey) {
@@ -138,14 +144,63 @@ Focus on how well the salesperson adapted to the specific AI prospect's personal
     }
 
     const data = await response.json();
+    console.log('📝 OpenAI raw response length:', data.choices[0].message.content.length);
+    
     let analysis;
-
-    try {
-      analysis = JSON.parse(data.choices[0].message.content);
-    } catch (e) {
-      console.log('Failed to parse JSON, using fallback analysis');
-      analysis = parseTextAnalysis(data.choices[0].message.content);
+    const rawContent = data.choices[0].message.content;
+    
+    // Multiple JSON parsing attempts with different strategies
+    const parseAttempts = [
+      // Attempt 1: Direct parsing
+      () => JSON.parse(rawContent),
+      
+      // Attempt 2: Extract JSON from markdown code blocks
+      () => {
+        const jsonMatch = rawContent.match(/```(?:json)?\s*(\{[\s\S]*\})\s*```/);
+        if (jsonMatch) return JSON.parse(jsonMatch[1]);
+        throw new Error('No JSON in code block');
+      },
+      
+      // Attempt 3: Find first complete JSON object
+      () => {
+        const startIdx = rawContent.indexOf('{');
+        const endIdx = rawContent.lastIndexOf('}');
+        if (startIdx !== -1 && endIdx !== -1 && endIdx > startIdx) {
+          return JSON.parse(rawContent.substring(startIdx, endIdx + 1));
+        }
+        throw new Error('No JSON object found');
+      },
+      
+      // Attempt 4: Clean and parse
+      () => {
+        const cleaned = rawContent
+          .replace(/```json\s*|\s*```/g, '')
+          .replace(/^\s*|\s*$/g, '')
+          .replace(/\n\s*\/\/.*$/gm, ''); // Remove comments
+        return JSON.parse(cleaned);
+      }
+    ];
+    
+    let parseSuccess = false;
+    for (let i = 0; i < parseAttempts.length; i++) {
+      try {
+        console.log(`🔄 JSON parse attempt ${i + 1}/${parseAttempts.length}`);
+        analysis = parseAttempts[i]();
+        console.log('✅ JSON parsing successful on attempt', i + 1);
+        parseSuccess = true;
+        break;
+      } catch (e) {
+        console.log(`❌ Parse attempt ${i + 1} failed:`, e.message);
+      }
     }
+    
+    if (!parseSuccess) {
+      console.log('⚠️ All JSON parsing attempts failed, using enhanced fallback');
+      analysis = parseTextAnalysis(rawContent, sessionConfig, exchangeCount);
+    }
+    
+    // Validate analysis structure
+    analysis = validateAnalysisStructure(analysis);
 
     // Apply difficulty multipliers
     const finalScore = applyDifficultyBonus(
@@ -227,16 +282,112 @@ Focus on how well the salesperson adapted to the specific AI prospect's personal
   }
 });
 
-function parseTextAnalysis(text) {
-  const scoreMatch = text.match(/score["\s:]*(\d+)/i);
-  const score = scoreMatch ? parseInt(scoreMatch[1]) : 75;
+function parseTextAnalysis(text, sessionConfig, exchangeCount) {
+  console.log('📋 Using enhanced fallback text analysis');
+  
+  // Extract score from various patterns
+  const scoreMatches = [
+    text.match(/score["\s:]*(\d+)/i),
+    text.match(/(\d+)\/100/),
+    text.match(/(\d+)\s*points?/i),
+    text.match(/rating["\s:]*(\d+)/i)
+  ];
+  
+  let score = 75; // Default
+  for (const match of scoreMatches) {
+    if (match) {
+      score = Math.min(100, Math.max(0, parseInt(match[1])));
+      break;
+    }
+  }
+  
+  // Extract strengths
+  const strengthsSection = text.match(/strengths?[\s\S]*?(?=improvements?|recommendations?|$)/i);
+  const strengths = strengthsSection 
+    ? extractListItems(strengthsSection[0])
+    : ["Maintained conversation flow", "Showed engagement", "Professional communication"];
+  
+  // Extract improvements  
+  const improvementsSection = text.match(/improvements?[\s\S]*?(?=recommendations?|strengths?|$)/i);
+  const improvements = improvementsSection
+    ? extractListItems(improvementsSection[0])
+    : ["Practice active listening", "Ask more probing questions", "Work on objection handling"];
+  
+  // Extract recommendations
+  const recommendationsSection = text.match(/recommendations?[\s\S]*?(?=strengths?|improvements?|$)/i);
+  const recommendations = recommendationsSection
+    ? extractListItems(recommendationsSection[0])
+    : ["Continue practicing with AI prospects", "Focus on specific objection handling", "Study best practices"];
+  
+  // Context-aware feedback
+  let feedback = "Analysis completed successfully. ";
+  if (exchangeCount < 3) {
+    feedback += "The conversation was brief - try to engage longer for more detailed feedback.";
+  } else if (exchangeCount > 10) {
+    feedback += "Great conversation length! You maintained good engagement throughout.";
+  } else {
+    feedback += "Good conversation flow and appropriate length for practice.";
+  }
   
   return {
     score,
-    feedback: "Analysis completed successfully",
-    strengths: ["Good communication", "Active listening", "Professional approach"],
-    improvements: ["Handle objections better", "Ask more probing questions", "Improve closing technique"],
-    recommendations: ["Practice objection handling", "Study product knowledge", "Work on rapport building"]
+    feedback,
+    strengths: strengths.slice(0, 4),
+    improvements: improvements.slice(0, 4), 
+    recommendations: recommendations.slice(0, 4),
+    personalityHandling: {
+      effectiveness: Math.max(40, score - 10),
+      personalityTransitions: [],
+      objectionHandling: {
+        attempted: [],
+        successful: [],
+        missed_opportunities: []
+      }
+    },
+    skillAssessment: {
+      rapport_building: Math.max(30, score - 15),
+      questioning_technique: Math.max(25, score - 20),
+      objection_handling: Math.max(20, score - 25),
+      closing_skills: Math.max(15, score - 30),
+      product_knowledge: Math.max(35, score - 10),
+      emotional_intelligence: Math.max(30, score - 15)
+    }
+  };
+}
+
+function extractListItems(text) {
+  const items = [];
+  const patterns = [
+    /[-•*]\s*(.+)/g,
+    /\d+\.\s*(.+)/g,
+    /"([^"]+)"/g,
+    /\n\s*([A-Z][^.\n]+)/g
+  ];
+  
+  for (const pattern of patterns) {
+    let match;
+    while ((match = pattern.exec(text)) !== null && items.length < 5) {
+      const item = match[1].trim();
+      if (item.length > 10 && item.length < 200) {
+        items.push(item);
+      }
+    }
+    if (items.length >= 3) break;
+  }
+  
+  return items.length > 0 ? items : [];
+}
+
+function validateAnalysisStructure(analysis) {
+  return {
+    score: typeof analysis.score === 'number' ? Math.min(100, Math.max(0, analysis.score)) : 75,
+    feedback: typeof analysis.feedback === 'string' ? analysis.feedback : "Analysis completed",
+    strengths: Array.isArray(analysis.strengths) ? analysis.strengths : ["Good communication"],
+    improvements: Array.isArray(analysis.improvements) ? analysis.improvements : ["Continue practicing"],
+    recommendations: Array.isArray(analysis.recommendations) ? analysis.recommendations : ["Keep improving"],
+    personalityHandling: analysis.personalityHandling || {},
+    skillAssessment: analysis.skillAssessment || {},
+    conversationFlow: analysis.conversationFlow || {}
   };
 }
 

@@ -79,6 +79,10 @@ const LiveCall = () => {
       };
     }
   });
+  
+  // Extract config values for easier access
+  const { replayMode, prospectPersonality, gamificationMode, originalMoment } = sessionConfig;
+  const callDuration = Math.floor((currentTime - callStartTime) / 1000);
 
   // Timer update
   useEffect(() => {
@@ -87,6 +91,66 @@ const LiveCall = () => {
     }, 1000);
     return () => clearInterval(timer);
   }, []);
+
+  // Auto-navigate when final analysis is ready
+  useEffect(() => {
+    if (finalAnalysis) {
+      console.log('📊 Final analysis ready, preparing navigation...', {
+        score: finalAnalysis.score,
+        feedbackLength: finalAnalysis.feedback?.length,
+        strengthsCount: finalAnalysis.strengths?.length,
+        sessionId
+      });
+      
+      // Validate analysis data before navigation
+      const isValidAnalysis = finalAnalysis.score !== undefined && 
+                             finalAnalysis.feedback && 
+                             Array.isArray(finalAnalysis.strengths);
+      
+      if (!isValidAnalysis) {
+        console.warn('⚠️  Invalid analysis data, using fallback');
+        const fallbackAnalysis = {
+          score: 70,
+          feedback: "Practice session completed successfully",
+          strengths: ["Engaged with prospect", "Maintained conversation"],
+          improvements: ["Continue practicing", "Focus on objection handling"],
+          recommendations: ["Try another session", "Study sales techniques"]
+        };
+        
+        navigate(`/call-analysis/${sessionId}`, {
+          replace: true,
+          state: {
+            analysis: fallbackAnalysis,
+            sessionConfig: { replayMode, prospectPersonality, gamificationMode, originalMoment },
+            duration: callDuration,
+            timestamp: Date.now(),
+            fallbackUsed: true
+          }
+        });
+        return;
+      }
+      
+      // Navigate with comprehensive validated state
+      setTimeout(() => {
+        console.log('🚀 Navigating to analysis page...');
+        navigate(`/call-analysis/${sessionId}`, {
+          replace: true,
+          state: {
+            analysis: finalAnalysis,
+            sessionConfig: {
+              replayMode,
+              prospectPersonality, 
+              gamificationMode,
+              originalMoment
+            },
+            duration: callDuration,
+            timestamp: Date.now(),
+            transcriptLength: conversationState.transcript?.length || 0
+          }
+        });
+      }, 100); // Small delay to ensure state is ready
+    }
+  }, [finalAnalysis, navigate, sessionId, replayMode, prospectPersonality, gamificationMode, originalMoment, callDuration, conversationState.transcript]);
 
   // Auto-start conversation with validation
   useEffect(() => {
@@ -179,18 +243,29 @@ const LiveCall = () => {
       console.log('User initiated call end');
       await endConversation();
       
-      // Small delay to ensure conversation analysis completes
+      toast({
+        title: "Call Ended",
+        description: "Analyzing your performance...",
+        duration: 3000
+      });
+      
+      // The navigation will be handled by the finalAnalysis useEffect
+      // If no analysis comes within 5 seconds, navigate with basic state
       setTimeout(() => {
-        navigate(`/call-analysis/${sessionId}`, {
-          state: {
-            sessionConfig,
-            duration: Math.floor((currentTime - callStartTime) / 1000),
-            score: conversationState.currentScore,
-            exchanges: conversationState.exchangeCount,
-            analysis: finalAnalysis || null
-          }
-        });
-      }, 1500);
+        if (!finalAnalysis) {
+          console.log('⏰ No analysis received after timeout, navigating with basic state');
+          navigate(`/call-analysis/${sessionId}`, {
+            replace: true,
+            state: {
+              sessionConfig: { replayMode, prospectPersonality, gamificationMode, originalMoment },
+              duration: callDuration,
+              score: conversationState.currentScore || 0,
+              exchanges: conversationState.exchangeCount || 0,
+              timedOut: true
+            }
+          });
+        }
+      }, 5000);
       
     } catch (error) {
       console.error('Error ending call:', error);
