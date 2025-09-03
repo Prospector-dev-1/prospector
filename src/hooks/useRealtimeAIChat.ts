@@ -1,6 +1,7 @@
 import { useState, useRef, useCallback, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 
+
 export type ReplayMode = 'detailed' | 'quick' | 'focused';
 export type ProspectPersonality = 'skeptical' | 'enthusiastic' | 'professional' | 'aggressive' | 'analytical';
 export type GamificationMode = 'none' | 'speed' | 'difficulty' | 'empathy';
@@ -13,7 +14,7 @@ interface CoachingHint {
 }
 
 export interface ConversationState {
-  status: 'idle' | 'connecting' | 'active' | 'ending' | 'ended' | 'error' | 'analyzing';
+  status: 'idle' | 'connecting' | 'active' | 'ending' | 'ended' | 'error';
   isConnected: boolean;
   transcript: string;
   exchangeCount: number;
@@ -41,14 +42,6 @@ export interface FinalAnalysis {
   conversationFlow?: any;
 }
 
-/** Fallback holder if Vapi never marks a “final/full” transcript */
-let __longestTranscriptFallback = '';
-
-const STORAGE_KEYS = {
-  FINAL_TEXT: (sid: string) => `prospector_final_transcript_${sid}`,
-  LEGACY_TEXT: (sid: string) => `transcript_${sid}`, // keep for compatibility
-};
-
 export const useRealtimeAIChat = () => {
   const [conversationState, setConversationState] = useState<ConversationState>(() => {
     const baseState = {
@@ -59,26 +52,24 @@ export const useRealtimeAIChat = () => {
       currentScore: 0,
       hints: [],
     };
+    
+    // Add computed properties
     Object.defineProperty(baseState, 'isActive', {
       get() { return this.status === 'active'; },
       enumerable: true
     });
+    
     Object.defineProperty(baseState, 'isConnecting', {
       get() { return this.status === 'connecting'; },
       enumerable: true
     });
+    
     return baseState as ConversationState;
   });
 
   const [finalAnalysis, setFinalAnalysis] = useState<FinalAnalysis | null>(null);
-
   const vapiInstance = useRef<any>(null);
-
-  /** We no longer append chunks; we only keep the final/full blob. */
-  const finalTranscriptRef = useRef<string>('');     // preferred, provider-marked final blob
-  const longestSeenRef = useRef<string>('');         // fallback if provider lacks “final”
-  const sessionTranscript = useRef<string>('');      // legacy compatibility (do not append chunks)
-
+  const sessionTranscript = useRef<string>('');
   const sessionConfigRef = useRef<{
     replayMode: ReplayMode;
     prospectPersonality: ProspectPersonality;
@@ -94,10 +85,13 @@ export const useRealtimeAIChat = () => {
       type,
       timestamp: Date.now()
     };
+    
     setConversationState(prev => ({
       ...prev,
-      hints: [...prev.hints.slice(-2), hint] // keep last 3
+      hints: [...prev.hints.slice(-2), hint] // Keep only last 3 hints
     }));
+
+    // Auto-remove hint after 8 seconds
     setTimeout(() => {
       setConversationState(prev => ({
         ...prev,
@@ -106,21 +100,10 @@ export const useRealtimeAIChat = () => {
     }, 8000);
   }, []);
 
-  // Safety fallback tracker (do NOT append to UI/state)
-  const commitCandidateTranscript = useCallback((s: string) => {
-    const text = (s || '').trim();
-    if (!text) return;
-    if (text.length > (longestSeenRef.current?.length || 0)) {
-      longestSeenRef.current = text;
-    }
-    if (text.length > (__longestTranscriptFallback?.length || 0)) {
-      __longestTranscriptFallback = text;
-    }
-  }, []);
-
   const initializeVapi = useCallback(async () => {
     try {
       const { data, error } = await supabase.functions.invoke('get-vapi-key');
+      
       if (error) throw error;
 
       const { default: Vapi } = await import('@vapi-ai/web');
@@ -136,6 +119,7 @@ export const useRealtimeAIChat = () => {
             error: undefined,
             retryAvailable: false
           };
+          // Redefine computed properties
           Object.defineProperty(newState, 'isActive', {
             get() { return this.status === 'active'; },
             enumerable: true
@@ -166,11 +150,10 @@ export const useRealtimeAIChat = () => {
           });
           return newState as ConversationState;
         });
-
-        // Give tail packets time to arrive before finalizing
+        
         setTimeout(() => {
           handleConversationEnd();
-        }, 1750);
+        }, 1000);
       });
 
       vapi.on('speech-start', () => {
@@ -181,64 +164,52 @@ export const useRealtimeAIChat = () => {
         console.log('User stopped speaking');
       });
 
-      // === FINAL-BLOB-ONLY TRANSCRIPT HANDLER ===
       vapi.on('message', (message: any) => {
-        console.log('📞 Vapi message received:', message?.type, message);
-
-        if (message?.type !== 'transcript') return;
-
-        // Normalize payload to text
-        const raw =
-          typeof message.transcript === 'object'
-            ? message.transcript.text ||
-              message.transcript.content ||
-              JSON.stringify(message.transcript)
-            : message.transcript || '';
-
-        const text = (raw || '').trim();
-        if (!text) return;
-
-        // Be liberal about “final” detection
-        const isFull =
-          Boolean((message as any).is_full) ||
-          Boolean((message as any).full) ||
-          Boolean((message as any).final) ||
-          Boolean((message as any).is_final) ||
-          (message as any).kind === 'final_transcript' ||
-          (message as any).scope === 'conversation' ||
-          (message as any).stage === 'final';
-
-        if (isFull) {
-          // ✅ Use only the single final blob
-          finalTranscriptRef.current = text;
-          sessionTranscript.current = text; // legacy compat
-
-          const sid = sessionConfigRef.current?.sessionId;
-          if (sid) {
-            // persist under both keys to avoid drift
-            sessionStorage.setItem(STORAGE_KEYS.FINAL_TEXT(sid), text);
-            sessionStorage.setItem(STORAGE_KEYS.LEGACY_TEXT(sid), text);
+        console.log('📞 Vapi message received:', message.type, message);
+        
+        // Handle transcript messages more comprehensively
+        if (message.type === 'transcript' && message.transcript) {
+          const transcriptText = typeof message.transcript === 'object' 
+            ? message.transcript.text || message.transcript.content || JSON.stringify(message.transcript)
+            : message.transcript;
+            
+          if (transcriptText && transcriptText.trim()) {
+            console.log('📝 Adding transcript:', transcriptText.trim());
+            sessionTranscript.current += transcriptText.trim() + '\n';
+            
+            // Store transcript in session storage as backup
+            if (sessionConfigRef.current?.sessionId) {
+              sessionStorage.setItem(`transcript_${sessionConfigRef.current.sessionId}`, sessionTranscript.current);
+            }
+            
+            setConversationState(prev => {
+              const newState = {
+                ...prev,
+                transcript: sessionTranscript.current,
+                exchangeCount: prev.exchangeCount + 1
+              };
+              Object.defineProperty(newState, 'isActive', {
+                get() { return this.status === 'active'; },
+                enumerable: true
+              });
+              Object.defineProperty(newState, 'isConnecting', {
+                get() { return this.status === 'connecting'; },
+                enumerable: true
+              });
+              return newState as ConversationState;
+            });
           }
-
-          // reflect in UI (optional preview)
-          setConversationState(prev => {
-            const next = { ...prev, transcript: text };
-            Object.defineProperty(next, 'isActive', {
-              get() { return this.status === 'active'; },
-              enumerable: true
-            });
-            Object.defineProperty(next, 'isConnecting', {
-              get() { return this.status === 'connecting'; },
-              enumerable: true
-            });
-            return next as ConversationState;
-          });
-
-          console.log('🧩 Final transcript captured (length):', text.length);
-        } else {
-          // ❌ Do NOT append partials; only track best-effort fallback
-          commitCandidateTranscript(text);
-          console.log('…partial transcript seen (ignored for storage). len=', text.length);
+        }
+        
+        // Handle other message types for additional transcript collection
+        if (message.type === 'conversation-update' && message.conversation) {
+          console.log('🔄 Conversation update:', message.conversation);
+          // Extract transcript from conversation updates if available
+        }
+        
+        // Handle function calls and responses
+        if (message.type === 'function-call' || message.type === 'function-result') {
+          console.log('🔧 Function call/result:', message);
         }
       });
 
@@ -248,15 +219,17 @@ export const useRealtimeAIChat = () => {
       console.error('Error initializing Vapi:', error);
       throw error;
     }
-  }, [commitCandidateTranscript]);
+  }, []);
 
-  // Cleanup on unmount
+  // Cleanup on unmount - avoid dependency array to prevent unnecessary re-runs
   useEffect(() => {
     return () => {
+      // Only cleanup if there's an active VAPI instance
       if (vapiInstance.current) {
         console.log('useRealtimeAIChat cleanup: ending conversation...');
         try {
           const stopResult = vapiInstance.current.stop();
+          // Only call .catch() if stop() returns a Promise
           if (stopResult && typeof stopResult.catch === 'function') {
             stopResult.catch(console.error);
           }
@@ -266,7 +239,7 @@ export const useRealtimeAIChat = () => {
         vapiInstance.current = null;
       }
     };
-  }, []);
+  }, []); // Empty dependency array to run only on mount/unmount
 
   const analyzeUserResponse = useCallback((exchangeCount: number) => {
     const hints = [
@@ -276,6 +249,7 @@ export const useRealtimeAIChat = () => {
       "Share a relevant success story or case study",
       "Ask about their biggest challenge in this area"
     ];
+
     if (exchangeCount % 3 === 0 && exchangeCount > 0) {
       const randomHint = hints[Math.floor(Math.random() * hints.length)];
       addCoachingHint(randomHint, 'info');
@@ -285,9 +259,10 @@ export const useRealtimeAIChat = () => {
   const analyzeAIResponse = useCallback((response: string) => {
     const positiveKeywords = ['interested', 'sounds good', 'tell me more', 'that could work'];
     const objectionKeywords = ['expensive', 'not sure', 'concerned', 'worried', 'budget'];
-    if (positiveKeywords.some(k => response.toLowerCase().includes(k))) {
+    
+    if (positiveKeywords.some(keyword => response.toLowerCase().includes(keyword))) {
       addCoachingHint("Great! The prospect is showing interest. This might be a good time to ask for next steps.", 'success');
-    } else if (objectionKeywords.some(k => response.toLowerCase().includes(k))) {
+    } else if (objectionKeywords.some(keyword => response.toLowerCase().includes(keyword))) {
       addCoachingHint("The prospect has raised an objection. Listen carefully and acknowledge their concern.", 'warning');
     }
   }, [addCoachingHint]);
@@ -301,7 +276,11 @@ export const useRealtimeAIChat = () => {
     customProspectId?: string
   ) => {
     console.log('=== Starting Enhanced Conversation ===', {
-      sessionId, replayMode, prospectPersonality, gamificationMode, customProspectId
+      sessionId,
+      replayMode,
+      prospectPersonality,
+      gamificationMode,
+      customProspectId
     });
 
     try {
@@ -329,11 +308,7 @@ export const useRealtimeAIChat = () => {
         return newState as ConversationState;
       });
 
-      // reset buffers
-      finalTranscriptRef.current = '';
-      longestSeenRef.current = '';
       sessionTranscript.current = '';
-      __longestTranscriptFallback = '';
       setFinalAnalysis(null);
 
       if (!vapiInstance.current) {
@@ -348,6 +323,7 @@ export const useRealtimeAIChat = () => {
         sessionId
       };
 
+      // Use enhanced AI conversation start with comprehensive error handling
       console.log('Invoking start-enhanced-ai-conversation...');
       const { data, error } = await supabase.functions.invoke('start-enhanced-ai-conversation', {
         body: {
@@ -357,8 +333,6 @@ export const useRealtimeAIChat = () => {
           prospectPersonality,
           gamificationMode,
           customProspectId
-          // If you want the AI “to remember”, ensure your Edge Function uses sessionId
-          // to load prior context and pass it in the system prompt.
         }
       });
 
@@ -366,24 +340,31 @@ export const useRealtimeAIChat = () => {
         console.error('Supabase function error:', error);
         throw new Error(error.message || 'Failed to start conversation');
       }
+
       if (!data || !data.assistantId) {
         console.error('Invalid response from start-enhanced-ai-conversation:', data);
         throw new Error('Invalid response from conversation service');
       }
 
+      console.log('Enhanced AI conversation started successfully:', data);
+
+      // Store prospect profile in state
       setConversationState(prev => ({
         ...prev,
-        prospectProfile: data.sessionConfig?.prospectProfile,
+        prospectProfile: data.sessionConfig.prospectProfile,
         personalityState: 'initial'
       }));
 
       await vapiInstance.current?.start(data.assistantId);
 
-    } catch (error: any) {
+      // Coaching hints disabled
+
+    } catch (error) {
       console.error('=== Error starting enhanced conversation ===', error);
+      
       let errorMessage = 'Failed to start conversation';
       let retryAvailable = false;
-
+      
       if (error.message?.includes('busy') || error.message?.includes('429')) {
         errorMessage = 'AI service is currently busy. Please try again in a moment.';
         retryAvailable = true;
@@ -392,7 +373,7 @@ export const useRealtimeAIChat = () => {
       } else if (error.message?.includes('configuration')) {
         errorMessage = 'Service configuration error. Please contact support.';
       }
-
+      
       setConversationState(prev => {
         const newState = {
           ...prev,
@@ -410,14 +391,15 @@ export const useRealtimeAIChat = () => {
         });
         return newState as ConversationState;
       });
-
+      
       throw new Error(errorMessage);
     }
-  }, [initializeVapi]);
+  }, [initializeVapi, addCoachingHint]);
 
   const endConversation = useCallback(async () => {
     try {
       console.log('endConversation called, current status:', conversationState.status);
+      
       setConversationState(prev => ({
         ...prev,
         status: 'ending',
@@ -429,6 +411,7 @@ export const useRealtimeAIChat = () => {
         console.log('Stopping Vapi instance...');
         try {
           const stopResult = vapiInstance.current.stop();
+          // Handle both Promise and non-Promise return values
           if (stopResult && typeof stopResult.then === 'function') {
             await stopResult;
           }
@@ -436,9 +419,12 @@ export const useRealtimeAIChat = () => {
         } catch (error) {
           console.error('Error stopping Vapi instance:', error);
         }
+        
+        // Clear the Vapi instance to prevent further use
         vapiInstance.current = null;
       }
 
+      // Force final state update
       setTimeout(() => {
         setConversationState(prev => ({
           ...prev,
@@ -451,6 +437,8 @@ export const useRealtimeAIChat = () => {
 
     } catch (error) {
       console.error('Error ending conversation:', error);
+      
+      // Ensure state is cleaned up even on error
       setConversationState(prev => ({
         ...prev,
         status: 'ended',
@@ -458,84 +446,98 @@ export const useRealtimeAIChat = () => {
         isConnecting: false,
         isConnected: false
       }));
+      
+      // Clear Vapi instance on error too
       vapiInstance.current = null;
     }
   }, [conversationState.status]);
 
   const handleConversationEnd = useCallback(async () => {
     try {
-      const sid = sessionConfigRef.current?.sessionId;
-      if (!sid) {
+      // Check if we have sufficient session data and transcript
+      if (!sessionConfigRef.current?.sessionId) {
         console.log('❌ No session ID to analyze');
         return;
       }
 
-      // Prefer provider-marked final; else stored; else fallback; else legacy
-      const storedFinal = sessionStorage.getItem(STORAGE_KEYS.FINAL_TEXT(sid)) || '';
-      const legacyBackup = sessionStorage.getItem(STORAGE_KEYS.LEGACY_TEXT(sid)) || '';
-      const finalTranscript =
-        finalTranscriptRef.current?.trim() ||
-        storedFinal.trim() ||
-        longestSeenRef.current?.trim() ||
-        __longestTranscriptFallback.trim() ||
-        sessionTranscript.current?.trim() ||
-        legacyBackup.trim() ||
-        '';
+      // Check session storage backup first
+      const backupTranscript = sessionStorage.getItem(`transcript_${sessionConfigRef.current.sessionId}`);
+      const finalTranscript = sessionTranscript.current || backupTranscript || '';
 
       console.log('📊 Pre-analysis validation:', {
-        sessionId: sid,
+        sessionId: sessionConfigRef.current.sessionId,
         transcriptLength: finalTranscript.length,
         transcriptSample: finalTranscript.substring(0, 100) + '...',
         exchangeCount: conversationState.exchangeCount,
-        hasStoredFinal: !!storedFinal,
-        hasLegacyBackup: !!legacyBackup
+        hasBackup: !!backupTranscript
       });
 
-      if (!finalTranscript) {
-        console.log('❌ No transcript available for analysis');
-        setFinalAnalysis({
-          score: 40,
-          feedback: "No conversation detected. Make sure your microphone is working and try again.",
-          strengths: ["Attempted conversation"],
-          improvements: ["Check microphone settings", "Ensure clear audio"],
-          recommendations: ["Test microphone", "Try again with clearer audio"]
-        });
-        return;
-      }
+    console.log('🔍 Processing conversation for analysis:', {
+      transcriptLength: finalTranscript?.length || 0,
+      exchangeCount: conversationState.exchangeCount,
+      sessionId: sessionConfigRef.current?.sessionId
+    });
+
+    // Always attempt analysis - no minimum length restriction
+    if (!finalTranscript) {
+      console.log('❌ No transcript available for analysis');
+      setFinalAnalysis({
+        score: 40,
+        feedback: "No conversation detected. Make sure your microphone is working and try again.",
+        strengths: ["Attempted conversation"],
+        improvements: ["Check microphone settings", "Ensure clear audio"],
+        recommendations: ["Test microphone", "Try again with clearer audio"]
+      });
+      return;
+    }
 
       console.log('🔄 Starting enhanced conversation analysis...');
-      setConversationState(prev => ({ ...prev, status: 'analyzing' as const }));
 
-      // Retry logic preserved
-      let analysisResult: any;
+      // Add loading state
+      setConversationState(prev => ({
+        ...prev,
+        status: 'analyzing' as any
+      }));
+
+      // Use enhanced conversation analysis with retry logic
+      let analysisResult;
       let attempts = 0;
       const maxAttempts = 3;
 
       while (attempts < maxAttempts) {
         try {
           console.log(`📊 Analysis attempt ${attempts + 1}/${maxAttempts}`);
+          
           const { data, error } = await supabase.functions.invoke('analyze-enhanced-conversation', {
             body: {
               transcript: finalTranscript,
               exchangeCount: Math.max(conversationState.exchangeCount, 1),
               sessionConfig: {
-                replayMode: sessionConfigRef.current!.replayMode,
-                prospectPersonality: sessionConfigRef.current!.prospectPersonality,
-                gamificationMode: sessionConfigRef.current!.gamificationMode,
+                replayMode: sessionConfigRef.current.replayMode,
+                prospectPersonality: sessionConfigRef.current.prospectPersonality,
+                gamificationMode: sessionConfigRef.current.gamificationMode,
                 prospectProfile: conversationState.prospectProfile
               },
-              sessionId: sid,
+              sessionId: sessionConfigRef.current.sessionId,
               retryAttempt: attempts + 1
             }
           });
+
           if (error) throw error;
+          
           analysisResult = data;
           console.log('✅ Analysis successful:', analysisResult);
           break;
+          
         } catch (error) {
           attempts++;
           console.error(`❌ Analysis attempt ${attempts} failed:`, error);
-          if (attempts >= maxAttempts) throw error;
+          
+          if (attempts >= maxAttempts) {
+            throw error;
+          }
+          
+          // Wait before retry
           await new Promise(resolve => setTimeout(resolve, 1000 * attempts));
         }
       }
@@ -556,6 +558,8 @@ export const useRealtimeAIChat = () => {
 
     } catch (error) {
       console.error('❌ Critical error in analysis pipeline:', error);
+      
+      // Enhanced fallback analysis
       setFinalAnalysis({
         score: 65,
         feedback: "Analysis service encountered an issue, but your conversation was recorded. The transcript shows good engagement with the prospect.",
@@ -564,17 +568,18 @@ export const useRealtimeAIChat = () => {
         recommendations: ["Try another practice session", "Focus on specific objection handling techniques"]
       });
     } finally {
-      const sid = sessionConfigRef.current?.sessionId;
-      if (sid) {
-        // Clean both keys to avoid stale leftovers
-        sessionStorage.removeItem(STORAGE_KEYS.FINAL_TEXT(sid));
-        sessionStorage.removeItem(STORAGE_KEYS.LEGACY_TEXT(sid));
+      // Clean up session storage
+      if (sessionConfigRef.current?.sessionId) {
+        sessionStorage.removeItem(`transcript_${sessionConfigRef.current.sessionId}`);
       }
     }
   }, [conversationState.exchangeCount, conversationState.prospectProfile]);
 
   const clearHints = useCallback(() => {
-    setConversationState(prev => ({ ...prev, hints: [] }));
+    setConversationState(prev => ({
+      ...prev,
+      hints: []
+    }));
   }, []);
 
   return {
