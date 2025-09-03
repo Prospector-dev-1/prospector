@@ -39,6 +39,8 @@ interface CallCustomizationProps {
   setCustomInstructions: (value: string) => void;
   difficultyLevel: number[];
   setDifficultyLevel: (value: number[]) => void;
+  preferredVoice: string;
+  setPreferredVoice: (value: string) => void;
 }
 
 const CallCustomization: React.FC<CallCustomizationProps> = ({
@@ -54,6 +56,8 @@ const CallCustomization: React.FC<CallCustomizationProps> = ({
   setCustomInstructions,
   difficultyLevel,
   setDifficultyLevel,
+  preferredVoice,
+  setPreferredVoice,
 }) => {
   const [callObjectives, setCallObjectives] = useState<CallObjective[]>([]);
   const [selectedObjectiveData, setSelectedObjectiveData] = useState<CallObjective | null>(null);
@@ -243,6 +247,37 @@ const CallCustomization: React.FC<CallCustomizationProps> = ({
                   </div>
                 </div>
               )}
+            </CardContent>
+          </Card>
+
+          {/* Voice Selection */}
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center space-x-2">
+                <span>Voice Selection</span>
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div>
+                <Label htmlFor="preferred-voice">AI Prospect Voice</Label>
+                <Select value={preferredVoice} onValueChange={setPreferredVoice}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Auto-select based on difficulty" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="">Auto-select</SelectItem>
+                    <SelectItem value="alloy">Alloy (Neutral, versatile)</SelectItem>
+                    <SelectItem value="echo">Echo (Male, confident)</SelectItem>
+                    <SelectItem value="fable">Fable (British, warm)</SelectItem>
+                    <SelectItem value="nova">Nova (Female, energetic)</SelectItem>
+                    <SelectItem value="onyx">Onyx (Male, deep)</SelectItem>
+                    <SelectItem value="shimmer">Shimmer (Female, soft)</SelectItem>
+                  </SelectContent>
+                </Select>
+                <p className="text-xs text-muted-foreground mt-2">
+                  Leave as auto-select to let the system choose the best voice for the difficulty level.
+                </p>
+              </div>
             </CardContent>
           </Card>
 

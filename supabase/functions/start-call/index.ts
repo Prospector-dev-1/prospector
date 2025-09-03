@@ -34,7 +34,8 @@ serve(async (req) => {
       business_type, 
       prospect_role, 
       call_objective, 
-      custom_instructions 
+      custom_instructions,
+      preferred_voice
     } = await req.json();
     console.log('Call parameters:', { 
       difficulty_level, 
@@ -210,8 +211,20 @@ serve(async (req) => {
       };
     };
 
-    // Voice pool by difficulty with rotation (exclude realtime-only voices like 'sage')
-    const getVoiceForDifficulty = (level: number) => {
+    // Configurable voice pool with structured logging and fallback
+    const VALID_VOICES = ['nova', 'alloy', 'echo', 'onyx', 'fable', 'shimmer'];
+    const DEFAULT_VOICE = 'alloy';
+
+    const getVoiceForDifficulty = (level: number, requestedVoice?: string) => {
+      console.log(`[Voice Selection] Difficulty level: ${level}, Requested voice: ${requestedVoice || 'none'}`);
+      
+      // If specific voice requested and valid, use it
+      if (requestedVoice && VALID_VOICES.includes(requestedVoice)) {
+        console.log(`[Voice Selection] Using requested voice: ${requestedVoice}`);
+        return requestedVoice;
+      }
+      
+      // Voice pool by difficulty with rotation (exclude realtime-only voices like 'sage')
       const pool: Record<number, string[]> = {
         1: ['nova', 'alloy', 'echo'],
         2: ['alloy', 'nova', 'echo'],
@@ -224,8 +237,15 @@ serve(async (req) => {
         9: ['echo', 'onyx'],
         10: ['onyx', 'echo'],
       };
+      
       const voices = pool[level] || pool[5];
-      return sample(voices);
+      const selectedVoice = sample(voices);
+      
+      // Fallback validation
+      const finalVoice = selectedVoice && VALID_VOICES.includes(selectedVoice) ? selectedVoice : DEFAULT_VOICE;
+      
+      console.log(`[Voice Selection] Selected voice: ${finalVoice} (from pool: [${voices.join(', ')}])`);
+      return finalVoice;
     };
 
     // Enhanced prospect personality based on call objective
@@ -337,7 +357,7 @@ serve(async (req) => {
       },
       voice: {
         provider: 'openai',
-        voiceId: getVoiceForDifficulty(difficulty_level)
+        voiceId: getVoiceForDifficulty(difficulty_level, preferred_voice)
       },
       firstMessage: scenario.opener,
       endCallMessage: 'Thanks for calling, goodbye.',

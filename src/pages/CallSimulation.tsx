@@ -41,6 +41,7 @@ const CallSimulation = () => {
   const [callObjective, setCallObjective] = useState('');
   const [customObjective, setCustomObjective] = useState('');
   const [customInstructions, setCustomInstructions] = useState('');
+  const [preferredVoice, setPreferredVoice] = useState('');
 
   // UI states
   const [selectedPreset, setSelectedPreset] = useState<string | undefined>(undefined);
@@ -233,7 +234,8 @@ const CallSimulation = () => {
           business_type: businessType,
           prospect_role: prospectRole,
           call_objective: callObjective === 'Custom' ? customObjective : callObjective,
-          custom_instructions: customInstructions
+          custom_instructions: customInstructions,
+          preferred_voice: preferredVoice
         }
       });
       if (error) throw new Error(error.message);
@@ -433,7 +435,22 @@ const CallSimulation = () => {
               </CollapsibleTrigger>
               <CollapsibleContent className="mt-2">
                 <div className="bg-card rounded-lg border p-4">
-                  <CallCustomization businessType={businessType} setBusinessType={setBusinessType} prospectRole={prospectRole} setProspectRole={setProspectRole} callObjective={callObjective} setCallObjective={setCallObjective} customObjective={customObjective} setCustomObjective={setCustomObjective} customInstructions={customInstructions} setCustomInstructions={setCustomInstructions} difficultyLevel={difficultyLevel} setDifficultyLevel={setDifficultyLevel} />
+                  <CallCustomization 
+                    businessType={businessType} 
+                    setBusinessType={setBusinessType} 
+                    prospectRole={prospectRole} 
+                    setProspectRole={setProspectRole} 
+                    callObjective={callObjective} 
+                    setCallObjective={setCallObjective} 
+                    customObjective={customObjective} 
+                    setCustomObjective={setCustomObjective} 
+                    customInstructions={customInstructions} 
+                    setCustomInstructions={setCustomInstructions} 
+                    difficultyLevel={difficultyLevel} 
+                    setDifficultyLevel={setDifficultyLevel} 
+                    preferredVoice={preferredVoice}
+                    setPreferredVoice={setPreferredVoice}
+                  />
                 </div>
               </CollapsibleContent>
             </Collapsible>
