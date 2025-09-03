@@ -46,92 +46,151 @@ const CallAnalysis = () => {
   const [analysisData, setAnalysisData] = useState<AnalysisData | null>(null);
   const [loading, setLoading] = useState(true);
   const [selectedExchange, setSelectedExchange] = useState<number | null>(null);
+  const [retryCount, setRetryCount] = useState(0);
 
-  // Get session data from navigation state or fetch from DB
+  // Enhanced analysis data loading with multiple fallback layers
   useEffect(() => {
-    const fetchAnalysisData = async () => {
+    const loadAnalysisData = async () => {
       try {
         setLoading(true);
+        console.log('🔍 Loading analysis data for session:', sessionId);
         
-        // If we have real analysis data from navigation state
-        if ((location.state as any)?.analysis) {
-          const state = location.state as any;
-          const a = state.analysis;
-          
-          console.log('📊 Loading analysis from navigation state:', {
-            score: a.score,
-            feedbackLength: a.feedback?.length,
-            strengthsCount: a.strengths?.length,
-            fallbackUsed: state.fallbackUsed,
-            timedOut: state.timedOut
-          });
-          
+        // First try: Get data from navigation state
+        const navigationData = (location.state as any)?.analysis;
+        console.log('📍 Navigation data:', navigationData ? 'Available' : 'Not available');
+        
+        if (navigationData) {
+          console.log('✅ Using navigation data');
           const realAnalysis: AnalysisData = {
-            score: a.score || 0,
-            feedback: a.feedback || 'Analysis completed',
-            strengths: Array.isArray(a.strengths) ? a.strengths : [],
-            improvements: Array.isArray(a.improvements) ? a.improvements : [],
-            recommendations: Array.isArray(a.recommendations) ? a.recommendations : [],
-            exchanges: a.exchanges || [],
-            duration: state.duration || 0,
-            sessionConfig: state.sessionConfig || {}
+            score: navigationData.score || 0,
+            feedback: navigationData.feedback || 'Analysis completed',
+            strengths: Array.isArray(navigationData.strengths) ? navigationData.strengths : [],
+            improvements: Array.isArray(navigationData.improvements) ? navigationData.improvements : [],
+            recommendations: Array.isArray(navigationData.recommendations) ? navigationData.recommendations : [],
+            exchanges: navigationData.exchanges || [],
+            duration: (location.state as any)?.duration || 0,
+            sessionConfig: (location.state as any)?.sessionConfig || {}
           };
           
           setAnalysisData(realAnalysis);
-          
-          // Show feedback on data quality
-          if (state.fallbackUsed) {
-            toast({
-              title: 'Analysis Complete',
-              description: 'Used fallback analysis due to processing issues',
-              variant: 'default'
-            });
-          } else if (state.timedOut) {
-            toast({
-              title: 'Analysis Timeout',
-              description: 'Analysis took longer than expected - showing basic results',
-              variant: 'default'
-            });
-          }
-          
-        } else if (location.state) {
-          // Basic fallback when only minimal state is available
-          const state = location.state as any;
-          console.log('📊 Loading basic state fallback:', state);
-          
-          setAnalysisData({
-            score: state.score ?? 0,
-            feedback: 'Analysis data was incomplete. The conversation may have been too short or ended unexpectedly.',
-            strengths: ['Attempted the practice session'],
-            improvements: ['Complete the conversation for detailed feedback'],
-            recommendations: ['Try a longer practice session', 'Speak clearly to the AI prospect'],
-            exchanges: [],
-            duration: state.duration || 0,
-            sessionConfig: state.sessionConfig || {}
-          });
-          
-          toast({
-            title: 'Limited Analysis',
-            description: 'Analysis data was incomplete - try a longer conversation next time',
-            variant: 'default'
-          });
-          
-        } else {
-          // No navigation state at all
-          console.log('❌ No analysis data found in navigation state');
-          
-          toast({
-            title: 'No Analysis Data',
-            description: 'Could not load analysis for this session. It may have expired.',
-            variant: 'destructive'
-          });
-          
-          // Could implement database fallback here in the future
-          setAnalysisData(null);
+          setLoading(false);
+          return;
         }
         
+        // Second try: Check session storage
+        if (sessionId) {
+          try {
+            const sessionStorageData = sessionStorage.getItem(`analysis_${sessionId}`);
+            if (sessionStorageData) {
+              const parsedData = JSON.parse(sessionStorageData);
+              console.log('✅ Using session storage data');
+              
+              const sessionAnalysis: AnalysisData = {
+                score: parsedData.score || 50,
+                feedback: parsedData.feedback || 'Analysis retrieved from session storage',
+                strengths: parsedData.strengths || ['Completed conversation'],
+                improvements: parsedData.improvements || ['Continue practicing'],
+                recommendations: parsedData.recommendations || ['Keep practicing regularly'],
+                exchanges: parsedData.exchanges || [],
+                duration: parsedData.duration || Math.round((Date.now() - parsedData.timestamp) / 1000) || 0,
+                sessionConfig: parsedData.sessionConfig || {}
+              };
+              
+              setAnalysisData(sessionAnalysis);
+              
+              if (parsedData.isFallback) {
+                toast({
+                  title: 'Analysis Recovered',
+                  description: 'Using backup analysis from session storage',
+                  variant: 'default'
+                });
+              }
+              
+              setLoading(false);
+              return;
+            }
+          } catch (storageError) {
+            console.warn('⚠️ Failed to parse session storage data:', storageError);
+          }
+        }
+        
+        // Third try: Database fallback (query conversation_analytics table)
+        if (sessionId) {
+          console.log('🔄 Attempting database fallback for session:', sessionId);
+          try {
+            const { data: conversationData, error } = await supabase
+              .from('conversation_analytics')
+              .select('performance_metrics, conversation_flow, session_id')
+              .eq('session_id', sessionId)
+              .single();
+              
+            if (!error && conversationData?.performance_metrics) {
+              console.log('✅ Using database fallback data');
+              const metrics = conversationData.performance_metrics as any;
+              
+              const dbAnalysis: AnalysisData = {
+                score: metrics?.overall_score || 50,
+                feedback: metrics?.feedback || "Analysis retrieved from database backup.",
+                strengths: metrics?.strengths || ["Completed conversation"],
+                improvements: metrics?.improvements || ["Continue practicing"],
+                recommendations: metrics?.recommendations || ["Keep practicing regular conversations"],
+                exchanges: (conversationData.conversation_flow as any[]) || [],
+                duration: metrics?.duration || 0,
+                sessionConfig: metrics?.session_config || {}
+              };
+              
+              setAnalysisData(dbAnalysis);
+              
+              toast({
+                title: 'Analysis Recovered',
+                description: 'Retrieved analysis from database backup',
+                variant: 'default'
+              });
+              
+              setLoading(false);
+              return;
+            }
+          } catch (dbError) {
+            console.warn('⚠️ Database fallback failed:', dbError);
+          }
+        }
+        
+        // Final fallback: Create basic analysis based on available info
+        console.log('⚠️ All fallbacks failed, creating basic analysis');
+        
+        const fallbackAnalysis: AnalysisData = {
+          score: 40,
+          feedback: "Unable to retrieve detailed analysis. This conversation was completed but analysis data was not available. This can happen with very short conversations or connection issues.",
+          strengths: ["Completed practice session", "Took initiative to practice"],
+          improvements: ["Try a longer conversation for better analysis", "Ensure stable internet connection"],
+          recommendations: ["Practice regularly for consistent feedback", "Aim for conversations lasting 2-3 minutes"],
+          exchanges: [],
+          duration: 0,
+          sessionConfig: {}
+        };
+        
+        setAnalysisData(fallbackAnalysis);
+        
+        toast({
+          title: 'Basic Analysis',
+          description: 'Analysis data unavailable - showing basic feedback',
+          variant: 'default'
+        });
+        
       } catch (error) {
-        console.error('Error processing analysis data:', error);
+        console.error('❌ Error loading analysis data:', error);
+        
+        setAnalysisData({
+          score: 35,
+          feedback: "Error occurred while loading analysis data. Please try practicing again with a longer conversation.",
+          strengths: ["Attempted practice"],
+          improvements: ["Check internet connection", "Try longer conversations"],
+          recommendations: ["Contact support if issue persists", "Retry with stable connection"],
+          exchanges: [],
+          duration: 0,
+          sessionConfig: {}
+        });
+        
         toast({
           title: "Error",
           description: "Failed to load call analysis.",
@@ -142,8 +201,8 @@ const CallAnalysis = () => {
       }
     };
 
-    fetchAnalysisData();
-  }, [sessionId, location.state, toast]);
+    loadAnalysisData();
+  }, [sessionId, location.state, toast, retryCount]);
 
   const formatDuration = (seconds: number) => {
     const minutes = Math.floor(seconds / 60);
@@ -169,6 +228,12 @@ const CallAnalysis = () => {
     navigate('/ai-replay/' + sessionId, {
       state: { sessionConfig: analysisData?.sessionConfig }
     });
+  };
+  
+  const handleRetryAnalysis = () => {
+    console.log('🔄 Retrying analysis load...');
+    setLoading(true);
+    setRetryCount(prev => prev + 1);
   };
 
   const handleShareResults = async () => {
@@ -226,6 +291,10 @@ const CallAnalysis = () => {
               </ul>
             </div>
             <div className="flex flex-col gap-2">
+              <Button onClick={handleRetryAnalysis}>
+                <RefreshCw className="w-4 h-4 mr-1" />
+                Retry Analysis
+              </Button>
               <Button onClick={() => navigate('/ai-replay')}>
                 Start New Practice
               </Button>

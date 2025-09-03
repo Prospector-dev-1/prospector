@@ -177,8 +177,10 @@ export const useRealtimeAIChat = () => {
             console.log('📝 Adding transcript:', transcriptText.trim());
             sessionTranscript.current += transcriptText.trim() + '\n';
             
-            // Store in session storage as backup
-            sessionStorage.setItem(`transcript_${sessionConfigRef.current?.sessionId}`, sessionTranscript.current);
+            // Store transcript in session storage as backup
+            if (sessionConfigRef.current?.sessionId) {
+              sessionStorage.setItem(`transcript_${sessionConfigRef.current.sessionId}`, sessionTranscript.current);
+            }
             
             setConversationState(prev => {
               const newState = {
@@ -470,19 +472,24 @@ export const useRealtimeAIChat = () => {
         hasBackup: !!backupTranscript
       });
 
-      if (!finalTranscript || finalTranscript.trim().length < 10) {
-        console.log('❌ Insufficient transcript for analysis:', finalTranscript?.length || 0, 'characters');
-        
-        // Create minimal fallback analysis
-        setFinalAnalysis({
-          score: 50,
-          feedback: "Conversation was too short to provide detailed analysis. Try speaking for at least 30 seconds to get meaningful feedback.",
-          strengths: ["Initiated conversation"],
-          improvements: ["Extend conversation length", "Engage more with the prospect"],
-          recommendations: ["Practice longer conversations", "Ask more questions"]
-        });
-        return;
-      }
+    console.log('🔍 Processing conversation for analysis:', {
+      transcriptLength: finalTranscript?.length || 0,
+      exchangeCount: conversationState.exchangeCount,
+      sessionId: sessionConfigRef.current?.sessionId
+    });
+
+    // Always attempt analysis - no minimum length restriction
+    if (!finalTranscript) {
+      console.log('❌ No transcript available for analysis');
+      setFinalAnalysis({
+        score: 40,
+        feedback: "No conversation detected. Make sure your microphone is working and try again.",
+        strengths: ["Attempted conversation"],
+        improvements: ["Check microphone settings", "Ensure clear audio"],
+        recommendations: ["Test microphone", "Try again with clearer audio"]
+      });
+      return;
+    }
 
       console.log('🔄 Starting enhanced conversation analysis...');
 
