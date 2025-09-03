@@ -210,11 +210,11 @@ serve(async (req) => {
       };
     };
 
-    // Voice pool by difficulty with rotation
+    // Voice pool by difficulty with rotation (exclude realtime-only voices like 'sage')
     const getVoiceForDifficulty = (level: number) => {
       const pool: Record<number, string[]> = {
-        1: ['sage', 'nova', 'alloy'],
-        2: ['alloy', 'sage', 'nova'],
+        1: ['nova', 'alloy', 'echo'],
+        2: ['alloy', 'nova', 'echo'],
         3: ['nova', 'alloy', 'echo'],
         4: ['onyx', 'echo', 'alloy'],
         5: ['echo', 'onyx', 'fable'],
