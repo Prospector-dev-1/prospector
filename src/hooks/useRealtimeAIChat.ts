@@ -41,10 +41,12 @@ export interface FinalAnalysis {
   conversationFlow?: any;
 }
 
+/** Fallback holder if Vapi never marks a “final/full” transcript */
+let __longestTranscriptFallback = '';
+
 const STORAGE_KEYS = {
   FINAL_TEXT: (sid: string) => `prospector_final_transcript_${sid}`,
-  // legacy compatibility key (we still write & clean it to avoid drift elsewhere)
-  LEGACY_TEXT: (sid: string) => `transcript_${sid}`,
+  LEGACY_TEXT: (sid: string) => `transcript_${sid}`, // keep for compatibility
 };
 
 export const useRealtimeAIChat = () => {
@@ -72,10 +74,10 @@ export const useRealtimeAIChat = () => {
 
   const vapiInstance = useRef<any>(null);
 
-  // We no longer append chunks; we only keep the final/full blob.
-  const finalTranscriptRef = useRef<string>('');     // provider-marked full transcript (preferred)
-  const longestSeenRef = useRef<string>('');         // fallback if provider doesn’t flag final
-  const sessionTranscript = useRef<string>('');      // legacy (kept for compatibility during this transition)
+  /** We no longer append chunks; we only keep the final/full blob. */
+  const finalTranscriptRef = useRef<string>('');     // preferred, provider-marked final blob
+  const longestSeenRef = useRef<string>('');         // fallback if provider lacks “final”
+  const sessionTranscript = useRef<string>('');      // legacy compatibility (do not append chunks)
 
   const sessionConfigRef = useRef<{
     replayMode: ReplayMode;
@@ -94,7 +96,7 @@ export const useRealtimeAIChat = () => {
     };
     setConversationState(prev => ({
       ...prev,
-      hints: [...prev.hints.slice(-2), hint] // Keep only last 3 hints
+      hints: [...prev.hints.slice(-2), hint] // keep last 3
     }));
     setTimeout(() => {
       setConversationState(prev => ({
@@ -104,12 +106,15 @@ export const useRealtimeAIChat = () => {
     }, 8000);
   }, []);
 
-  // Record the longest candidate as a safety fallback (no appending to UI)
+  // Safety fallback tracker (do NOT append to UI/state)
   const commitCandidateTranscript = useCallback((s: string) => {
     const text = (s || '').trim();
     if (!text) return;
     if (text.length > (longestSeenRef.current?.length || 0)) {
       longestSeenRef.current = text;
+    }
+    if (text.length > (__longestTranscriptFallback?.length || 0)) {
+      __longestTranscriptFallback = text;
     }
   }, []);
 
@@ -176,56 +181,64 @@ export const useRealtimeAIChat = () => {
         console.log('User stopped speaking');
       });
 
+      // === FINAL-BLOB-ONLY TRANSCRIPT HANDLER ===
       vapi.on('message', (message: any) => {
-        console.log('📞 Vapi message received:', message.type, message);
+        console.log('📞 Vapi message received:', message?.type, message);
 
-        if (message?.type === 'transcript') {
-          const raw =
-            typeof message.transcript === 'object'
-              ? message.transcript.text ||
-                message.transcript.content ||
-                JSON.stringify(message.transcript)
-              : message.transcript || '';
+        if (message?.type !== 'transcript') return;
 
-          // Accept a variety of "final" markers (be liberal)
-          const isFull =
-            Boolean(message.is_full) ||
-            Boolean(message.full) ||
-            Boolean(message.final) ||
-            Boolean(message.is_final) ||
-            message.kind === 'final_transcript' ||
-            message.scope === 'conversation';
+        // Normalize payload to text
+        const raw =
+          typeof message.transcript === 'object'
+            ? message.transcript.text ||
+              message.transcript.content ||
+              JSON.stringify(message.transcript)
+            : message.transcript || '';
 
-          if (isFull) {
-            finalTranscriptRef.current = (raw || '').trim();
-            // Persist under both the new and legacy keys to avoid drift elsewhere
-            const sid = sessionConfigRef.current?.sessionId;
-            if (sid) {
-              sessionStorage.setItem(STORAGE_KEYS.FINAL_TEXT(sid), finalTranscriptRef.current);
-              sessionStorage.setItem(STORAGE_KEYS.LEGACY_TEXT(sid), finalTranscriptRef.current);
-            }
-            // Reflect to UI state (optional; you can remove if you don’t want live preview)
-            setConversationState(prev => {
-              const newState = { ...prev, transcript: finalTranscriptRef.current };
-              Object.defineProperty(newState, 'isActive', {
-                get() { return this.status === 'active'; },
-                enumerable: true
-              });
-              Object.defineProperty(newState, 'isConnecting', {
-                get() { return this.status === 'connecting'; },
-                enumerable: true
-              });
-              return newState as ConversationState;
-            });
-          } else {
-            // Do NOT append partials; only keep a best-effort fallback
-            commitCandidateTranscript(raw);
+        const text = (raw || '').trim();
+        if (!text) return;
+
+        // Be liberal about “final” detection
+        const isFull =
+          Boolean((message as any).is_full) ||
+          Boolean((message as any).full) ||
+          Boolean((message as any).final) ||
+          Boolean((message as any).is_final) ||
+          (message as any).kind === 'final_transcript' ||
+          (message as any).scope === 'conversation' ||
+          (message as any).stage === 'final';
+
+        if (isFull) {
+          // ✅ Use only the single final blob
+          finalTranscriptRef.current = text;
+          sessionTranscript.current = text; // legacy compat
+
+          const sid = sessionConfigRef.current?.sessionId;
+          if (sid) {
+            // persist under both keys to avoid drift
+            sessionStorage.setItem(STORAGE_KEYS.FINAL_TEXT(sid), text);
+            sessionStorage.setItem(STORAGE_KEYS.LEGACY_TEXT(sid), text);
           }
-        }
 
-        // You can still handle other message types here if needed
-        if (message.type === 'function-call' || message.type === 'function-result') {
-          console.log('🔧 Function call/result:', message);
+          // reflect in UI (optional preview)
+          setConversationState(prev => {
+            const next = { ...prev, transcript: text };
+            Object.defineProperty(next, 'isActive', {
+              get() { return this.status === 'active'; },
+              enumerable: true
+            });
+            Object.defineProperty(next, 'isConnecting', {
+              get() { return this.status === 'connecting'; },
+              enumerable: true
+            });
+            return next as ConversationState;
+          });
+
+          console.log('🧩 Final transcript captured (length):', text.length);
+        } else {
+          // ❌ Do NOT append partials; only track best-effort fallback
+          commitCandidateTranscript(text);
+          console.log('…partial transcript seen (ignored for storage). len=', text.length);
         }
       });
 
@@ -237,6 +250,7 @@ export const useRealtimeAIChat = () => {
     }
   }, [commitCandidateTranscript]);
 
+  // Cleanup on unmount
   useEffect(() => {
     return () => {
       if (vapiInstance.current) {
@@ -319,6 +333,7 @@ export const useRealtimeAIChat = () => {
       finalTranscriptRef.current = '';
       longestSeenRef.current = '';
       sessionTranscript.current = '';
+      __longestTranscriptFallback = '';
       setFinalAnalysis(null);
 
       if (!vapiInstance.current) {
@@ -342,6 +357,8 @@ export const useRealtimeAIChat = () => {
           prospectPersonality,
           gamificationMode,
           customProspectId
+          // If you want the AI “to remember”, ensure your Edge Function uses sessionId
+          // to load prior context and pass it in the system prompt.
         }
       });
 
@@ -356,13 +373,11 @@ export const useRealtimeAIChat = () => {
 
       setConversationState(prev => ({
         ...prev,
-        prospectProfile: data.sessionConfig.prospectProfile,
+        prospectProfile: data.sessionConfig?.prospectProfile,
         personalityState: 'initial'
       }));
 
       await vapiInstance.current?.start(data.assistantId);
-
-      // (Coaching hints are disabled in your current code)
 
     } catch (error: any) {
       console.error('=== Error starting enhanced conversation ===', error);
@@ -455,14 +470,15 @@ export const useRealtimeAIChat = () => {
         return;
       }
 
-      // Prefer the provider-marked final blob; otherwise try stored; otherwise longest seen; otherwise legacy
+      // Prefer provider-marked final; else stored; else fallback; else legacy
       const storedFinal = sessionStorage.getItem(STORAGE_KEYS.FINAL_TEXT(sid)) || '';
       const legacyBackup = sessionStorage.getItem(STORAGE_KEYS.LEGACY_TEXT(sid)) || '';
       const finalTranscript =
         finalTranscriptRef.current?.trim() ||
         storedFinal.trim() ||
         longestSeenRef.current?.trim() ||
-        sessionTranscript.current?.trim() || // legacy fallback
+        __longestTranscriptFallback.trim() ||
+        sessionTranscript.current?.trim() ||
         legacyBackup.trim() ||
         '';
 
@@ -475,13 +491,6 @@ export const useRealtimeAIChat = () => {
         hasLegacyBackup: !!legacyBackup
       });
 
-      console.log('🔍 Processing conversation for analysis:', {
-        transcriptLength: finalTranscript?.length || 0,
-        exchangeCount: conversationState.exchangeCount,
-        sessionId: sid
-      });
-
-      // If absolutely nothing, fall back to your existing “no data” behavior
       if (!finalTranscript) {
         console.log('❌ No transcript available for analysis');
         setFinalAnalysis({
