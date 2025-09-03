@@ -51,6 +51,11 @@ const CallSimulation = () => {
   const [callDuration, setCallDuration] = useState(0);
   const [isMuted, setIsMuted] = useState(false);
   const [callRecordId, setCallRecordId] = useState<string | null>(null);
+  const [recentPerformance, setRecentPerformance] = useState<{
+    lastScore?: number;
+    streak?: number;
+    avgScore?: number;
+  }>({});
   const {
     outputMode,
     isChanging: isAudioChanging,
@@ -63,6 +68,49 @@ const CallSimulation = () => {
   const transcriptRef = useRef<string>('');
   const callRecordIdRef = useRef<string | null>(null);
   const callDurationRef = useRef<number>(0);
+  
+  // Fetch recent performance data
+  useEffect(() => {
+    const fetchRecentPerformance = async () => {
+      if (!user) return;
+      
+      try {
+        // Get last score
+        const { data: lastCall } = await supabase
+          .from('calls')
+          .select('overall_score')
+          .eq('user_id', user.id)
+          .not('overall_score', 'is', null)
+          .order('created_at', { ascending: false })
+          .limit(1)
+          .single();
+
+        // Get average score from last 10 calls
+        const { data: recentCalls } = await supabase
+          .from('calls')
+          .select('overall_score')
+          .eq('user_id', user.id)
+          .not('overall_score', 'is', null)
+          .order('created_at', { ascending: false })
+          .limit(10);
+
+        const avgScore = recentCalls && recentCalls.length > 0 
+          ? Math.round(recentCalls.reduce((sum, call) => sum + (call.overall_score || 0), 0) / recentCalls.length)
+          : undefined;
+
+        setRecentPerformance({
+          lastScore: lastCall?.overall_score ? Math.round(lastCall.overall_score) : undefined,
+          avgScore,
+          streak: 0 // TODO: Calculate actual streak from user_daily_stats
+        });
+      } catch (error) {
+        console.error('Error fetching recent performance:', error);
+      }
+    };
+
+    fetchRecentPerformance();
+  }, [user]);
+
   useEffect(() => {
     const initVapi = async () => {
       try {
@@ -406,11 +454,12 @@ const CallSimulation = () => {
           // Call Setup View
           <div className="space-y-6">
             {/* Hero Section */}
-            <CallHeroSection userName={user?.user_metadata?.display_name || user?.email?.split('@')[0] || 'User'} credits={profile?.credits || 0} subscriptionType={profile?.subscription_type || 'free'} recentPerformance={{
-              lastScore: 78,
-              streak: 3,
-              avgScore: 82
-            }} />
+            <CallHeroSection 
+              userName={user?.user_metadata?.display_name || user?.email?.split('@')[0] || 'User'} 
+              credits={profile?.credits || 0} 
+              subscriptionType={profile?.subscription_type || 'free'} 
+              recentPerformance={recentPerformance} 
+            />
 
             {/* Quick Setup Cards */}
             <div>
