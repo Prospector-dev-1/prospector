@@ -225,7 +225,15 @@ export const useRealtimeAIChat = () => {
       // Only cleanup if there's an active VAPI instance
       if (vapiInstance.current) {
         console.log('useRealtimeAIChat cleanup: ending conversation...');
-        vapiInstance.current.stop().catch(console.error);
+        try {
+          const stopResult = vapiInstance.current.stop();
+          // Only call .catch() if stop() returns a Promise
+          if (stopResult && typeof stopResult.catch === 'function') {
+            stopResult.catch(console.error);
+          }
+        } catch (error) {
+          console.error('Error during VAPI cleanup:', error);
+        }
         vapiInstance.current = null;
       }
     };
@@ -399,8 +407,16 @@ export const useRealtimeAIChat = () => {
 
       if (vapiInstance.current) {
         console.log('Stopping Vapi instance...');
-        await vapiInstance.current.stop();
-        console.log('Vapi instance stopped');
+        try {
+          const stopResult = vapiInstance.current.stop();
+          // Handle both Promise and non-Promise return values
+          if (stopResult && typeof stopResult.then === 'function') {
+            await stopResult;
+          }
+          console.log('Vapi instance stopped');
+        } catch (error) {
+          console.error('Error stopping Vapi instance:', error);
+        }
         
         // Clear the Vapi instance to prevent further use
         vapiInstance.current = null;
