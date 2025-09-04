@@ -152,3 +152,6 @@ yarn-error.log
 
 # Project-specific ignores
 .idx/
+
+# Enviroment Variables
+.env
