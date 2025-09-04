@@ -18,6 +18,7 @@ serve(async (req) => {
   }
 
   try {
+    console.log('=== Enhanced AI Conversation Start ===');
     const { 
       sessionId, 
       originalMoment, 
@@ -37,8 +38,10 @@ serve(async (req) => {
 
     const vapiApiKey = Deno.env.get('VAPI_API_KEY');
     if (!vapiApiKey) {
+      console.error('VAPI_API_KEY not found in environment');
       throw new Error('VAPI_API_KEY not found');
     }
+    console.log('VAPI API Key available:', !!vapiApiKey);
 
     // Get user ID from auth
     const authHeader = req.headers.get('Authorization');
@@ -93,8 +96,9 @@ serve(async (req) => {
       interactionHistory: interactionHistory || []
     });
 
-    // Get voice for personality
+    // Get voice for personality with fallback
     const voiceId = getVoiceForPersonality(prospectPersonality);
+    console.log('Selected voice for personality:', { prospectPersonality, voiceId });
 
     // Create VAPI assistant with enhanced configuration
     const assistantConfig = {
@@ -108,7 +112,7 @@ serve(async (req) => {
         temperature: 0.8
       },
       voice: {
-        provider: "11labs",
+        provider: "openai",
         voiceId: voiceId
       },
       firstMessage: generateContextualFirstMessage(originalMoment, prospectProfile),
@@ -124,19 +128,60 @@ serve(async (req) => {
       }
     };
 
-    const response = await fetch('https://api.vapi.ai/assistant', {
-      method: 'POST',
-      headers: {
-        'Authorization': `Bearer ${vapiApiKey}`,
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify(assistantConfig),
-    });
+    console.log('Creating VAPI assistant with config:', JSON.stringify(assistantConfig, null, 2));
 
-    if (!response.ok) {
-      const errorData = await response.text();
-      console.error('VAPI API error:', errorData);
-      throw new Error(`VAPI API error: ${response.status}`);
+    let response;
+    let retryCount = 0;
+    const maxRetries = 3;
+    const baseDelay = 1000;
+
+    while (retryCount < maxRetries) {
+      try {
+        response = await fetch('https://api.vapi.ai/assistant', {
+          method: 'POST',
+          headers: {
+            'Authorization': `Bearer ${vapiApiKey}`,
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify(assistantConfig),
+        });
+
+        if (response.ok) {
+          console.log('VAPI assistant created successfully on attempt', retryCount + 1);
+          break;
+        }
+
+        const errorText = await response.text();
+        console.error(`VAPI API error (attempt ${retryCount + 1}):`, {
+          status: response.status,
+          statusText: response.statusText,
+          error: errorText
+        });
+
+        if (response.status === 429) {
+          // Rate limit - wait with exponential backoff
+          const delay = baseDelay * Math.pow(2, retryCount);
+          console.log(`Rate limited, waiting ${delay}ms before retry ${retryCount + 1}/${maxRetries}`);
+          await new Promise(resolve => setTimeout(resolve, delay));
+          retryCount++;
+          continue;
+        } else {
+          // Non-retryable error
+          throw new Error(`VAPI API error: ${response.status} - ${errorText}`);
+        }
+      } catch (fetchError) {
+        console.error(`Network error on attempt ${retryCount + 1}:`, fetchError);
+        if (retryCount === maxRetries - 1) {
+          throw new Error(`Failed to connect to VAPI after ${maxRetries} attempts: ${fetchError.message}`);
+        }
+        const delay = baseDelay * Math.pow(2, retryCount);
+        await new Promise(resolve => setTimeout(resolve, delay));
+        retryCount++;
+      }
+    }
+
+    if (!response || !response.ok) {
+      throw new Error('Failed to create VAPI assistant after all retries');
     }
 
     const assistantData = await response.json();
@@ -176,9 +221,35 @@ serve(async (req) => {
     });
 
   } catch (error) {
-    console.error('Error in start-enhanced-ai-conversation:', error);
-    return new Response(JSON.stringify({ error: error.message }), {
-      status: 500,
+    console.error('=== Error in start-enhanced-ai-conversation ===');
+    console.error('Error details:', {
+      message: error.message,
+      stack: error.stack,
+      sessionId,
+      prospectPersonality,
+      replayMode
+    });
+    
+    let errorMessage = 'Failed to start AI conversation';
+    let statusCode = 500;
+    
+    if (error.message.includes('Rate limit')) {
+      errorMessage = 'AI service is currently busy. Please try again in a moment.';
+      statusCode = 429;
+    } else if (error.message.includes('VAPI_API_KEY')) {
+      errorMessage = 'Service configuration error. Please contact support.';
+      statusCode = 503;
+    } else if (error.message.includes('User not authenticated')) {
+      errorMessage = 'Authentication required. Please sign in again.';
+      statusCode = 401;
+    }
+    
+    return new Response(JSON.stringify({ 
+      error: errorMessage,
+      details: error.message,
+      retry: statusCode === 429
+    }), {
+      status: statusCode,
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
     });
   }
@@ -230,6 +301,19 @@ REALISM GUIDELINES:
 - Maintain ${profileTraits.formality || 'medium'} formality level
 - Show ${profileTraits.directness || 'medium'} directness in communication
 - Demonstrate ${profileTraits.technical_depth || 'medium'} technical understanding
+
+ROLE GUARDRAILS:
+- You are the BUYER/PROSPECT. Do not pitch, sell, or promote any product or service.
+- Never speak as the seller. Refer to the user's offer as "your product/solution/company". Do NOT say "our product", "we can offer", or similar.
+- Do not invent pricing, features, or implementation details. Ask the user to provide them.
+- If the user asks you to pitch or to describe "your" product, correct the role: "I'm the buyer here—help me understand your value and fit."
+
+FEW-SHOT CALIBRATION:
+User (seller): "We help SMBs reduce no-shows by 30% using automated reminders."
+Prospect (you): "Okay. We already use Google Calendar. Where exactly does the 30% come from, and what does rollout look like for a 15-person team?"
+
+User (seller): "Can you give me your pricing tiers?"
+Prospect (you): "That's your area—walk me through your pricing and what drives ROI for businesses like mine."
 
 GAMIFICATION MODE: ${gamificationMode.toUpperCase()}
 ${getGamificationInstructions(gamificationMode)}
@@ -291,15 +375,18 @@ function getGamificationInstructions(mode) {
 }
 
 function getVoiceForPersonality(personality) {
+  // Use OpenAI TTS voices that are compatible with VAPI
   const voiceMap = {
-    skeptical: 'CwhRBWXzGAHq8TQ4Fs17', // Roger - Authoritative
-    enthusiastic: 'EXAVITQu4vr4xnSDxMaL', // Sarah - Energetic
-    professional: 'JBFqnCBsd6RMkjVDRZzb', // George - Professional
-    aggressive: 'TX3LPaxmHKxFdv7VOQHJ', // Liam - Strong
-    analytical: 'nPczCjzI2devNBz1zQrb'  // Brian - Thoughtful
+    skeptical: 'nova',      // Strong, authoritative
+    enthusiastic: 'alloy',  // Energetic, engaging
+    professional: 'echo',   // Professional, clear
+    aggressive: 'fable',    // Bold, assertive
+    analytical: 'onyx'      // Thoughtful, measured
   };
   
-  return voiceMap[personality] || voiceMap.professional;
+  const selectedVoice = voiceMap[personality] || voiceMap.professional;
+  console.log('Voice mapping:', { personality, selectedVoice });
+  return selectedVoice;
 }
 
 function generateContextualFirstMessage(originalMoment, prospectProfile) {
