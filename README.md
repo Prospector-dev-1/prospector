@@ -15,7 +15,7 @@ Prospector is a full-stack cross-platform application (Web, iOS, Android) that h
 ```
 
 
-##
+## System Architecture
 ```mermaid
 flowchart TD
     A[User] --> B[Frontend: React + Vite + Capacitor]
