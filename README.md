@@ -107,6 +107,17 @@ Hosting
 ```
 
 # Getting Started (Local Development)
+## Source of Truth
+
+```text
+- The Web App (React + Vite inside /src) is the **only source of truth**.
+- Do not make changes directly inside /android or /ios.
+- The Android and iOS projects are generated automatically by Capacitor.
+- Whenever you change frontend code, rebuild and sync:
+    1. Run `npm run build`
+    2. Run `npx cap sync`
+- This ensures that mobile apps always stay in sync with the web app.
+```
 ### 1. Clone & Install
 ```sh
 1. Clone & Install
