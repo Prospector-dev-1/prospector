@@ -213,3 +213,9 @@ git push origin feature/new-feature
 Proprietary – All rights reserved
 
 ```
+
+### Note
+```text
+If you dont see Ios in the repo layout, thats normal,it is not intergrated yet.
+If while debugging you find new issues, edit the README, and write the issues here ->
+
