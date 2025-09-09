@@ -52,7 +52,7 @@ Hosting
 - Mobile builds via Android Studio and Xcode
 
 ```
-###
+### Database Schema
 ```mermaid
     
         erDiagram
